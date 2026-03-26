@@ -51,21 +51,21 @@ sc0.append({'id':'PF', 'x':94, 'y':201, 'bg':'g'})
 sc0.append({'id':'An', 'x':222, 'y':201, 'bg':'g'})
 
 sc1 = []
-sc1.append({'id':'V1', 'x':63, 'y':37, 'bg':'w'})
-sc1.append({'id':'Vdeg1', 'x':121, 'y':37, 'bg':'w'})
-sc1.append({'id':'V2', 'x':63, 'y':53, 'bg':'g'})
-sc1.append({'id':'Vdeg2', 'x':121, 'y':53, 'bg':'g'})
-sc1.append({'id':'V3', 'x':63, 'y':69, 'bg':'w'})
-sc1.append({'id':'Vdeg3', 'x':121, 'y':69, 'bg':'w'})
-sc1.append({'id':'A1', 'x':63, 'y':88, 'bg':'w'})
-sc1.append({'id':'Adeg1', 'x':121, 'y':88, 'bg':'w'})
-sc1.append({'id':'A2', 'x':63, 'y':104, 'bg':'g'})
-sc1.append({'id':'Adeg2', 'x':121, 'y':104, 'bg':'g'})
-sc1.append({'id':'A3', 'x':63, 'y':120, 'bg':'w'})
-sc1.append({'id':'Adeg3', 'x':121, 'y':120, 'bg':'w'})
-sc1.append({'id':'freq', 'alias':'f', 'x':83, 'y':155, 'bg':'w'})
-sc1.append({'id':'V_unb', 'alias':'V%', 'x':81, 'y':190, 'bg':'g'})
-sc1.append({'id':'A_unb', 'alias':'A%', 'x':82, 'y':206, 'bg':'w'})
+sc1.append({'id':'V1', 'x':63, 'y':37, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'Vdeg1', 'x':121, 'y':37, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'V2', 'x':63, 'y':53, 'bg':'g', 'scale': 0.9})
+sc1.append({'id':'Vdeg2', 'x':121, 'y':53, 'bg':'g', 'scale': 0.9})
+sc1.append({'id':'V3', 'x':63, 'y':69, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'Vdeg3', 'x':121, 'y':69, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'A1', 'x':63, 'y':88, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'Adeg1', 'x':121, 'y':88, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'A2', 'x':63, 'y':104, 'bg':'g', 'scale': 0.9})
+sc1.append({'id':'Adeg2', 'x':121, 'y':104, 'bg':'g', 'scale': 0.9})
+sc1.append({'id':'A3', 'x':63, 'y':120, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'Adeg3', 'x':121, 'y':120, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'freq', 'alias':'f', 'x':83, 'y':155, 'bg':'w', 'scale': 0.9})
+sc1.append({'id':'V_unb', 'alias':'V%', 'x':81, 'y':190, 'bg':'g', 'scale': 0.9})
+sc1.append({'id':'A_unb', 'alias':'A%', 'x':82, 'y':206, 'bg':'w', 'scale': 0.9})
 
 sc2 = []
 sc2.extend(make_grid(['V1','V2','V3'], [76,136,196], 47, 'w'))
@@ -116,13 +116,19 @@ def apply_text_to_image(img, overlay_config, text_str):
     # 2. Draw new text right-aligned
     chars = list(text_str)
     curr_x = x_right + 1
+    scale = overlay_config.get('scale', 1.0)
     
     for char in reversed(chars):
         if char == '/': char = '.'
         digit_img = get_digit_img(char, color)
         if digit_img:
+            if scale != 1.0:
+                new_w = int(digit_img.width * scale)
+                new_h = int(digit_img.height * scale)
+                digit_img = digit_img.resize((new_w, new_h), Image.LANCZOS)
+            
             w_digit = digit_img.width
-            spacing = 1 if w_digit == 9 else 2
+            spacing = 1 if w_digit >= 8 else 2
             
             curr_x -= w_digit
             paste_y = y_bot - digit_img.height + 1
@@ -132,7 +138,7 @@ def apply_text_to_image(img, overlay_config, text_str):
             
             curr_x -= spacing
         else:
-            curr_x -= 6
+            curr_x -= int(6 * scale)
 
 def process_image(img, screen_idx, params):
     sc = SCREENS[screen_idx % 6]
