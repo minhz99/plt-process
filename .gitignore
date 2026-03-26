@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project-specific
+*.KEW
+*.kew
+*.ZIP
+*.zip
+*.BMP
+*.bmp
+*.png
+*.jpg
+patch.py
+patch_v2.py
+kew_analysis.json
+*.xlsx
+/temp/
