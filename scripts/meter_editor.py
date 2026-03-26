@@ -64,8 +64,8 @@ sc1.append({'id':'Adeg2', 'x':121, 'y':103, 'bg':'g', 'scale': 0.85, 'w_clear': 
 sc1.append({'id':'A3', 'x':63, 'y':119, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
 sc1.append({'id':'Adeg3', 'x':121, 'y':119, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
 sc1.append({'id':'freq', 'alias':'f', 'x':83, 'y':154, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
-sc1.append({'id':'V_unb', 'alias':'V%', 'x':81, 'y':189, 'bg':'g', 'scale': 0.85, 'w_clear': 45})
-sc1.append({'id':'A_unb', 'alias':'A%', 'x':82, 'y':205, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
+sc1.append({'id':'V_unb', 'alias':'V%', 'x':83, 'y':189, 'bg':'g', 'scale': 0.85, 'w_clear': 45})
+sc1.append({'id':'A_unb', 'alias':'A%', 'x':83, 'y':205, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
 
 sc2 = []
 sc2.extend(make_grid(['V1','V2','V3'], [76,136,196], 47, 'w'))
