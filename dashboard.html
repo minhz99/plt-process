@@ -708,15 +708,49 @@ select {
 <div class="content" id="tab-edit-img">
   <div class="section-header">Sửa Ảnh Đo (Pixel Replacement)</div>
   <div class="chart-card" style="margin-bottom: 1.5rem;">
-    <h3>Tải lên các tệp ảnh (.BMP)</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1rem;">
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 1 (Tổng hợp)</label><input type="file" id="ei-file-0" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 2 (Pha áp)</label><input type="file" id="ei-file-1" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 3 (Sin áp)</label><input type="file" id="ei-file-2" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 4 (Sin dòng)</label><input type="file" id="ei-file-3" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 5 (Hài áp)</label><input type="file" id="ei-file-4" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
-      <div><label style="font-size:0.8rem; color:var(--text-muted)">Ảnh 6 (Hài dòng)</label><input type="file" id="ei-file-5" accept=".bmp" style="width:100%; font-size:0.8rem; color:white; background:var(--surface2); border:1px solid var(--border); padding:5px; border-radius:4px;"></div>
+    <h3>Tải lên dữ liệu ảnh (.BMP)</h3>
+    <div id="ei-bulk-upload-area" style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.2s;" ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';" ondragleave="this.style.borderColor='var(--border)';" ondrop="handleBulkDrop(event)">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
+      <div style="font-size: 0.9rem; font-weight: 600;">Kéo thả nhiều ảnh .BMP vào đây</div>
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Hoặc click để chọn nhiều file</div>
+      <input type="file" id="ei-bulk-input" multiple accept=".bmp" style="display: none" onchange="handleBulkFiles(this.files)">
     </div>
+    
+    <div id="ei-preview-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
+      <!-- Previews will appear here -->
+    </div>
+    
+    <div id="ei-slots-info" style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px;">
+        Kéo thả các ảnh vào đúng vị trí bên dưới để sắp xếp chức năng:
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px;">
+      <div class="ei-slot" data-idx="0" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 0)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">1. Tổng hợp</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+      <div class="ei-slot" data-idx="1" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 1)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">2. Pha áp</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+      <div class="ei-slot" data-idx="2" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 2)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">3. Sin áp</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+      <div class="ei-slot" data-idx="3" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 3)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">4. Sin dòng</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+      <div class="ei-slot" data-idx="4" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 4)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">5. Hài áp</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+      <div class="ei-slot" data-idx="5" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 5)" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">6. Hài dòng</span>
+        <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+      </div>
+    </div>
+  </div>
   </div>
 
   <div class="chart-card" style="margin-bottom: 1.5rem;">
@@ -2158,6 +2192,67 @@ function applyAndDownloadCorrection() {
 }
 
 let EDITED_FILES = [];
+let PENDING_FILES = []; // Array of { id, file, url }
+let SLOT_MAPPING = [null, null, null, null, null, null]; // Stores the PENDING_FILES id for each slot
+
+function handleBulkDrop(e) {
+  e.preventDefault();
+  handleBulkFiles(e.dataTransfer.files);
+}
+
+document.getElementById('ei-bulk-upload-area').onclick = () => document.getElementById('ei-bulk-input').click();
+
+function handleBulkFiles(files) {
+  const container = document.getElementById('ei-preview-container');
+  Array.from(files).forEach(file => {
+    if (!file.name.toLowerCase().endswith('.bmp')) return;
+    const id = 'f_' + Math.random().toString(36).substr(2, 9);
+    const url = URL.createObjectURL(file);
+    const fileObj = { id, file, url };
+    PENDING_FILES.push(fileObj);
+    
+    // Create preview element
+    const el = document.createElement('div');
+    el.className = 'ei-pending-preview';
+    el.id = id;
+    el.draggable = true;
+    el.ondragstart = (e) => e.dataTransfer.setData('text/plain', id);
+    el.style = 'border: 1px solid var(--border); border-radius: 6px; padding: 5px; background: var(--surface); text-align: center; cursor: grab;';
+    el.innerHTML = `
+        <img src="${url}" style="width: 100%; height: 60px; object-fit: cover; border-radius: 4px; margin-bottom: 5px;">
+        <div style="font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}</div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function handleDropToSlot(e, slotIdx) {
+  e.preventDefault();
+  const fileId = e.dataTransfer.getData('text/plain');
+  const fileObj = PENDING_FILES.find(f => f.id === fileId);
+  if (!fileObj) return;
+  
+  // Update mapping
+  SLOT_MAPPING[slotIdx] = fileObj;
+  
+  // Visual update
+  const slot = document.querySelectorAll('.ei-slot')[slotIdx];
+  const content = slot.querySelector('.ei-slot-content');
+  content.innerHTML = `
+    <div style="position: relative; width: 100%;">
+        <img src="${fileObj.url}" style="width: 100%; height: 50px; object-fit: cover; border-radius: 4px;">
+        <div style="font-size: 0.6rem; margin-top: 2px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${fileObj.file.name}</div>
+        <button onclick="clearSlot(${slotIdx}); event.stopPropagation();" style="position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 15px; height: 15px; font-size: 10px; cursor: pointer;">×</button>
+    </div>
+  `;
+}
+
+function clearSlot(idx) {
+  SLOT_MAPPING[idx] = null;
+  const slot = document.querySelectorAll('.ei-slot')[idx];
+  slot.querySelector('.ei-slot-content').innerHTML = '';
+}
+
 
 async function submitEditImages() {
   const errorEl = document.getElementById('ei-error');
@@ -2170,14 +2265,13 @@ async function submitEditImages() {
 
   const selectedFiles = [];
   for (let i = 0; i < 6; i++) {
-    const p = document.getElementById('ei-file-' + i);
-    if (p && p.files.length > 0) {
-      selectedFiles.push({ idx: i, file: p.files[0] });
+    if (SLOT_MAPPING[i]) {
+      selectedFiles.push({ idx: i, file: SLOT_MAPPING[i].file });
     }
   }
 
   if (selectedFiles.length === 0) {
-    errorEl.textContent = 'Vui lòng chọn ít nhất một file ảnh .BMP tại bất kỳ ô nào.';
+    errorEl.textContent = 'Vui lòng kéo thả ít nhất một ảnh vào các ô chức năng bên trên.';
     errorEl.style.display = 'block';
     return;
   }
