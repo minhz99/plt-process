@@ -29,10 +29,10 @@ def get_digit_img(char, color='w'):
         
     return None
 
-def make_grid(ids, x_rights, y_bot, bg):
+def make_grid(ids, x_rights, y_bot, bg, scale=0.96):
     res = []
     for i, id_val in enumerate(ids):
-        res.append({'id': id_val, 'x': x_rights[i], 'y': y_bot, 'bg': bg})
+        res.append({'id': id_val, 'x': x_rights[i], 'y': y_bot, 'bg': bg, 'scale': scale})
     return res
 
 # Screen configurations based on updated rules
@@ -43,12 +43,12 @@ sc0.extend(make_grid(['P1','P2','P3'], [94,158,222], 86, 'w'))
 sc0.extend(make_grid(['Q1','Q2','Q3'], [94,158,222], 102, 'g'))
 sc0.extend(make_grid(['S1','S2','S3'], [94,158,222], 118, 'w'))
 sc0.extend(make_grid(['PF1','PF2','PF3'], [94,158,222], 134, 'g'))
-sc0.append({'id':'P', 'x':94, 'y':153, 'bg':'w'})
-sc0.append({'id':'freq', 'alias':'f', 'x':222, 'y':153, 'bg':'w'})
-sc0.append({'id':'Q', 'x':94, 'y':169, 'bg':'g'})
-sc0.append({'id':'S', 'x':94, 'y':185, 'bg':'w'})
-sc0.append({'id':'PF', 'x':94, 'y':201, 'bg':'g'})
-sc0.append({'id':'An', 'x':222, 'y':201, 'bg':'g'})
+sc0.append({'id':'P', 'x':94, 'y':153, 'bg':'w', 'scale': 0.96})
+sc0.append({'id':'freq', 'alias':'f', 'x':222, 'y':153, 'bg':'w', 'scale': 0.96})
+sc0.append({'id':'Q', 'x':94, 'y':169, 'bg':'g', 'scale': 0.96})
+sc0.append({'id':'S', 'x':94, 'y':185, 'bg':'w', 'scale': 0.96})
+sc0.append({'id':'PF', 'x':94, 'y':201, 'bg':'g', 'scale': 0.96})
+sc0.append({'id':'An', 'x':222, 'y':201, 'bg':'g', 'scale': 0.96})
 
 sc1 = []
 sc1.append({'id':'V1', 'x':63, 'y':36, 'bg':'w', 'scale': 0.85, 'w_clear': 45})
