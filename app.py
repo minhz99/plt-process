@@ -449,5 +449,5 @@ def edit_meter_images_bulk():
 
 
 if __name__ == '__main__':
-    print("Khởi động KEW Server trên cổng 5000...")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("Khởi động KEW Server trên cổng 5515...")
+    app.run(host='0.0.0.0', port=5515, debug=True)
