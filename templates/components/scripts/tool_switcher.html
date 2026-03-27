@@ -1,0 +1,27 @@
+<script>
+
+/* ── GLOBAL TOOL SWITCHING ── */
+function switchTool(toolId) {
+    document.querySelectorAll('.workspace').forEach(el => { el.style.display = 'none'; });
+    document.querySelectorAll('#tool-tabs .tool-tab').forEach(el => el.classList.remove('active'));
+
+    const workspace = document.getElementById('workspace-' + toolId);
+    if (workspace) workspace.style.display = 'block';
+
+    const btn = document.getElementById('btn-tool-' + toolId);
+    if (btn) btn.classList.add('active');
+
+    const showKewMeta = toolId === 'kew';
+    const deviceInfo = document.getElementById('deviceInfo');
+    const headerMeta = document.getElementById('headerMeta');
+    if (deviceInfo) deviceInfo.style.display = showKewMeta ? 'block' : 'none';
+    if (headerMeta) headerMeta.style.display = showKewMeta ? 'block' : 'none';
+
+    localStorage.setItem('plt_active_tool', toolId);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTool = localStorage.getItem('plt_active_tool') || 'kew';
+    switchTool(savedTool);
+});
+</script>

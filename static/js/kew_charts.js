@@ -148,34 +148,15 @@
       }
     }
 
-    function switchTab(name) {
-      const contentEl = document.getElementById(`tab-${name}`);
+    function switchKewTab(name) {
+      const contentEl = document.querySelector(`#workspace-kew #tab-${name}`);
       if (!contentEl) return;
 
-      // Tabs that require KEW data
-      const dataRequiredTabs = ['overview', 'voltage', 'current', 'power', 'harmonics', 'events', 'assessment', 'correction'];
-
-      if (dataRequiredTabs.includes(name) && !DATA) {
-        // Inject "No Data" placeholder if missing
-        contentEl.innerHTML = `
-      <div class="no-data-overlay">
-        <div class="no-data-icon">📂</div>
-        <h3>Chưa có dữ liệu KEW</h3>
-        <p class="no-data-text">
-          Tính năng này yêu cầu dữ liệu từ máy đo KEW. 
-          Vui lòng upload file log (.KEW hoặc .ZIP) ở màn hình chính để xem phân tích chi tiết.
-        </p>
-        <button class="btn" style="margin-top: 1.5rem;" onclick="location.reload()">Quay lại Upload</button>
-      </div>
-    `;
-      }
-
-      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#workspace-kew .content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#kew-nav-section .tab').forEach(el => el.classList.remove('active'));
       contentEl.classList.add('active');
-      document.querySelectorAll('.tab').forEach(t => {
-        if (t.getAttribute('onclick')?.includes(name)) t.classList.add('active');
-      });
+      const activeTabBtn = document.querySelector(`#kew-nav-section [data-kew-tab="${name}"]`);
+      if (activeTabBtn) activeTabBtn.classList.add('active');
 
       // Lazy render data if available
       if (DATA) {
@@ -186,8 +167,8 @@
     function skipUpload() {
       document.getElementById('upload-container').style.display = 'none';
       document.getElementById('app-container').style.display = 'block';
-      // Default to edit-img tab as it's the one that doesn't need data
-      switchTab('edit-img');
+      // Keep user in KEW workflow; no data will be rendered until upload succeeds.
+      switchKewTab('overview');
     }
 
     // ─── Subsample timestamps for display ─────────────────
@@ -232,12 +213,12 @@
       renderHeaderMeta(data.summary);
       
       // Re-initialize active tab
-      const activeTabEl = document.querySelector('.content.active');
+      const activeTabEl = document.querySelector('#workspace-kew .content.active');
       const activeName = activeTabEl ? activeTabEl.id.replace('tab-', '') : 'overview';
       
       if (activeName.includes('workspace')) {
           // if we are in another workspace, switch back to overview in kew workspace
-          switchTab('overview');
+          switchKewTab('overview');
       } else {
           renderTabWithData(activeName);
       }
@@ -246,12 +227,20 @@
     // ─── Header meta ─────────────────
     function renderHeaderMeta(sum) {
       const dev = sum.device;
-      document.getElementById('deviceInfo').textContent = `S/N: ${dev['SERIAL NUMBER'] || '—'} | ${dev['WIRING'] || ''} | ${dev['NOMINAL VOLTAGE'] || ''} | ${dev['FREQUENCY'] || ''}`;
-      document.getElementById('headerMeta').innerHTML = `
+      const deviceInfoEl = document.getElementById('deviceInfo');
+      const headerMetaEl = document.getElementById('headerMeta');
+
+      if (deviceInfoEl) {
+        deviceInfoEl.textContent = `Thiết bị: S/N ${dev['SERIAL NUMBER'] || '—'} | ${dev['WIRING'] || ''} | ${dev['NOMINAL VOLTAGE'] || ''} | ${dev['FREQUENCY'] || ''}`;
+      }
+
+      if (headerMetaEl) {
+        headerMetaEl.innerHTML = `
     <div class="meta-chip">Bắt đầu: <span>${sum.time_start?.substring(0, 16) || '—'}</span></div>
     <div class="meta-chip">Kết thúc: <span>${sum.time_end?.substring(0, 16) || '—'}</span></div>
     <div class="meta-chip">Mẫu: <span>${sum.num_samples}</span></div>
   `;
+      }
     }
 
     // ─── KPI cards ─────────────────
@@ -366,10 +355,11 @@
 
     // ─── Voltage tab ─────────────────
     let voltPhase = 'all';
-    function setVoltPhase(ph) {
+    function setVoltPhase(ph, btnEl) {
+      if (!DATA) return;
       voltPhase = ph;
       document.querySelectorAll('#voltPhaseButtons .btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      if (btnEl) btnEl.classList.add('active');
       renderVoltageTab(DATA.series);
     }
 
@@ -439,8 +429,11 @@
 
     // ─── Current tab ─────────────────
     let currPhase = 'all';
-    function setCurrPhase(ph) {
+    function setCurrPhase(ph, btnEl) {
+      if (!DATA) return;
       currPhase = ph;
+      document.querySelectorAll('#currPhaseButtons .btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
       renderCurrentTab(DATA.series);
     }
 
@@ -915,7 +908,7 @@
       setTimeout(() => { document.getElementById('loading-text').textContent = 'Đang trích xuất sóng hài...'; }, 2000);
       setTimeout(() => { document.getElementById('loading-text').textContent = 'Tính toán THD và sự kiện...'; }, 4000);
 
-      fetch('/api/upload', {
+      fetch('/api/kew/upload', {
         method: 'POST',
         body: formData
       })
@@ -940,7 +933,7 @@
     // ── Phase Detection & Gen Panel ─────────────────
     function detectAndShowGenPanel(formData) {
       // Build a fresh FormData from the uploaded files
-      fetch('/api/detect', { method: 'POST', body: formData })
+      fetch('/api/kew/detect', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
           if (!data.results || data.results.length === 0) return;
@@ -972,7 +965,7 @@
       spinner.style.display = 'inline-block';
       btnText.textContent = 'Đang xử lý...';
 
-      fetch('/api/fix', { method: 'POST', body: lastFormData })
+      fetch('/api/kew/fix', { method: 'POST', body: lastFormData })
         .then(res => {
           if (!res.ok) return res.json().then(e => { throw new Error(e.error || 'Lỗi hệ thống'); });
           return res.blob();
@@ -1317,7 +1310,7 @@
       for (const [k, v] of sendFd.entries()) fd2.append(k, v);
       fd2.append('corrections', JSON.stringify(effective));
 
-      fetch('/api/correct', { method: 'POST', body: fd2 })
+      fetch('/api/kew/correct', { method: 'POST', body: fd2 })
         .then(res => {
           if (!res.ok) return res.json().then(e => { throw new Error(e.error || 'Lỗi hệ thống'); });
           return res.blob();

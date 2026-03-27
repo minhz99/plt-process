@@ -40,7 +40,11 @@ Công cụ tự động hóa việc nhập liệu và xử lý tệp Excel báo 
 3. Truy cập Dashboard tại: `http://localhost:5525`
 
 ## ⚙️ Cấu Trúc Dự Án
-- `modules/`: Chứa các Blueprint xử lý Backend (KEW, Excel).
-- `static/js/`: Các module xử lý logic Frontend (Charts, Image Editor, Excel).
-- `templates/`: Giao diện Dashboard (Bootstrap 5).
+- `modules/`: Chứa các Blueprint xử lý Backend (KEW, Excel, Image).
+- `static/js/`: Các module xử lý logic Frontend (KEW charts, Image Editor, Excel Handler).
+- `templates/dashboard.html`: Layout tổng (shell) của dashboard.
+- `templates/components/layout/`: Thành phần layout dùng chung (sidebar, ...).
+- `templates/components/workspaces/`: Mỗi tool là một component/template riêng (`kew.html`, `image.html`, `excel.html`).
+- `templates/components/modals/`: Các modal dùng chung.
+- `templates/components/scripts/`: Script điều hướng workspace và bundle script.
 - `utils/`: Các hàm tiện ích dùng chung.

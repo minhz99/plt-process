@@ -69,7 +69,7 @@ let currentMode = 'string_mode';
         }
 
         // Xử lý chuyển tab
-        function switchTab(modeId) {
+        function switchExcelTab(modeId) {
             document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             

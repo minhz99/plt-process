@@ -1,0 +1,264 @@
+  <!-- ══════════════════ IMAGE WORKSPACE ══════════════════ -->
+  <div id="workspace-img" class="workspace" style="display:none;">
+    <div class="content active" id="tab-edit-img">
+      <div class="section-header">Sửa Ảnh Đo (Pixel Replacement)</div>
+      <div class="chart-card" style="margin-bottom: 1.5rem;">
+        <h3>Tải lên dữ liệu ảnh (.BMP)</h3>
+        
+        <div class="mb-4 mt-3">
+          <label class="form-label text-muted fw-semibold" style="font-size:0.85rem">Chọn Mẫu Đồng Hồ (Template)</label>
+          <select class="form-select bg-dark text-white border-secondary" id="ei-template-select" style="max-width: 300px;">
+            <option value="kew6315">Kyoritsu KEW 6315 (Mặc định)</option>
+            <option value="kew6305">Kyoritsu KEW 6305</option>
+            <option value="hioki3198">Hioki PQ3198</option>
+            <option value="chauvin">Chauvin Arnoux C.A 8336</option>
+          </select>
+        </div>
+
+        <div id="ei-bulk-upload-area"
+          style="border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.2s;"
+          ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+          ondragleave="this.style.borderColor='var(--border)';" ondrop="handleBulkDrop(event)">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
+          <div style="font-size: 0.9rem; font-weight: 600;">Kéo thả nhiều ảnh .BMP vào đây</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Hoặc click để chọn nhiều file</div>
+          <input type="file" id="ei-bulk-input" multiple accept=".bmp" style="display: none"
+            onchange="handleBulkFiles(this.files)">
+        </div>
+
+        <div id="ei-preview-container"
+          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
+          <!-- Previews will appear here -->
+        </div>
+
+        <div id="ei-slots-info"
+          style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px;">
+          Kéo thả các ảnh vào đúng vị trí bên dưới để sắp xếp chức năng:
+        </div>
+
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px;">
+          <div class="ei-slot" data-idx="0" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 0)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">1. Tổng hợp</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+          <div class="ei-slot" data-idx="1" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 1)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">2. Góc pha</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+          <div class="ei-slot" data-idx="2" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 2)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">3. Sin áp</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+          <div class="ei-slot" data-idx="3" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 3)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">4. Sin dòng</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+          <div class="ei-slot" data-idx="4" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 4)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">5. Hài áp</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+          <div class="ei-slot" data-idx="5" ondragover="event.preventDefault()" ondrop="handleDropToSlot(event, 5)"
+            style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface2); text-align: center; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">6. Hài dòng</span>
+            <div class="ei-slot-content" style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom: 1.5rem;">
+      <h3>Thông số cấu hình</h3>
+      <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px;">
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V1</label><input type="text" id="ei-V1"
+            placeholder="V1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V2</label><input type="text" id="ei-V2"
+            placeholder="V2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V3</label><input type="text" id="ei-V3"
+            placeholder="V3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A1</label><input type="text" id="ei-A1"
+            placeholder="A1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A2</label><input type="text" id="ei-A2"
+            placeholder="A2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A3</label><input type="text" id="ei-A3"
+            placeholder="A3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P1</label><input type="text" id="ei-P1"
+            placeholder="P1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P2</label><input type="text" id="ei-P2"
+            placeholder="P2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P3</label><input type="text" id="ei-P3"
+            placeholder="P3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q1</label><input type="text" id="ei-Q1"
+            placeholder="Q1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q2</label><input type="text" id="ei-Q2"
+            placeholder="Q2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q3</label><input type="text" id="ei-Q3"
+            placeholder="Q3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S1</label><input type="text" id="ei-S1"
+            placeholder="S1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S2</label><input type="text" id="ei-S2"
+            placeholder="S2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S3</label><input type="text" id="ei-S3"
+            placeholder="S3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF1</label><input type="text" id="ei-PF1"
+            placeholder="PF1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF2</label><input type="text" id="ei-PF2"
+            placeholder="PF2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF3</label><input type="text" id="ei-PF3"
+            placeholder="PF3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg1</label><input type="text" id="ei-Vdeg1"
+            placeholder="Vdeg1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg2</label><input type="text" id="ei-Vdeg2"
+            placeholder="Vdeg2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg3</label><input type="text" id="ei-Vdeg3"
+            placeholder="Vdeg3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg1</label><input type="text" id="ei-Adeg1"
+            placeholder="Adeg1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg2</label><input type="text" id="ei-Adeg2"
+            placeholder="Adeg2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg3</label><input type="text" id="ei-Adeg3"
+            placeholder="Adeg3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV1</label><input type="text" id="ei-THDV1"
+            placeholder="THDV1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV2</label><input type="text" id="ei-THDV2"
+            placeholder="THDV2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV3</label><input type="text" id="ei-THDV3"
+            placeholder="THDV3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA1</label><input type="text" id="ei-THDA1"
+            placeholder="THDA1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA2</label><input type="text" id="ei-THDA2"
+            placeholder="THDA2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA3</label><input type="text" id="ei-THDA3"
+            placeholder="THDA3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P</label><input type="text" id="ei-P"
+            placeholder="P"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q</label><input type="text" id="ei-Q"
+            placeholder="Q"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S</label><input type="text" id="ei-S"
+            placeholder="S"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF</label><input type="text" id="ei-PF"
+            placeholder="PF"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">freq</label><input type="text" id="ei-freq"
+            placeholder="freq"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">An</label><input type="text" id="ei-An"
+            placeholder="An"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V_unb</label><input type="text" id="ei-V_unb"
+            placeholder="V_unb"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A_unb</label><input type="text" id="ei-A_unb"
+            placeholder="A_unb"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:white; border-radius:4px;" />
+        </div>
+      </div>
+    </div>
+    <div class="charts-grid">
+
+    </div>
+
+    <div class="chart-card"
+      style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;text-align:center;">
+      <div style="display:none">
+        <input type="checkbox" id="ei-fluctuate">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button id="btn-edit-img-submit" onclick="submitEditImages()"
+          style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:white;padding:12px 28px;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:opacity 0.15s">
+          <div id="ei-spinner"
+            style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:white;animation:spin 0.8s linear infinite;display:none">
+          </div>
+          <span id="ei-btn-text">📸 Bắt đầu xử lý</span>
+        </button>
+        <button id="btn-edit-img-zip" onclick="downloadEditedZip()"
+          style="display:none; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px 20px; border-radius:12px; font-size:0.88rem; cursor:pointer;">
+          📦 Tải toàn bộ ZIP
+        </button>
+      </div>
+      <div id="ei-error" style="color:var(--danger);font-size:0.78rem;display:none"></div>
+    </div>
+  </div>
+
+  <div id="ei-results-container" style="display:none; margin-top: 2rem;">
+    <div class="section-header">Kết quả chỉnh sửa (Live Gallery)</div>
+    <div id="ei-gallery"
+      style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;"></div>
+  </div>
+  </div>
