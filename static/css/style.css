@@ -1,18 +1,42 @@
-:root {
-      --bg: #0b0a10;
-      --surface: #14131d;
-      --surface2: #1d1b2a;
-      --border: #2d2845;
-      --accent: #6d28d9;
-      --accent2: #ec4899;
-      --accent3: #10b981;
-      --accent4: #f59e0b;
-      --danger: #ef4444;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --grid: #1a1828;
-      --card-glow: rgba(109, 40, 217, 0.15);
-    }
+:root, [data-bs-theme="dark"] {
+  --bg: #0b0a10;
+  --surface: #14131d;
+  --surface2: #1d1b2a;
+  --border: #2d2845;
+  --accent: #6d28d9;
+  --accent2: #ec4899;
+  --accent3: #10b981;
+  --accent4: #f59e0b;
+  --danger: #ef4444;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --grid: #1a1828;
+  --card-glow: rgba(109, 40, 217, 0.15);
+  --header-bg: linear-gradient(135deg, #0d1b2e 0%, #162035 100%);
+  --upload-bg: rgba(15, 23, 42, 0.72);
+  --upload-card: linear-gradient(140deg, rgba(17, 24, 39, 0.94), rgba(26, 34, 53, 0.88));
+  --bs-theme-filter: invert(1) grayscale(1) brightness(2);
+}
+
+[data-bs-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --border: #e2e8f0;
+  --accent: #4f46e5;
+  --accent2: #db2777;
+  --accent3: #059669;
+  --accent4: #d97706;
+  --danger: #dc2626;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --grid: #f1f5f9;
+  --card-glow: rgba(79, 70, 229, 0.05);
+  --header-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --upload-bg: rgba(241, 245, 249, 0.82);
+  --upload-card: linear-gradient(140deg, #ffffff, #f1f5f9);
+  --bs-theme-filter: none;
+}
 
     *,
     *::before,
@@ -31,7 +55,10 @@
     }
 
     .app-sidebar {
+      background: var(--surface);
+      color: var(--text);
       backdrop-filter: blur(10px);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     }
 
     .tool-tabs {
@@ -70,7 +97,7 @@
 
     /* ── Header ── */
     header {
-      background: linear-gradient(135deg, #0d1b2e 0%, #162035 100%);
+      background: var(--header-bg);
       border-bottom: 1px solid var(--border);
       padding: 0 2rem;
       display: flex;
@@ -607,7 +634,7 @@
 
     .kew-upload-card {
       margin-bottom: 1.5rem;
-      background: linear-gradient(140deg, rgba(17, 24, 39, 0.94), rgba(26, 34, 53, 0.88));
+      background: var(--upload-card);
       border-color: rgba(59, 130, 246, 0.35);
       box-shadow: 0 20px 35px rgba(4, 10, 23, 0.45);
     }
@@ -636,7 +663,7 @@
       margin-top: 0.5rem;
       cursor: pointer;
       transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
-      background: rgba(15, 23, 42, 0.72);
+      background: var(--upload-bg);
       text-align: center;
     }
 

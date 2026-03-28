@@ -32,8 +32,39 @@ function switchTool(toolId) {
     localStorage.setItem('plt_active_tool', activeTool);
 }
 
+/* ── THEME SWITCHING ── */
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-bs-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    setTheme(newTheme);
+}
+
+function setTheme(theme) {
+    const html = document.documentElement;
+    html.setAttribute('data-bs-theme', theme);
+    localStorage.setItem('plt_theme', theme);
+    
+    // Update UI elements
+    const iconLight = document.getElementById('theme-icon-light');
+    const iconDark = document.getElementById('theme-icon-dark');
+    const themeText = document.getElementById('theme-text');
+    
+    if (theme === 'light') {
+        if(iconLight) iconLight.classList.add('d-none');
+        if(iconDark) iconDark.classList.remove('d-none');
+        if(themeText) themeText.innerText = 'Chế độ tối';
+    } else {
+        if(iconLight) iconLight.classList.remove('d-none');
+        if(iconDark) iconDark.classList.add('d-none');
+        if(themeText) themeText.innerText = 'Chế độ sáng';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    localStorage.removeItem('plt_theme');
+    const savedTheme = localStorage.getItem('plt_theme') || 'dark';
+    setTheme(savedTheme);
     const savedTool = localStorage.getItem('plt_active_tool') || 'kew';
     switchTool(savedTool);
 });
