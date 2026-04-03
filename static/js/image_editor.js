@@ -242,31 +242,28 @@ let EDITED_FILES = [];
 
     async function loadDigitTemplates() {
       if (_digitsLoaded) return;
+      // Tránh gọi nhiều lần song song
       if (_digitsLoading) return _digitsLoading;
 
       _digitsLoading = (async () => {
         try {
-          const resp = await fetch('/api/image/digits?t=' + Date.now());
+          const resp = await fetch('/api/image/digits');
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const data = await resp.json();
+          const data = await resp.json(); // { "0_w": "data:image/png;base64,...", ... }
 
           const loadPromises = Object.entries(data).map(([key, dataUrl]) =>
             new Promise(resolve => {
               const img = new Image();
               img.onload = () => { DIGIT_TEMPLATES[key] = img; resolve(); };
-              img.onerror = () => resolve();
+              img.onerror = () => resolve(); // bỏ qua nếu lỗi
               img.src = dataUrl;
             })
           );
 
           await Promise.all(loadPromises);
-          if (Object.keys(DIGIT_TEMPLATES).length === 0) {
-            throw new Error("Dữ liệu template rỗng từ server.");
-          }
           _digitsLoaded = true;
         } catch (err) {
           console.error('Không thể tải digit templates từ server:', err);
-          throw new Error('Lỗi tải font số: ' + err.message);
         } finally {
           _digitsLoading = null;
         }
@@ -279,6 +276,7 @@ let EDITED_FILES = [];
       const s = CHAR_MAP[char] || char;
       let key = `${s}_${color}`;
       if (DIGIT_TEMPLATES[key]) return DIGIT_TEMPLATES[key];
+      // Fallback
       key = `${s}_${color === 'w' ? 'g' : 'w'}`;
       return DIGIT_TEMPLATES[key] || null;
     }
@@ -286,41 +284,35 @@ let EDITED_FILES = [];
     async function processImageClientSide(file, screenIdx, params) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           const img = new Image();
           img.onload = async () => {
-            try {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
 
-              const templateSelect = document.getElementById('ei-template-select');
-              const meterModel = templateSelect ? templateSelect.value : 'kew6315';
-              
-              let sc;
-              if (meterModel === 'kew6315') {
-                  sc = SCREENS[screenIdx % 6] || SCREENS[0];
-              } else {
-                  sc = SCREENS[screenIdx % 6] || SCREENS[0];
-              }
-              
-              for (const overlay of sc.overlays) {
-                let val = params[overlay.id];
-                if (val === undefined && overlay.alias) val = params[overlay.alias];
-                if (val !== undefined && val !== null && val !== "") {
-                  await applyTextToCanvas(ctx, overlay, String(val));
-                }
-              }
-
-              canvas.toBlob(blob => {
-                 if (blob) resolve(blob);
-                 else reject(new Error('Lỗi xuất canvas ra dạng BMP.'));
-              }, 'image/bmp');
-            } catch (err) {
-              reject(err);
+            const templateSelect = document.getElementById('ei-template-select');
+            const meterModel = templateSelect ? templateSelect.value : 'kew6315';
+            
+            let sc;
+            if (meterModel === 'kew6315') {
+                sc = SCREENS[screenIdx % 6] || SCREENS[0];
+            } else {
+                // Placeholder cho các mẫu đồng hồ khác (Hioki, Chauvin). Tạm thời fallback về SCREENS.
+                sc = SCREENS[screenIdx % 6] || SCREENS[0];
             }
+            
+            for (const overlay of sc.overlays) {
+              let val = params[overlay.id];
+              if (val === undefined && overlay.alias) val = params[overlay.alias];
+              if (val !== undefined && val !== null && val !== "") {
+                await applyTextToCanvas(ctx, overlay, String(val));
+              }
+            }
+
+            canvas.toBlob(blob => resolve(blob), 'image/bmp');
           };
           img.onerror = reject;
           img.src = e.target.result;
@@ -341,12 +333,13 @@ let EDITED_FILES = [];
       const x_left = Math.max(0, x_right - w_clear + 1);
       const y_top = Math.max(0, y_bot - h_clear + 1);
 
-      // 1. Clear background (sample from top-left of clear area to avoid intersecting grids/text baselines)
-      const pixel = ctx.getImageData(x_left, y_top, 1, 1).data;
+      // 1. Clear background (sample from bottom-left of clear area)
+      const pixel = ctx.getImageData(x_left, y_bot, 1, 1).data;
       ctx.fillStyle = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
       ctx.fillRect(x_left, y_top, w_clear, h_clear);
 
       // 2. Draw text
+      // Chuẩn hoá dấu phẩy thành dấu chấm thập phân trước khi vẽ
       const normalizedText = text.replace(/,/g, '.');
       const chars = normalizedText.split('').reverse();
       let curr_x = x_right + 1;
