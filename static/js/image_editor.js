@@ -236,27 +236,40 @@ let EDITED_FILES = [];
     }
 
     const DIGIT_TEMPLATES = {};
-    const CHAR_MAP = { '.': 'dot', '-': 'minus', ':': 'colon' };
+    const CHAR_MAP = { '.': 'dot', '-': 'minus' };
+    let _digitsLoaded = false;
+    let _digitsLoading = null;
 
     async function loadDigitTemplates() {
-      const symbols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'dot', 'minus', 'colon'];
-      const colors = ['w', 'g'];
-      const promises = [];
+      if (_digitsLoaded) return;
+      // Tránh gọi nhiều lần song song
+      if (_digitsLoading) return _digitsLoading;
 
-      for (let s of symbols) {
-        for (let c of colors) {
-          const key = `${s}_${c}`;
-          promises.push((async () => {
-            const img = new Image();
-            img.src = `/static/digits/${s}${c}.bmp`;
-            await new Promise(r => { img.onload = r; img.onerror = r; });
-            if (img.complete && img.naturalWidth > 0) {
-              DIGIT_TEMPLATES[key] = img;
-            }
-          })());
+      _digitsLoading = (async () => {
+        try {
+          const resp = await fetch('/api/image/digits');
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json(); // { "0_w": "data:image/png;base64,...", ... }
+
+          const loadPromises = Object.entries(data).map(([key, dataUrl]) =>
+            new Promise(resolve => {
+              const img = new Image();
+              img.onload = () => { DIGIT_TEMPLATES[key] = img; resolve(); };
+              img.onerror = () => resolve(); // bỏ qua nếu lỗi
+              img.src = dataUrl;
+            })
+          );
+
+          await Promise.all(loadPromises);
+          _digitsLoaded = true;
+        } catch (err) {
+          console.error('Không thể tải digit templates từ server:', err);
+        } finally {
+          _digitsLoading = null;
         }
-      }
-      await Promise.all(promises);
+      })();
+
+      return _digitsLoading;
     }
 
     function getDigitImg(char, color) {
