@@ -1,8 +1,8 @@
 async function runSynopexReport() {
   const zipInput = document.getElementById('synopex-zip');
-  const outputNameInput = document.getElementById('synopex-output-name');
   const statusEl = document.getElementById('synopex-status');
   const errorEl = document.getElementById('synopex-error');
+  const downloadEl = document.getElementById('synopex-download');
   const btn = document.getElementById('btn-synopex-generate');
   const spinner = document.getElementById('synopex-spinner');
   const btnText = document.getElementById('synopex-btn-text');
@@ -11,6 +11,7 @@ async function runSynopexReport() {
 
   errorEl.style.display = 'none';
   errorEl.textContent = '';
+  if (downloadEl) downloadEl.style.display = 'none';
 
   if (!zipFile) {
     errorEl.textContent = 'Vui lòng chọn file ZIP dữ liệu.';
@@ -20,7 +21,6 @@ async function runSynopexReport() {
 
   const formData = new FormData();
   formData.append('data_zip', zipFile);
-  formData.append('output_name', (outputNameInput?.value || '').trim());
 
   statusEl.textContent = `Đang xử lý ${zipFile.name}...`;
   btn.disabled = true;
@@ -38,24 +38,25 @@ async function runSynopexReport() {
       try {
         const data = await response.json();
         if (data?.error) message = data.error;
-      } catch (e) {
-        // ignore
-      }
+      } catch (_) { /* ignore */ }
       throw new Error(message);
     }
 
     const blob = await response.blob();
-    const filenameHeader = response.headers.get('Content-Disposition') || '';
-    const match = filenameHeader.match(/filename="?([^"]+)"?/i);
-    const filename = match?.[1] || ((outputNameInput?.value || '').trim() || 'KEW_Synopex_Report.docx');
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    const header = response.headers.get('Content-Disposition') || '';
+    const match = header.match(/filename="?([^"]+)"?/i);
+    const filename = match?.[1] || 'KEW_Synopex_Report.docx';
+
+    if (downloadEl) {
+      const oldUrl = downloadEl.getAttribute('href');
+      if (oldUrl && oldUrl !== '#') URL.revokeObjectURL(oldUrl);
+
+      const url = URL.createObjectURL(blob);
+      downloadEl.href = url;
+      downloadEl.download = filename;
+      downloadEl.style.display = 'inline-block';
+    }
+
     statusEl.textContent = `Đã tạo xong báo cáo: ${filename}`;
   } catch (error) {
     errorEl.textContent = error.message || 'Không thể tạo báo cáo.';
@@ -74,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   zipInput.addEventListener('change', () => {
     const statusEl = document.getElementById('synopex-status');
+    const downloadEl = document.getElementById('synopex-download');
+    if (downloadEl) downloadEl.style.display = 'none';
     if (zipInput.files?.[0] && statusEl) {
       statusEl.textContent = `Đã chọn ZIP: ${zipInput.files[0].name}`;
     }
