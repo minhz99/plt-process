@@ -109,14 +109,33 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
       const tsHH   = (document.getElementById('ei-ts-hh')  ?.value || '').trim();
       const tsMi   = (document.getElementById('ei-ts-mi')  ?.value || '').trim();
       const tsSS   = (document.getElementById('ei-ts-ss')  ?.value || '').trim();
-      const hasTimestamp = tsDD || tsMo || tsYYYY || tsHH || tsMi || tsSS;
-      const timestamp = hasTimestamp
-        ? `${(tsDD  ||'00').padStart(2,'0')}/${(tsMo  ||'00').padStart(2,'0')}/${(tsYYYY||'0000').padStart(4,'0')} ${(tsHH||'00').padStart(2,'0')}:${(tsMi||'00').padStart(2,'0')}:${(tsSS||'00').padStart(2,'0')}`
-        : null;
+      const hasTimestamp = Boolean(tsDD || tsMo || tsYYYY || tsHH || tsMi || tsSS);
+      let timestampsForFiles = [];
+      try {
+        timestampsForFiles = buildTimestampPlan({
+          hasTimestamp,
+          tsDD,
+          tsMo,
+          tsYYYY,
+          tsHH,
+          tsMi,
+          tsSS,
+          fileCount: selectedFiles.length
+        });
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        btnSubmit.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = '📸 Tiếp tục xử lý';
+        return;
+      }
 
-      for (let item of selectedFiles) {
+      for (let order = 0; order < selectedFiles.length; order++) {
+        const item = selectedFiles[order];
         const file = item.file;
         const i = item.idx;
+        const imageTimestamp = timestampsForFiles[order];
         const card = document.createElement('div');
         card.className = 'chart-card';
         card.style.padding = '10px';
@@ -134,13 +153,13 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
           let blob = await processImageServerSide(file, i, parameters, meterModel);
 
           // Bước 2: áp dụng timestamp (nếu có điền)
-          if (timestamp) {
-            blob = await applyTimestampServerSide(blob, timestamp);
+          if (imageTimestamp) {
+            blob = await applyTimestampServerSide(blob, imageTimestamp);
           }
 
           const url = URL.createObjectURL(blob);
-          const tsLabel = timestamp
-            ? `<div style="font-size:0.63rem; color:var(--text-muted); margin-top:3px; text-align:center;">⏱ ${timestamp}</div>`
+          const tsLabel = imageTimestamp
+            ? `<div style="font-size:0.63rem; color:var(--text-muted); margin-top:3px; text-align:center;">⏱ ${imageTimestamp}</div>`
             : '';
 
           card.innerHTML = `
@@ -279,3 +298,120 @@ function fillTimestampFromPicker(val) {
     document.getElementById('ei-ts-hh').value   = hh;
     document.getElementById('ei-ts-mi').value   = mi || '00';
 }
+
+function toggleTimestampRandomRange(enabled) {
+    const minInput = document.getElementById('ei-ts-step-min');
+    const maxInput = document.getElementById('ei-ts-step-max');
+    if (!minInput || !maxInput) return;
+    minInput.disabled = !enabled;
+    maxInput.disabled = !enabled;
+}
+
+function buildTimestampPlan(opts) {
+    const { hasTimestamp, tsDD, tsMo, tsYYYY, tsHH, tsMi, tsSS, fileCount } = opts;
+    if (!hasTimestamp) {
+        return Array(fileCount).fill(null);
+    }
+
+    const baseTimestamp = formatTimestampString(tsDD, tsMo, tsYYYY, tsHH, tsMi, tsSS);
+    if (fileCount <= 1) {
+        return [baseTimestamp];
+    }
+
+    const randomEnabled = document.getElementById('ei-ts-random-enabled')?.checked;
+    const fixedStep = parseNonNegativeInt(
+        document.getElementById('ei-ts-step-fixed')?.value || '',
+        'n (giây)',
+        true
+    );
+
+    if (!randomEnabled && fixedStep === 0) {
+        return Array(fileCount).fill(baseTimestamp);
+    }
+
+    let minStep = fixedStep;
+    let maxStep = fixedStep;
+    if (randomEnabled) {
+        minStep = parseNonNegativeInt(
+            document.getElementById('ei-ts-step-min')?.value || '',
+            'm (giây)',
+            false
+        );
+        maxStep = parseNonNegativeInt(
+            document.getElementById('ei-ts-step-max')?.value || '',
+            'n (giây)',
+            false
+        );
+        if (maxStep < minStep) {
+            throw new Error('Khoảng ngẫu nhiên không hợp lệ: n phải lớn hơn hoặc bằng m.');
+        }
+    }
+
+    const baseDate = parseStrictTimestampDate(tsDD, tsMo, tsYYYY, tsHH, tsMi, tsSS);
+    if (!baseDate) {
+        throw new Error('Để cộng thời gian giữa các ảnh, vui lòng nhập đầy đủ ngày/tháng/năm giờ:phút:giây hợp lệ.');
+    }
+
+    const planned = [baseTimestamp];
+    let current = new Date(baseDate.getTime());
+    for (let i = 1; i < fileCount; i++) {
+        const delta = randomEnabled ? randomIntInclusive(minStep, maxStep) : fixedStep;
+        current = new Date(current.getTime() + (delta * 1000));
+        planned.push(formatTimestampFromDate(current));
+    }
+
+    return planned;
+}
+
+function parseNonNegativeInt(rawValue, label, allowEmpty) {
+    const raw = String(rawValue || '').trim();
+    if (raw === '') {
+        if (allowEmpty) return 0;
+        throw new Error(`Vui lòng nhập ${label}.`);
+    }
+    if (!/^\d+$/.test(raw)) {
+        throw new Error(`${label} phải là số nguyên không âm.`);
+    }
+    return parseInt(raw, 10);
+}
+
+function parseStrictTimestampDate(dd, mo, yyyy, hh, mi, ss) {
+    const parts = [dd, mo, yyyy, hh, mi, ss].map(v => String(v || '').trim());
+    if (!parts.every(v => /^\d+$/.test(v))) {
+        return null;
+    }
+
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    const hour = parseInt(parts[3], 10);
+    const minute = parseInt(parts[4], 10);
+    const second = parseInt(parts[5], 10);
+
+    if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return null;
+
+    const d = new Date(year, month - 1, day, hour, minute, second, 0);
+    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+    return d;
+}
+
+function formatTimestampString(dd, mo, yyyy, hh, mi, ss) {
+    return `${String(dd || '00').padStart(2, '0')}/${String(mo || '00').padStart(2, '0')}/${String(yyyy || '0000').padStart(4, '0')} ${String(hh || '00').padStart(2, '0')}:${String(mi || '00').padStart(2, '0')}:${String(ss || '00').padStart(2, '0')}`;
+}
+
+function formatTimestampFromDate(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function randomIntInclusive(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+(function initTimestampDelayInputs() {
+    const randomEnabled = document.getElementById('ei-ts-random-enabled');
+    if (randomEnabled) {
+        toggleTimestampRandomRange(randomEnabled.checked);
+    }
+})();
