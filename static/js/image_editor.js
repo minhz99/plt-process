@@ -18,7 +18,6 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
         const fileObj = { id, file, url };
         PENDING_FILES.push(fileObj);
 
-        // Create preview element
         const el = document.createElement('div');
         el.className = 'ei-pending-preview';
         el.id = id;
@@ -39,10 +38,8 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
       const fileObj = PENDING_FILES.find(f => f.id === fileId);
       if (!fileObj) return;
 
-      // Update mapping
       SLOT_MAPPING[slotIdx] = fileObj;
 
-      // Visual update
       const slot = document.querySelectorAll('.ei-slot')[slotIdx];
       const content = slot.querySelector('.ei-slot-content');
       content.innerHTML = `
@@ -87,20 +84,35 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
       gallery.innerHTML = '';
       resultsContainer.style.display = 'block';
       btnSubmit.disabled = true;
+      btnZip.style.display = 'none';
       spinner.style.display = 'inline-block';
       btnText.textContent = 'Đang xử lý...';
       EDITED_FILES = [];
 
+      // Thu thập thông số đo
       const parameters = {};
-      const fields = ['V1', 'V2', 'V3', 'A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3', 'S1', 'S2', 'S3', 'PF1', 'PF2', 'PF3', 'Vdeg1', 'Vdeg2', 'Vdeg3', 'Adeg1', 'Adeg2', 'Adeg3', 'THDV1', 'THDV2', 'THDV3', 'THDA1', 'THDA2', 'THDA3', 'P', 'Q', 'S', 'PF', 'freq', 'An', 'V_unb', 'A_unb'];
-
+      const fields = ['V1', 'V2', 'V3', 'A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3',
+                      'S1', 'S2', 'S3', 'PF1', 'PF2', 'PF3', 'Vdeg1', 'Vdeg2', 'Vdeg3',
+                      'Adeg1', 'Adeg2', 'Adeg3', 'THDV1', 'THDV2', 'THDV3',
+                      'THDA1', 'THDA2', 'THDA3', 'P', 'Q', 'S', 'PF', 'freq', 'An', 'V_unb', 'A_unb'];
       fields.forEach(f => {
         const el = document.getElementById('ei-' + f);
         if (el && el.value && el.value.trim() !== "") {
-          // Chuẩn hoá: dấu phẩy thập phân -> dấu chấm
           parameters[f] = el.value.trim().replace(/,/g, '.');
         }
       });
+
+      // Thu thập thời gian (nếu có điền bất kỳ trường nào)
+      const tsDD   = (document.getElementById('ei-ts-dd')  ?.value || '').trim();
+      const tsMo   = (document.getElementById('ei-ts-mo')  ?.value || '').trim();
+      const tsYYYY = (document.getElementById('ei-ts-yyyy')?.value || '').trim();
+      const tsHH   = (document.getElementById('ei-ts-hh')  ?.value || '').trim();
+      const tsMi   = (document.getElementById('ei-ts-mi')  ?.value || '').trim();
+      const tsSS   = (document.getElementById('ei-ts-ss')  ?.value || '').trim();
+      const hasTimestamp = tsDD || tsMo || tsYYYY || tsHH || tsMi || tsSS;
+      const timestamp = hasTimestamp
+        ? `${(tsDD  ||'00').padStart(2,'0')}/${(tsMo  ||'00').padStart(2,'0')}/${(tsYYYY||'0000').padStart(4,'0')} ${(tsHH||'00').padStart(2,'0')}:${(tsMi||'00').padStart(2,'0')}:${(tsSS||'00').padStart(2,'0')}`
+        : null;
 
       for (let item of selectedFiles) {
         const file = item.file;
@@ -116,12 +128,20 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         try {
-          // Server processing
+          // Bước 1: xử lý thông số đo
           const templateSelect = document.getElementById('ei-template-select');
           const meterModel = templateSelect ? templateSelect.value : 'kew6315';
-          const blob = await processImageServerSide(file, i, parameters, meterModel);
-          const url = URL.createObjectURL(blob);
+          let blob = await processImageServerSide(file, i, parameters, meterModel);
 
+          // Bước 2: áp dụng timestamp (nếu có điền)
+          if (timestamp) {
+            blob = await applyTimestampServerSide(blob, timestamp);
+          }
+
+          const url = URL.createObjectURL(blob);
+          const tsLabel = timestamp
+            ? `<div style="font-size:0.63rem; color:var(--text-muted); margin-top:3px; text-align:center;">⏱ ${timestamp}</div>`
+            : '';
 
           card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
@@ -129,6 +149,7 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
           <a href="${url}" download="Edited_${file.name}" style="font-size:0.7rem; color:var(--accent); text-decoration:none;">Lưu ⬇️</a>
         </div>
         <img src="${url}" style="width:100%; border-radius:4px; cursor:pointer;" onclick="window.open('${url}')" />
+        ${tsLabel}
       `;
           EDITED_FILES.push({ blob, name: file.name });
         } catch (err) {
@@ -139,10 +160,10 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
       btnSubmit.disabled = false;
       spinner.style.display = 'none';
       btnText.textContent = '📸 Tiếp tục xử lý';
-      if (EDITED_FILES.length > 0) btnZip.style.display = 'block';
+      btnZip.style.display = EDITED_FILES.length > 0 ? 'block' : 'none';
     }
 
-    function downloadEditedZip() {
+    async function downloadEditedZip() {
       if (EDITED_FILES.length === 0) return;
       const btn = document.getElementById('btn-edit-img-zip');
       const originalText = btn.innerHTML;
@@ -154,15 +175,30 @@ let SLOT_MAPPING = [null, null, null, null, null, null]; // slot index → PENDI
         zip.file('Edited_' + item.name, item.blob);
       });
 
-      zip.generateAsync({ type: "blob" }).then(function (content) {
+      try {
+        const content = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(content);
-        const a = document.createElement('a'); a.href = url; a.download = 'Edited_Meter_Images.zip';
-        document.body.appendChild(a); a.click(); a.remove();
-        btn.disabled = false; btn.innerHTML = originalText;
-      });
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Edited_Meter_Images.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        const errorEl = document.getElementById('ei-error');
+        errorEl.textContent = `Không thể tạo ZIP: ${err.message}`;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     }
 
 
+// ════════════════════════════════════════════════════════════════════
+//  API HELPERS
+// ════════════════════════════════════════════════════════════════════
 
 async function processImageServerSide(file, screenIdx, params, meterModel) {
     const formData = new FormData();
@@ -181,11 +217,65 @@ async function processImageServerSide(file, screenIdx, params, meterModel) {
         try {
             const errData = await response.json();
             if (errData && errData.error) errMsg = errData.error;
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) { /* ignore */ }
         throw new Error(errMsg);
     }
 
     return await response.blob();
+}
+
+/** Gửi blob (đã xử lý thông số) lên server để dán chữ số thời gian */
+async function applyTimestampServerSide(blobOrFile, timestamp) {
+    const formData = new FormData();
+    const fname = blobOrFile instanceof File ? blobOrFile.name : 'edited.bmp';
+    formData.append('file', blobOrFile, fname);
+    formData.append('timestamp', timestamp);
+
+    const response = await fetch('/api/image/apply-timestamp', {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        let errMsg = `Lỗi HTTP ${response.status} (timestamp)`;
+        try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg = errData.error;
+        } catch (_) {}
+        throw new Error(errMsg);
+    }
+    return await response.blob();
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  TIMESTAMP UI HELPERS
+// ════════════════════════════════════════════════════════════════════
+
+/** Điền thời gian hiện tại vào các ô nhập */
+function fillTimestampNow() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('ei-ts-dd').value   = pad(now.getDate());
+    document.getElementById('ei-ts-mo').value   = pad(now.getMonth() + 1);
+    document.getElementById('ei-ts-yyyy').value = now.getFullYear();
+    document.getElementById('ei-ts-hh').value   = pad(now.getHours());
+    document.getElementById('ei-ts-mi').value   = pad(now.getMinutes());
+    document.getElementById('ei-ts-ss').value   = pad(now.getSeconds());
+    // Cập nhật picker
+    const pv = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('ei-ts-picker').value = pv;
+}
+
+/** Đồng bộ từ datetime-local picker vào các ô riêng */
+function fillTimestampFromPicker(val) {
+    if (!val) return;
+    const [datePart, timePart] = val.split('T');
+    const [yyyy, mo, dd] = datePart.split('-');
+    const [hh, mi]       = timePart.split(':');
+    document.getElementById('ei-ts-dd').value   = dd;
+    document.getElementById('ei-ts-mo').value   = mo;
+    document.getElementById('ei-ts-yyyy').value = yyyy;
+    document.getElementById('ei-ts-hh').value   = hh;
+    document.getElementById('ei-ts-mi').value   = mi || '00';
 }

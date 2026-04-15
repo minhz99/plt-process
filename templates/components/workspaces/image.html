@@ -73,7 +73,7 @@
     </div>
 
     <div class="chart-card" style="margin-bottom: 1.5rem;">
-      <h3>Thông số cấu hình</h3>
+      <h3>Thông số cấu hình & thời gian</h3>
       <div
         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px;">
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V1</label><input type="text" id="ei-V1"
@@ -229,16 +229,77 @@
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
       </div>
+
+      <div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border);">
+        <h4 style="font-size:0.92rem; margin:0 0 0.5rem 0;">⏱️ Chỉnh sửa Thời gian</h4>
+        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem;">
+          Dán chữ số thời gian (<code>dd/mm/yyyy hh:mm:ss</code>) vào ảnh theo toạ độ định sẵn.
+          Để trống phần nào sẽ bỏ qua phần đó.
+        </p>
+
+        <!-- Quick datetime picker -->
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:1rem;">
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Chọn nhanh</label>
+            <input type="datetime-local" id="ei-ts-picker"
+              style="display:block; padding:6px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.85rem;"
+              oninput="fillTimestampFromPicker(this.value)" />
+          </div>
+          <button onclick="fillTimestampNow()"
+            style="margin-top:18px; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:6px 14px; border-radius:6px; font-size:0.78rem; cursor:pointer;">
+            🕛 Bây giờ
+          </button>
+        </div>
+
+        <!-- Individual digit fields -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom:1rem;">
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Ngày (dd)</label>
+            <input type="text" id="ei-ts-dd" maxlength="2" placeholder="dd"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Tháng (mm)</label>
+            <input type="text" id="ei-ts-mo" maxlength="2" placeholder="mm"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Năm (yyyy)</label>
+            <input type="text" id="ei-ts-yyyy" maxlength="4" placeholder="yyyy"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Giờ (hh)</label>
+            <input type="text" id="ei-ts-hh" maxlength="2" placeholder="hh"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Phút (mm)</label>
+            <input type="text" id="ei-ts-mi" maxlength="2" placeholder="mm"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted)">Giây (ss)</label>
+            <input type="text" id="ei-ts-ss" maxlength="2" placeholder="ss"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:1rem; letter-spacing:2px;" />
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- ══ Submit ══════════════════════════════════════════════════ -->
     <div class="chart-card"
       style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;text-align:center;">
+      <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">
+        Nếu có nhập thời gian ở trên, thời gian sẽ tự động được áp dụng sau khi xử lý thông số.
+      </p>
       <div style="display:flex; gap:10px;">
         <button id="btn-edit-img-submit" onclick="submitEditImages()"
           style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:white;padding:12px 28px;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:opacity 0.15s">
           <div id="ei-spinner"
             style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:white;animation:spin 0.8s linear infinite;display:none">
           </div>
-          <span id="ei-btn-text">📸 Bắt đầu xử lý</span>
+          <span id="ei-btn-text">📸 Tiếp tục xử lý</span>
         </button>
         <button id="btn-edit-img-zip" onclick="downloadEditedZip()"
           style="display:none; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px 20px; border-radius:12px; font-size:0.88rem; cursor:pointer;">
@@ -254,4 +315,5 @@
     <div id="ei-gallery"
       style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;"></div>
   </div>
+
 </div>

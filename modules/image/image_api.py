@@ -1,5 +1,4 @@
 import os
-import base64
 import io
 import json
 from flask import Blueprint, jsonify, current_app, request, send_file
@@ -7,6 +6,21 @@ from PIL import Image, ImageDraw
 from modules.image.kew6315_layout import SCREENS
 
 image_bp = Blueprint('image_bp', __name__)
+
+# ── Toạ độ dán chữ số thời gian ────────────────────────────────────────────────
+# Mỗi chữ số PNG 6×9 px; các số được dán từ trái sang phải từ điểm (x, y).
+TIME_FIELDS = {
+    # Ngày
+    'dd': {'x': 258, 'y': 1},
+    'mo': {'x': 276, 'y': 1},  # tháng (mm)
+    'yyyy': {'x': 294, 'y': 1},
+    # Giờ
+    'hh': {'x': 264, 'y': 11},
+    'mi': {'x': 282, 'y': 11},  # phút (mm)
+    'ss': {'x': 300, 'y': 11},
+}
+DIGIT_W = 6
+DIGIT_H = 9
 
 @image_bp.route('/templates', methods=['GET'])
 def get_templates():
@@ -18,34 +32,6 @@ def get_templates():
         {"id": "chauvin", "name": "Chauvin Arnoux C.A 8336"}
     ]
     return jsonify(templates)
-
-
-@image_bp.route('/digits', methods=['GET'])
-def get_digits():
-    """Trả về toàn bộ digit templates dạng base64 PNG để client-side dùng cho canvas."""
-    digits_dir = os.path.join(current_app.static_folder, 'digits')
-    result = {}
-
-    symbols = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'dot', 'minus']
-    colors = ['w', 'g']
-
-    for s in symbols:
-        for c in colors:
-            filename = f"{s}{c}.bmp"
-            filepath = os.path.join(digits_dir, filename)
-            if not os.path.exists(filepath):
-                continue
-            try:
-                img = Image.open(filepath).convert('RGBA')
-                buf = io.BytesIO()
-                img.save(buf, format='PNG')
-                b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-                key = f"{s}_{c}"
-                result[key] = f"data:image/png;base64,{b64}"
-            except Exception as e:
-                current_app.logger.warning(f"Không thể đọc digit {filename}: {e}")
-
-    return jsonify(result)
 
 CHAR_MAP = {'.': 'dot', '-': 'minus'}
 _DIGIT_TEMPLATES = {}
@@ -110,6 +96,19 @@ def apply_text_to_image(img, img_draw, config, text, digits_dir):
         else:
             curr_x -= 6
 
+def _safe_screen(idx):
+    if not SCREENS:
+        return {'overlays': []}
+    return SCREENS[idx % len(SCREENS)]
+
+
+def _build_bmp_name(prefix, filename):
+    fname = filename or 'edited.bmp'
+    if not fname.lower().endswith('.bmp'):
+        fname += '.bmp'
+    return f"{prefix}_{fname}"
+
+
 @image_bp.route('/process', methods=['POST'])
 def process_image():
     if 'file' not in request.files:
@@ -123,18 +122,18 @@ def process_image():
     try:
         screen_idx = int(screen_idx_str)
         params = json.loads(params_str)
-    except:
+    except (ValueError, json.JSONDecodeError):
         return jsonify({"error": "Invalid screen_idx or parameters"}), 400
         
     try:
         original_img = Image.open(file).convert("RGB")
-    except Exception as e:
+    except Exception:
         return jsonify({"error": "Invalid image file"}), 400
         
-    if meter_model == 'kew6315':
-        sc = SCREENS[screen_idx % 6] if (screen_idx % 6) < len(SCREENS) else SCREENS[0]
-    else:
-        sc = SCREENS[screen_idx % 6] if (screen_idx % 6) < len(SCREENS) else SCREENS[0]
+    if meter_model != 'kew6315':
+        current_app.logger.info("meterModel=%s chưa hỗ trợ riêng, dùng layout kew6315", meter_model)
+
+    sc = _safe_screen(screen_idx)
         
     digits_dir = os.path.join(current_app.static_folder, 'digits')
     img_draw = ImageDraw.Draw(original_img)
@@ -151,9 +150,117 @@ def process_image():
     original_img.save(buf, format='BMP')
     buf.seek(0)
     
-    # Sửa filename (nếu có .bmp thì xoá hoặc đổi thành Edit_)
-    fname = getattr(file, 'filename', 'edited.bmp')
-    if not fname.lower().endswith('.bmp'):
-        fname += '.bmp'
-        
-    return send_file(buf, mimetype='image/bmp', as_attachment=True, download_name=f"Edited_{fname}")
+    return send_file(
+        buf,
+        mimetype='image/bmp',
+        as_attachment=True,
+        download_name=_build_bmp_name("Edited", getattr(file, 'filename', 'edited.bmp')),
+    )
+
+
+# ── Bộ cache ảnh chữ số thời gian ─────────────────────────────────────────────
+_TIME_DIGIT_CACHE = {}
+
+def _get_time_digit(digit_char, time_digits_dir):
+    """Trả về RGBA PIL Image cho chữ số 0-9 từ thư mục time-digits."""
+    if digit_char in _TIME_DIGIT_CACHE:
+        return _TIME_DIGIT_CACHE[digit_char]
+    path = os.path.join(time_digits_dir, f"{digit_char}.png")
+    if not os.path.exists(path):
+        return None
+    img = Image.open(path).convert('RGBA')
+    _TIME_DIGIT_CACHE[digit_char] = img
+    return img
+
+
+def _paste_digits_in_field(target_img, digits_str, field_cfg, time_digits_dir):
+    """Dán từng chữ số 6×9 vào field_cfg từ trái sang phải."""
+    x_cursor = field_cfg['x']
+    y_top = field_cfg['y']
+    for ch in digits_str:
+        if not ch.isdigit():
+            continue
+        d_img = _get_time_digit(ch, time_digits_dir)
+        if d_img is None:
+            x_cursor += DIGIT_W
+            continue
+        # Resize nếu kích thước khác 6×9 (dự phòng)
+        if d_img.width != DIGIT_W or d_img.height != DIGIT_H:
+            d_img = d_img.resize((DIGIT_W, DIGIT_H), Image.NEAREST)
+        mask = d_img.split()[3]
+        target_img.paste(d_img, (x_cursor, y_top), mask)
+        x_cursor += DIGIT_W
+
+
+def _parse_timestamp_values(form):
+    timestamp = form.get('timestamp', '').strip()
+    if timestamp:
+        try:
+            date_part, time_part = timestamp.split(' ', 1)
+            dd_s, mo_s, yyyy_s = date_part.split('/')
+            hh_s, mi_s, ss_s = time_part.split(':')
+        except ValueError as exc:
+            raise ValueError('Định dạng timestamp phải là dd/mm/yyyy hh:mm:ss') from exc
+    else:
+        dd_s = form.get('dd', '')
+        mo_s = form.get('mo', '')
+        yyyy_s = form.get('yyyy', '')
+        hh_s = form.get('hh', '')
+        mi_s = form.get('mi', '')
+        ss_s = form.get('ss', '')
+
+    return {
+        'dd': dd_s.zfill(2),
+        'mo': mo_s.zfill(2),
+        'yyyy': yyyy_s.zfill(4),
+        'hh': hh_s.zfill(2),
+        'mi': mi_s.zfill(2),
+        'ss': ss_s.zfill(2),
+    }
+
+
+@image_bp.route('/apply-timestamp', methods=['POST'])
+def apply_timestamp():
+    """Dán chữ số thời gian (dd/mm/yyyy hh:mm:ss) vào ảnh BMP.
+
+    Form fields:
+        file       – ảnh BMP gốc
+        timestamp  – chuỗi có dạng 'dd/mm/yyyy hh:mm:ss'
+                     (có thể truyền riêng từng phần qua dd, mo, yyyy, hh, mi, ss)
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    try:
+        original_img = Image.open(file).convert('RGB')
+    except Exception:
+        return jsonify({'error': 'Invalid image file'}), 400
+
+    try:
+        values = _parse_timestamp_values(request.form)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+    time_digits_dir = os.path.join(current_app.static_folder, 'time-digits')
+    if not os.path.isdir(time_digits_dir):
+        return jsonify({'error': 'Thiếu thư mục static/time-digits trên server'}), 500
+
+    rgba_img = original_img.convert('RGBA')
+
+    for field_key, field_cfg in TIME_FIELDS.items():
+        val = values.get(field_key, '')
+        if val:
+            _paste_digits_in_field(rgba_img, val, field_cfg, time_digits_dir)
+
+    out_img = rgba_img.convert('RGB')
+    buf = io.BytesIO()
+    out_img.save(buf, format='BMP')
+    buf.seek(0)
+
+    return send_file(
+        buf,
+        mimetype='image/bmp',
+        as_attachment=True,
+        download_name=_build_bmp_name("TS", getattr(file, 'filename', 'edited.bmp')),
+    )

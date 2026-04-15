@@ -11,7 +11,7 @@ Công cụ phân tích dữ liệu điện năng từ máy đo Kyoritsu (file `.
 
 ## 2. 📸 Xử lý ảnh đo (Image Editor)
 Công cụ chỉnh sửa thông số hiển thị trên ảnh chụp màn hình máy đo (file `.BMP`).
-- Thay thế chỉ số (Pixel Replacement) trực tiếp trên trình duyệt bằng HTML5 Canvas.
+- Thay thế chỉ số (Pixel Replacement) và dán thời gian theo toạ độ bằng xử lý server-side cho ảnh `.BMP`.
 - Hỗ trợ nhiều mẫu đồng hồ (Template) khác nhau như Kyoritsu KEW 6315, 6305, Hioki...
 - Xử lý hàng loạt và đóng gói file ZIP sau khi sửa.
 
