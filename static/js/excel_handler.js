@@ -58,7 +58,7 @@ function fill_excel(ws, pairs, row) {
     mapping.forEach(m => {
         const addr = m.col + row;
         if (!ws[addr]) ws[addr] = { t: 'n' };
-        ws[addr].v = typeof m.val === 'string' ? to_number(m.val.replace(/\./g, '').replace(/,/g, '.')) : m.val;
+        ws[addr].v = typeof m.val === 'string' ? to_number(m.val) : m.val;
     });
 }
 
@@ -128,7 +128,7 @@ async function uploadFile() {
 // CLIENT-SIDE Download File
 function downloadFile() {
     if (!workbook) return;
-    XLSX.writeFile(workbook, `KetQua_Excel_${new Date().getTime()}.xlsx`);
+    XLSX.writeFile(workbook, currentFilename || `KetQua_Excel_${new Date().getTime()}.xlsx`);
 }
 
 // Kéo thả file vào màn hình để upload
