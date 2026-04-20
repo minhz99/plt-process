@@ -5,6 +5,8 @@ let workbook = null; // Store active workbook object
 let sourceExcelFile = null; // Keep original uploaded file for server-side export
 const pendingUpdateMap = new Map(); // key: `${sheet}::${address}` -> {sheet, address, value}
 let currentFilename = "";
+const DEFAULT_TEMPLATE_URL = "/static/excel-template/excel-so-dien.xlsx";
+const DEFAULT_TEMPLATE_NAME = "excel-so-dien.xlsx";
 
 // Helper functions from Python logic
 function to_number(val) {
@@ -146,37 +148,59 @@ async function uploadFile() {
         return;
     }
 
-    const file = fileInput.files[0];
+    await loadWorkbookFromFile(fileInput.files[0], { isTemplate: false });
+    fileInput.value = '';
+}
+
+async function loadWorkbookFromFile(file, { isTemplate = false } = {}) {
     sourceExcelFile = file;
-    currentFilename = file.name;
+    currentFilename = file.name || DEFAULT_TEMPLATE_NAME;
     resetSessionEdits();
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const data = new Uint8Array(e.target.result);
-        workbook = XLSX.read(data, { type: 'array' });
+    const buffer = await file.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    workbook = XLSX.read(data, { type: 'array' });
 
-        // Update UI
-        document.getElementById('data_entry_section').style.opacity = '1';
-        document.getElementById('data_entry_section').style.pointerEvents = 'auto';
-        document.getElementById('active_file_display').style.display = 'flex';
+    // Update UI
+    document.getElementById('data_entry_section').style.opacity = '1';
+    document.getElementById('data_entry_section').style.pointerEvents = 'auto';
+    document.getElementById('active_file_display').style.display = 'flex';
 
-        const selectEl = document.getElementById('active_filename');
-        selectEl.innerHTML = `<option value="${currentFilename}">${currentFilename}</option>`;
+    const selectEl = document.getElementById('active_filename');
+    const displayName = isTemplate ? `${currentFilename} (mặc định)` : currentFilename;
+    selectEl.innerHTML = `<option value="${currentFilename}">${displayName}</option>`;
 
-        document.getElementById('btn_download').style.display = 'block';
-        fileInput.value = '';
-        showMessage(`Đã tải file ${currentFilename} thành công!`);
-    };
-    reader.readAsArrayBuffer(file);
+    document.getElementById('btn_download').style.display = 'block';
+    showMessage(isTemplate
+        ? `Đã nạp file mẫu mặc định ${currentFilename}.`
+        : `Đã tải file ${currentFilename} thành công!`);
+}
+
+async function ensureWorkbookLoaded() {
+    if (workbook && sourceExcelFile) return true;
+
+    try {
+        const response = await fetch(DEFAULT_TEMPLATE_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error("Không tìm thấy file mẫu mặc định trên server.");
+
+        const blob = await response.blob();
+        const templateFile = new File(
+            [blob],
+            DEFAULT_TEMPLATE_NAME,
+            { type: blob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+        );
+        await loadWorkbookFromFile(templateFile, { isTemplate: true });
+        return true;
+    } catch (error) {
+        showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
+        return false;
+    }
 }
 
 // SERVER-SIDE Download File (preserve workbook formatting)
 async function downloadFile() {
-    if (!sourceExcelFile) {
-        showMessage("Vui lòng tải file Excel lên trước.", true);
-        return;
-    }
+    const ready = await ensureWorkbookLoaded();
+    if (!ready || !sourceExcelFile) return;
 
     const updates = Array.from(pendingUpdateMap.values());
     if (updates.length === 0) {
@@ -311,10 +335,8 @@ document.getElementById('bt_price').addEventListener('paste', function (event) {
 
 // CLIENT-SIDE Submit Dữ Liệu
 async function submitData() {
-    if (!workbook) {
-        alert("Vui lòng tải file Excel lên trước.");
-        return;
-    }
+    const ready = await ensureWorkbookLoaded();
+    if (!ready || !workbook) return;
 
     const sheetName = document.getElementById('sheet_name').value.trim();
     const month = parseInt(document.getElementById('month').value);
