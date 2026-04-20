@@ -1,6 +1,5 @@
 let currentMode = 'string_mode';
 let historyData = [];
-let editingIndex = -1;
 let workbook = null; // Store active workbook object
 let sourceExcelFile = null; // Keep original uploaded file for server-side export
 const pendingUpdateMap = new Map(); // key: `${sheet}::${address}` -> {sheet, address, value}
@@ -26,6 +25,10 @@ function find_row(ws, target_month, target_period) {
     // Read target cells (Column D/4 is Month, Column E/5 is Period)
     // ws indexing is A1, B1... or {c:3, r:4}
     let month_row = null;
+    
+    if (!ws['!ref']) {
+        return (target_month - 1) * 4 + 4 + target_period;
+    }
     const range = XLSX.utils.decode_range(ws['!ref']);
 
     for (let r = 4; r <= range.e.r; r++) { // Row 5 is index 4
@@ -89,8 +92,6 @@ function registerPendingUpdates(sheetName, updates) {
 function resetSessionEdits() {
     pendingUpdateMap.clear();
     historyData = [];
-    editingIndex = -1;
-    cancelEdit();
 }
 
 function parseFilenameFromContentDisposition(contentDisposition) {
@@ -170,6 +171,18 @@ async function loadWorkbookFromFile(file, { isTemplate = false } = {}) {
     const displayName = isTemplate ? `${currentFilename} (mặc định)` : currentFilename;
     selectEl.innerHTML = `<option value="${currentFilename}">${displayName}</option>`;
 
+    // Populate sheet_name dropdown
+    const sheetSelectEl = document.getElementById('sheet_name');
+    if (sheetSelectEl) {
+        sheetSelectEl.innerHTML = '';
+        workbook.SheetNames.forEach(sheetName => {
+            const option = document.createElement('option');
+            option.value = sheetName;
+            option.textContent = sheetName;
+            sheetSelectEl.appendChild(option);
+        });
+    }
+
     document.getElementById('btn_download').style.display = 'block';
     showMessage(isTemplate
         ? `Đã nạp file mẫu mặc định ${currentFilename}.`
@@ -194,6 +207,23 @@ async function ensureWorkbookLoaded() {
     } catch (error) {
         showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
         return false;
+    }
+}
+
+async function useDefaultTemplate() {
+    try {
+        const response = await fetch(DEFAULT_TEMPLATE_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error("Không tìm thấy file mẫu mặc định trên server.");
+
+        const blob = await response.blob();
+        const templateFile = new File(
+            [blob],
+            DEFAULT_TEMPLATE_NAME,
+            { type: blob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+        );
+        await loadWorkbookFromFile(templateFile, { isTemplate: true });
+    } catch (error) {
+        showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
     }
 }
 
@@ -439,9 +469,6 @@ function renderHistoryTable() {
 
     historyData.forEach((item, index) => {
         const tr = document.createElement('tr');
-        if (index === editingIndex) {
-            tr.className = 'row-edited';
-        }
 
         const formatCell = (pair) => `<b>${pair[0]}</b> - ${pair[1]}`;
         const fileDisp = item.filename.length > 20 ? item.filename.substring(0, 17) + '...' : item.filename;
@@ -454,67 +481,9 @@ function renderHistoryTable() {
                     <td>${formatCell(item.parsed_data[0])}</td>
                     <td>${formatCell(item.parsed_data[1])}</td>
                     <td>${formatCell(item.parsed_data[2])}</td>
-                    <td style="text-align: right;">
-                        <button class="btn-small btn-warning" onclick="editRow(${index})">🛠 Sửa</button>
-                    </td>
                 `;
         tbody.appendChild(tr);
     });
-}
-
-// Nhấn nút Edit trên lịch sử
-function editRow(index) {
-    editingIndex = index;
-    const item = historyData[index];
-
-    // Chọn đúng file trong dropdown
-    const selectEl = document.getElementById('active_filename');
-    for (let i = 0; i < selectEl.options.length; i++) {
-        if (selectEl.options[i].value === item.filename) {
-            selectEl.value = item.filename;
-            break;
-        }
-    }
-
-    // Điền lại form
-    document.getElementById('sheet_name').value = item.sheet;
-    document.getElementById('month').value = item.month;
-    document.getElementById('period').value = item.period;
-
-    const [bt, cd, td] = item.parsed_data;
-
-    // Điền dữ liệu Manual (LUÔN update Manual Mode để có sẵn)
-    document.getElementById('bt_price').value = bt[0]; document.getElementById('bt_usage').value = bt[1];
-    document.getElementById('cd_price').value = cd[0]; document.getElementById('cd_usage').value = cd[1];
-    document.getElementById('td_price').value = td[0]; document.getElementById('td_usage').value = td[1];
-
-    // Lắp ráp lại chuỗi Textarea
-    document.getElementById('raw_data').value = `${bt[0]} ${bt[1]}\
-${cd[0]} ${cd[1]}\
-${td[0]} ${td[1]}`;
-
-    // Chuyển UI nút Submit
-    const btnSubmit = document.getElementById('btn_submit');
-    btnSubmit.textContent = `LƯU VÀ GHI ĐÈ EXCEL (KỲ ${item.period} THÁNG ${item.month} NĂM ${item.sheet})`;
-    btnSubmit.className = "btn-block btn-warning";
-
-    document.getElementById('btn_cancel_edit').style.display = 'block';
-
-    // Trượt lên form
-    document.getElementById('data_entry_section').scrollIntoView({ behavior: 'smooth' });
-
-    renderHistoryTable(); // Highlight row
-}
-
-function cancelEdit() {
-    editingIndex = -1;
-
-    const btnSubmit = document.getElementById('btn_submit');
-    btnSubmit.textContent = "GHI DỮ LIỆU VÀO EXCEL";
-    btnSubmit.className = "btn-block";
-
-    document.getElementById('btn_cancel_edit').style.display = 'none';
-    renderHistoryTable(); // Remove highlight
 }
 
 // Bắt sự kiện Enter global

@@ -11,9 +11,11 @@
     <div class="card">
       <h3 class="excel-step-title">Bước 1: Chọn tệp Excel mẫu</h3>
 
-      <div class="file-area">
-        <input type="file" id="excel_file" accept=".xlsx" multiple>
+      <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="excel_file" accept=".xlsx" multiple style="flex-grow: 1; max-width: 300px;">
         <button onclick="uploadFile()">Tải lên file cần nhập</button>
+        <span style="font-size: 14px; opacity: 0.7;">hoặc</span>
+        <button class="btn-outline" onclick="useDefaultTemplate()">Sử dụng mẫu excel sẵn có</button>
       </div>
 
       <div id="active_file_display">
@@ -34,7 +36,7 @@
       <div class="form-row">
         <div class="form-col form-col-wide">
           <label>Năm (tên sheet Excel)</label>
-          <input type="text" id="sheet_name" value="2023" placeholder="Ví dụ: 2023">
+          <select id="sheet_name"></select>
         </div>
         <div class="form-col">
           <label>Tháng (1-12)</label>
@@ -90,8 +92,6 @@
 
       <div class="form-row excel-actions">
         <button onclick="submitData()" class="btn-block" id="btn_submit">Ghi dữ liệu vào Excel</button>
-        <button onclick="cancelEdit()" class="btn-outline btn-block excel-cancel-btn" id="btn_cancel_edit"
-          style="display: none;">Hủy chỉnh sửa</button>
       </div>
 
       <div id="message"></div>
@@ -111,18 +111,15 @@
               <th>BT (Giá-SL)</th>
               <th>CĐ (Giá-SL)</th>
               <th>TĐ (Giá-SL)</th>
-              <th class="text-end">Hành động</th>
             </tr>
           </thead>
           <tbody id="history_body">
             <tr>
-              <td colspan="8" class="empty-state">Chưa có kết quả nào được ghi trong phiên này.</td>
+              <td colspan="7" class="empty-state">Chưa có kết quả nào được ghi trong phiên này.</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="excel-history-note">* Nhấn "Sửa" để nạp lại dữ liệu lên form và ghi đè dòng tương ứng trong file Excel.
-      </p>
     </div>
 
   </div>
