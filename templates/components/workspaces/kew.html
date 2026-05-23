@@ -21,7 +21,7 @@
             <p style="font-size:0.76rem;color:var(--text-muted);margin:6px 0 8px;max-width:52rem;line-height:1.5">
               Upload file <strong>.zip</strong> chứa file <strong>Excel hiện trường</strong> (.xlsx), các thư mục record
               <code>Sxxxx</code> và ảnh gốc <code>PS-SDxxx.BMP</code>. Hệ thống sẽ tự động đồng bộ dải ảnh vào đúng
-              thiết bị, chạy OCR để trích xuất số liệu đo đạc.
+              thiết bị, chạy OCR để trích xuất số liệu đo đạc, và <strong>tự động phân tích file INPS để nhận diện & điền cột đặc tính dòng điện (<code>current_char</code>)</strong>.
             </p>
             <div
               style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;max-width:52rem;font-size:0.73rem;line-height:1.55">
@@ -47,12 +47,12 @@
                   style="background:rgba(16,185,129,0.1);color:#34d399;padding:2px 8px;border-radius:6px;border:1px solid rgba(16,185,129,0.2);font-family:monospace">current_char</span>
               </div>
               <div style="margin-top:8px;color:var(--text-muted);font-size:0.7rem;line-height:1.6">
-                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (danh sách ảnh bỏ qua), <code>imglu</code>
-                (ảnh load/unload cho máy nén khí).<br>
+                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (danh sách ảnh bỏ qua), <code>imglu</code> (ảnh load/unload cho máy nén khí).<br>
                 * <strong>Các giá trị hợp lệ của <code>current_char</code>:</strong> 
                 <code>ổn định</code>, <code>tương đối ổn định</code>, <code>dao động nhẹ</code>, <code>biến đổi nhẹ</code>, 
-                <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code> (biến đổi liên tục với biên độ nhỏ), 
-                <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>.
+                <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code>, 
+                <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>.<br>
+                * <strong>Tự động điền:</strong> Nếu cột <code>current_char</code> trong Excel trống, hệ thống sẽ tự động phân tích file INPS để điền giá trị ước lượng ở bước sơ bộ này. Bạn có thể mở Excel trong file ZIP kết quả để xem và chỉnh sửa lại trước khi xuất Word.
               </div>
             </div>
             <div class="zip-tree-container"
