@@ -805,6 +805,157 @@ def run_ocr_and_update_excel(
     return warnings_out
 
 
+def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
+    """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS.
+
+    Phân tích chuỗi dòng điện đo được từ các cột AVG_A1[A], AVG_A2[A], AVG_A3[A]
+    trong file INPS để ước lượng 1 trong 8 đặc tính:
+    1. ổn định
+    2. tương đối ổn định
+    3. biên độ nhỏ
+    4. biến đổi nhẹ
+    5. dao động nhẹ
+    6. biến đổi liên tục
+    7. biến đổi liên tục theo tải
+    8. load/unload
+    """
+    import numpy as np
+
+    if df is None or df.empty:
+        return None
+
+    # Tìm các cột dòng điện trung bình
+    current_cols = []
+    for prefix in ("AVG_A1", "AVG_A2", "AVG_A3"):
+        col = next((c for c in df.columns if c.upper().startswith(prefix)), None)
+        if col:
+            current_cols.append(col)
+
+    if not current_cols:
+        current_cols = [
+            c for c in df.columns 
+            if "AVG_A" in c.upper() and not any(x in c.upper() for x in ("_MIN", "_MAX"))
+        ]
+
+    if not current_cols:
+        return None
+
+    # Lấy chuỗi số thực
+    df_currents = df[current_cols].apply(pd.to_numeric, errors='coerce').dropna(how='all')
+    if df_currents.empty:
+        return None
+
+    # Tính dòng điện trung bình 3 pha tại mỗi thời điểm
+    mean_currents = df_currents.mean(axis=1)
+    mean_val = mean_currents.mean()
+    
+    if mean_val < 0.1:  # Thiết bị không chạy hoặc dòng cực nhỏ
+        return "ổn định"
+
+    std_val = mean_currents.std()
+    cv = std_val / mean_val if mean_val > 0 else 0.0
+
+    p10 = mean_currents.quantile(0.10)
+    p90 = mean_currents.quantile(0.90)
+    
+    mid_low = p10 + (p90 - p10) * 0.35
+    mid_high = p10 + (p90 - p10) * 0.65
+    in_middle = mean_currents[(mean_currents > mid_low) & (mean_currents < mid_high)].count()
+    total = len(mean_currents)
+    mid_ratio = in_middle / total if total > 0 else 0.0
+
+    diffs = np.abs(np.diff(mean_currents.values))
+    mean_diff = np.mean(diffs) if len(diffs) > 0 else 0.0
+    step_ratio = mean_diff / std_val if std_val > 0 else 0.0
+
+    # 1. Kiểm tra load/unload (chạy bimodal)
+    if mid_ratio < 0.10 and p90 > 0 and (p10 / p90) < 0.65:
+        return "load/unload"
+
+    # 2. Phân loại theo hệ số biến thiên (CV)
+    if cv <= 0.02:
+        return "ổn định"
+    elif cv <= 0.05:
+        return "tương đối ổn định"
+    elif cv <= 0.08:
+        return "biên độ nhỏ"
+    elif cv <= 0.11:
+        return "biến đổi nhẹ"
+    elif cv <= 0.15:
+        return "dao động nhẹ"
+    else:
+        # cv > 0.15: kiểm tra xu hướng thay đổi mượt mà theo tải vs nhiễu ngẫu nhiên
+        if step_ratio < 0.40:
+            return "biến đổi liên tục theo tải"
+        else:
+            return "biến đổi liên tục"
+
+
+def auto_fill_current_char(
+    excel_path: str,
+    plans: list[RowPlan],
+    s_map: dict[str, str],
+    overwrite_existing: bool = False,
+) -> list[str]:
+    """Tự động phân tích file INPS để điền/cập nhật cột current_char trong Excel."""
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        return ["Thiếu thư viện openpyxl — bỏ qua tự động điền current_char."]
+
+    warnings_out: list[str] = []
+
+    try:
+        wb = load_workbook(excel_path)
+        ws = wb.active
+    except Exception as e:
+        return [f"current_char: không mở được workbook để ghi ({e})."]
+
+    header_row = 1
+    existing_col_map: dict[str, int] = {}
+    for col_idx, cell in enumerate(ws[header_row], start=1):
+        if cell.value is not None:
+            k = _norm_key(str(cell.value))
+            if k:
+                existing_col_map[k] = col_idx
+
+    col_idx = existing_col_map.get("current_char")
+    if not col_idx:
+        return ["Không tìm thấy cột 'current_char' trong Excel hiện trường."]
+
+    from modules.kew.analyse_kew import find_file, parse_inps
+
+    for plan in plans:
+        # Kiểm tra xem ô đã có giá trị chưa
+        cell = ws.cell(row=plan.excel_row, column=col_idx)
+        if not overwrite_existing and cell.value is not None and str(cell.value).strip():
+            continue
+
+        folder_path = s_map.get(plan.s_key)
+        if not folder_path or not os.path.isdir(folder_path):
+            continue
+
+        inps_path = find_file(folder_path, "INPS")
+        if not inps_path or not os.path.isfile(inps_path):
+            continue
+
+        try:
+            _, df = parse_inps(inps_path)
+            estimated = _estimate_current_char_from_df(df)
+            if estimated:
+                cell.value = estimated
+                warnings_out.append(f"[{plan.device_raw}] Tự động nhận diện current_char: {estimated}")
+        except Exception as e:
+            warnings_out.append(f"[{plan.device_raw}] Lỗi ước lượng current_char: {e}")
+
+    try:
+        wb.save(excel_path)
+    except Exception as e:
+        warnings_out.append(f"current_char: không lưu được Excel sau khi cập nhật ({e}).")
+
+    return warnings_out
+
+
 def process_field_zip_bytes(
     zip_bytes: bytes,
     work_dir: str,
@@ -872,6 +1023,15 @@ def process_field_zip_bytes(
             overwrite_existing=ocr_overwrite_forced,
         )
         warnings.extend(ocr_warns)
+
+    # ── Tự động điền current_char từ file INPS ──────────────────────────────
+    inps_warns = auto_fill_current_char(
+        excel_path=excel_path,
+        plans=plans,
+        s_map=s_map,
+        overwrite_existing=ocr_overwrite_forced,
+    )
+    warnings.extend(inps_warns)
 
     staging = os.path.join(work_dir, "staging")
     os.makedirs(staging, exist_ok=True)
