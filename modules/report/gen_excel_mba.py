@@ -220,7 +220,16 @@ def _evaluate_for_excel(df: "pd.DataFrame") -> dict[int, str]:
     if tdd_cols:
         max_vals = [df[c].max() for c in tdd_cols if not df[c].dropna().empty]
         avg_vals = [df[c].mean() for c in tdd_cols if not df[c].dropna().empty]
-        res[23] = _eval_thd(max_vals, avg_vals, _TDD_LIMIT_PCT)
+        p_val = None
+        if "AVG_P[W]" in df.columns:
+            p_vals = df["AVG_P[W]"].dropna()
+            if not p_vals.empty:
+                p_val = p_vals.mean()
+        if p_val is not None:
+            tdd_lim = 12.0 if p_val > 50.0 else 20.0
+        else:
+            tdd_lim = _TDD_LIMIT_PCT
+        res[23] = _eval_thd(max_vals, avg_vals, tdd_lim)
         
     return res
 
@@ -374,7 +383,12 @@ def generate_mba_excel_from_devices(
             
             # AE23: TDD
             tdd = _parse_float(ep.get("tdd"))
-            ws["AE23"] = _eval_thd([tdd], [tdd], _TDD_LIMIT_PCT)
+            p_val = _parse_float(ep.get("p"))
+            if p_val is not None:
+                tdd_lim = 12.0 if p_val > 50.0 else 20.0
+            else:
+                tdd_lim = _TDD_LIMIT_PCT
+            ws["AE23"] = _eval_thd([tdd], [tdd], tdd_lim)
 
     # 4. Cập nhật bảng tổng hợp tại sheet "Tổn thất MBA"
     if "Tổn thất MBA" in wb.sheetnames:

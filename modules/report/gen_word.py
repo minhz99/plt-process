@@ -781,7 +781,10 @@ def _compose_remarks_from_excel_fields(
         du_hi = (u_max - vref) / vref * 100.0
 
     # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) ───────────────────────────────
-    tdd_lim = _TDD_LIMIT_PCT if kind == "mba" else _device_tdd_limit_from_name(name)
+    if p_kw is not None:
+        tdd_lim = 12.0 if p_kw > 50.0 else 20.0
+    else:
+        tdd_lim = _TDD_LIMIT_PCT if kind == "mba" else _device_tdd_limit_from_name(name)
     loi_dem = 0
 
     if cos_phi is not None and abs(cos_phi) < _PF_LIMIT:
@@ -800,9 +803,23 @@ def _compose_remarks_from_excel_fields(
 
     # ── Đánh giá chất lượng tổng quan ────────────────────────────────────
     if kind == "mba":
-        quality = "tốt" if loi_dem == 0 else ("tương đối tốt" if loi_dem == 1 else "chưa thực sự tốt")
+        if loi_dem == 0:
+            quality = "tốt"
+        elif loi_dem == 1:
+            quality = "khá tốt"
+        elif loi_dem == 2:
+            quality = "tương đối tốt"
+        else:
+            quality = "chưa thực sự tốt"
     else:
-        quality = "tốt" if loi_dem == 0 else ("tương đối tốt" if loi_dem == 1 else "chưa tốt")
+        if loi_dem == 0:
+            quality = "tốt"
+        elif loi_dem == 1:
+            quality = "khá tốt"
+        elif loi_dem == 2:
+            quality = "tương đối tốt"
+        else:
+            quality = "chưa tốt"
 
     # ── Câu Hệ số công suất ───────────────────────────────────────────────
     pf_txt = _pf_phrase(cos_phi)
