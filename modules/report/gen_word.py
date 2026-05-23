@@ -985,6 +985,92 @@ def _compose_remarks_from_excel_fields(
         parts.append(harm_sent)
     return " ".join(parts)
 
+def _estimate_current_char_from_df(df) -> str | None:
+    """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS.
+
+    Phân tích chuỗi dòng điện đo được từ các cột AVG_A1[A], AVG_A2[A], AVG_A3[A]
+    trong file INPS để ước lượng 1 trong 8 đặc tính:
+    1. ổn định
+    2. tương đối ổn định
+    3. biên độ nhỏ
+    4. biến đổi nhẹ
+    5. dao động nhẹ
+    6. biến đổi liên tục
+    7. biến đổi liên tục theo tải
+    8. load/unload
+    """
+    import pandas as pd
+    import numpy as np
+
+    if df is None or df.empty:
+        return None
+
+    # Tìm các cột dòng điện trung bình
+    current_cols = []
+    for prefix in ("AVG_A1", "AVG_A2", "AVG_A3"):
+        col = next((c for c in df.columns if c.upper().startswith(prefix)), None)
+        if col:
+            current_cols.append(col)
+
+    if not current_cols:
+        current_cols = [
+            c for c in df.columns 
+            if "AVG_A" in c.upper() and not any(x in c.upper() for x in ("_MIN", "_MAX"))
+        ]
+
+    if not current_cols:
+        return None
+
+    # Lấy chuỗi số thực
+    df_currents = df[current_cols].apply(pd.to_numeric, errors='coerce').dropna(how='all')
+    if df_currents.empty:
+        return None
+
+    # Tính dòng điện trung bình 3 pha tại mỗi thời điểm
+    mean_currents = df_currents.mean(axis=1)
+    mean_val = mean_currents.mean()
+    
+    if mean_val < 0.1:  # Thiết bị không chạy hoặc dòng cực nhỏ
+        return "ổn định"
+
+    std_val = mean_currents.std()
+    cv = std_val / mean_val if mean_val > 0 else 0.0
+
+    p10 = mean_currents.quantile(0.10)
+    p90 = mean_currents.quantile(0.90)
+    
+    mid_low = p10 + (p90 - p10) * 0.35
+    mid_high = p10 + (p90 - p10) * 0.65
+    in_middle = mean_currents[(mean_currents > mid_low) & (mean_currents < mid_high)].count()
+    total = len(mean_currents)
+    mid_ratio = in_middle / total if total > 0 else 0.0
+
+    diffs = np.abs(np.diff(mean_currents.values))
+    mean_diff = np.mean(diffs) if len(diffs) > 0 else 0.0
+    step_ratio = mean_diff / std_val if std_val > 0 else 0.0
+
+    # 1. Kiểm tra load/unload (chạy bimodal)
+    if mid_ratio < 0.10 and p90 > 0 and (p10 / p90) < 0.65:
+        return "load/unload"
+
+    # 2. Phân loại theo hệ số biến thiên (CV)
+    if cv <= 0.02:
+        return "ổn định"
+    elif cv <= 0.05:
+        return "tương đối ổn định"
+    elif cv <= 0.08:
+        return "biên độ nhỏ"
+    elif cv <= 0.11:
+        return "biến đổi nhẹ"
+    elif cv <= 0.15:
+        return "dao động nhẹ"
+    else:
+        # cv > 0.15: kiểm tra xu hướng thay đổi mượt mà theo tải vs nhiễu ngẫu nhiên
+        if step_ratio < 0.40:
+            return "biến đổi liên tục theo tải"
+        else:
+            return "biến đổi liên tục"
+
 def _resolve_remarks_field(
     *,
     kind: SectionKind,
@@ -1011,6 +1097,22 @@ def _resolve_remarks_field(
 
     params = excel_params or {}
     current_char = params.get("current_char")
+    
+    # Tự động nhận diện current_char từ file INPS nếu chưa có
+    if not current_char:
+        import os
+        from modules.kew.analyse_kew import find_file
+        inps_path = find_file(str(folder), "INPS")
+        if inps_path and os.path.isfile(inps_path):
+            try:
+                from modules.kew.analyse_kew import parse_inps
+                _, df = parse_inps(inps_path)
+                estimated = _estimate_current_char_from_df(df)
+                if estimated:
+                    current_char = estimated
+            except Exception as e:
+                print(f"[WARN] Lỗi tự động nhận diện current_char từ file INPS cho {name}: {e}")
+
     u_min = _parse_float_field(params.get("u_min"))
     u_max = _parse_float_field(params.get("u_max"))
     i_max = _parse_float_field(params.get("i_max"))
