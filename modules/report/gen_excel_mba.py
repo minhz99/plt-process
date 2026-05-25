@@ -111,6 +111,7 @@ def _mba_to_number(v):
         return pd.NA
     s = str(v).strip()
     s = s.replace('-', '')
+    s = s.replace(',', '.')  # Chuẩn hóa dấu phẩy ngăn cách thập phân thành dấu chấm trước khi regex
     if not s or s.lower() == "nan":
         return pd.NA
     m = re.search(r"(\d+(?:\.\d+)?)\s*([kKmM])?", s)
@@ -160,7 +161,11 @@ def _mba_extract(df: "pd.DataFrame") -> "tuple[pd.DataFrame, list[str]]":
     for col in cols_to_check:
         renamed = dict(_MBA_COLUMN_MAPPING).get(col, col)
         if renamed in out.columns:
-            out[renamed] = out[renamed].apply(lambda x: x * 1000.0 if pd.notna(x) and abs(x) < 10.0 else x)
+            # Tách biệt ngưỡng tự động nhân 1000 cho dòng điện (kA -> A) và công suất (kW -> W)
+            if "A" in col:
+                out[renamed] = out[renamed].apply(lambda x: x * 1000.0 if pd.notna(x) and abs(x) < 10.0 else x)
+            else:
+                out[renamed] = out[renamed].apply(lambda x: x * 1000.0 if pd.notna(x) and abs(x) < 1000.0 else x)
 
     for col in _MBA_SCALE_DIV_1000:
         renamed = dict(_MBA_COLUMN_MAPPING).get(col, col)
