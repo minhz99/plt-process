@@ -7,8 +7,7 @@
 
       <div class="mb-4 mt-3">
         <label class="form-label text-muted fw-semibold" style="font-size:0.85rem">Chọn loại máy đo</label>
-        <select class="form-select" id="ei-template-select"
-          style="max-width: 300px;">
+        <select class="form-select" id="ei-template-select" style="max-width: 300px;">
           <option value="kew6315" selected>Kyoritsu KEW 6315</option>
           <option value="kew6305" disabled>Kyoritsu KEW 6305</option>
           <option value="hioki3198" disabled>Hioki PQ3198</option>
@@ -74,158 +73,189 @@
 
     <div class="chart-card" style="margin-bottom: 1.5rem;">
       <h3>Thông số cấu hình & thời gian</h3>
+
+      <!-- Bộ tạo số liệu tự động (Generator) -->
+      <div
+        style="background: var(--surface-card); border: 1px dashed var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <h4
+          style="margin: 0 0 10px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; color: var(--accent);">
+          ⚡ Bộ tạo số liệu tự động (Auto Generator)
+        </h4>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0 0 15px 0;">
+          Nhập 9 thông số cốt lõi bên dưới, hệ thống sẽ tự động tính toán và điền đầy đủ 38 thông số đo mà không bị xung
+          đột logic kỹ thuật.
+        </p>
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 15px;">
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">P (kW/W tổng)</label>
+            <input type="text" id="gen-P"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">PF (Tổng)</label>
+            <input type="text" id="gen-PF"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">A1 (A)</label>
+            <input type="text" id="gen-A1"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">A2 (A)</label>
+            <input type="text" id="gen-A2"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">A3 (A)</label>
+            <input type="text" id="gen-A3"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">A_unb (%)</label>
+            <input type="text" id="gen-Aunb"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">U_unb (%)</label>
+            <input type="text" id="gen-Uunb"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">THDmax (%)</label>
+            <input type="text" id="gen-THDmax"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-muted)">TDDmax (%)</label>
+            <input type="text" id="gen-TDDmax"
+              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" onclick="generateAndFillParameters()"
+            style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>✨ Tạo bộ số & Điền tự động</span>
+          </button>
+        </div>
+        <div id="gen-error" style="color: var(--danger); font-size: 0.75rem; margin-top: 8px; display: none;"></div>
+      </div>
+
       <div
         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px;">
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V1</label><input type="text" id="ei-V1"
-            placeholder="V1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V2</label><input type="text" id="ei-V2"
-            placeholder="V2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V3</label><input type="text" id="ei-V3"
-            placeholder="V3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">A1</label><input type="text" id="ei-A1"
-            placeholder="A1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">A2</label><input type="text" id="ei-A2"
-            placeholder="A2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">A3</label><input type="text" id="ei-A3"
-            placeholder="A3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">P1</label><input type="text" id="ei-P1"
-            placeholder="P1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">P2</label><input type="text" id="ei-P2"
-            placeholder="P2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">P3</label><input type="text" id="ei-P3"
-            placeholder="P3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Q1</label><input type="text" id="ei-Q1"
-            placeholder="Q1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Q2</label><input type="text" id="ei-Q2"
-            placeholder="Q2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Q3</label><input type="text" id="ei-Q3"
-            placeholder="Q3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">S1</label><input type="text" id="ei-S1"
-            placeholder="S1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">S2</label><input type="text" id="ei-S2"
-            placeholder="S2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">S3</label><input type="text" id="ei-S3"
-            placeholder="S3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">PF1</label><input type="text" id="ei-PF1"
-            placeholder="PF1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">PF2</label><input type="text" id="ei-PF2"
-            placeholder="PF2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">PF3</label><input type="text" id="ei-PF3"
-            placeholder="PF3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg1</label><input type="text" id="ei-Vdeg1"
-            placeholder="Vdeg1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg2</label><input type="text" id="ei-Vdeg2"
-            placeholder="Vdeg2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg3</label><input type="text" id="ei-Vdeg3"
-            placeholder="Vdeg3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg1</label><input type="text" id="ei-Adeg1"
-            placeholder="Adeg1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg2</label><input type="text" id="ei-Adeg2"
-            placeholder="Adeg2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg3</label><input type="text" id="ei-Adeg3"
-            placeholder="Adeg3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV1</label><input type="text" id="ei-THDV1"
-            placeholder="THDV1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV2</label><input type="text" id="ei-THDV2"
-            placeholder="THDV2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV3</label><input type="text" id="ei-THDV3"
-            placeholder="THDV3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA1</label><input type="text" id="ei-THDA1"
-            placeholder="THDA1"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA2</label><input type="text" id="ei-THDA2"
-            placeholder="THDA2"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA3</label><input type="text" id="ei-THDA3"
-            placeholder="THDA3"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">P</label><input type="text" id="ei-P"
-            placeholder="P"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">Q</label><input type="text" id="ei-Q"
-            placeholder="Q"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">S</label><input type="text" id="ei-S"
-            placeholder="S"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">PF</label><input type="text" id="ei-PF"
-            placeholder="PF"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">freq</label><input type="text" id="ei-freq"
-            placeholder="freq"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">An</label><input type="text" id="ei-An"
-            placeholder="An"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V_unb</label><input type="text" id="ei-V_unb"
-            placeholder="V_unb"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
         <div><label style="font-size:0.8rem; color:var(--text-muted)">A_unb</label><input type="text" id="ei-A_unb"
-            placeholder="A_unb"
             style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
       </div>
@@ -252,7 +282,8 @@
         </div>
 
         <!-- Individual digit fields -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom:1rem;">
+        <div
+          style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom:1rem;">
           <div>
             <label style="font-size:0.8rem; color:var(--text-muted)">Ngày (dd)</label>
             <input type="text" id="ei-ts-dd" maxlength="2" placeholder="dd"
@@ -286,8 +317,10 @@
         </div>
 
         <div style="margin-top:0.35rem; padding-top:0.9rem; border-top:1px dashed var(--border);">
-          <h5 style="font-size:0.84rem; margin:0 0 0.5rem 0; color:var(--text-muted);">Độ trễ thời gian giữa các ảnh</h5>
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; align-items:end;">
+          <h5 style="font-size:0.84rem; margin:0 0 0.5rem 0; color:var(--text-muted);">Độ trễ thời gian giữa các ảnh
+          </h5>
+          <div
+            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; align-items:end;">
             <div>
               <label style="font-size:0.8rem; color:var(--text-muted)">m (giây)</label>
               <input type="number" id="ei-ts-step-min" min="0" step="1" placeholder="m" value="0"
@@ -300,7 +333,8 @@
             </div>
           </div>
           <p style="font-size:0.74rem; color:var(--text-muted); margin:0.55rem 0 0 0;">
-            Ảnh 1 dùng đúng thời gian bạn nhập. Từ ảnh 2 trở đi sẽ tự động cộng trễ ngẫu nhiên trong khoảng <code>m-n</code> giây.
+            Ảnh 1 dùng đúng thời gian bạn nhập. Từ ảnh 2 trở đi sẽ tự động cộng trễ ngẫu nhiên trong khoảng
+            <code>m-n</code> giây.
           </p>
         </div>
       </div>
