@@ -92,20 +92,19 @@ def parse_inps(filepath):
             
             # Parse datetime
             if 'DATE' in df.columns and 'TIME' in df.columns:
+                datetime_str = df['DATE'].astype(str) + ' ' + df['TIME'].astype(str)
                 df['DATETIME'] = pd.to_datetime(
-                    df['DATE'].astype(str) + ' ' + df['TIME'].astype(str),
-                    format='%Y/%m/%d %H:%M:%S', errors='coerce'
+                    datetime_str, format='%Y/%m/%d %H:%M:%S', errors='coerce'
                 )
+                if df['DATETIME'].isna().all():
+                    df['DATETIME'] = pd.to_datetime(datetime_str, errors='coerce')
             
             # Parse numeric (bỏ qua cột placeholder _blank_)
             skip = {'DATE', 'TIME', 'DATETIME', 'ELAPSED TIME'}
             for col in df.columns:
                 if col in skip or col.startswith('_blank_'):
                     continue
-                if df[col].dtype == object:
-                    converted = pd.to_numeric(df[col], errors='coerce')
-                    if not converted.isna().all():
-                        df[col] = converted
+                df[col] = pd.to_numeric(df[col], errors='coerce')
             
             return magic, df
     

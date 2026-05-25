@@ -107,22 +107,47 @@ def _mba_to_number(v):
         float or pd.NA: Giá trị số sau khi chuyển đổi hoặc pd.NA nếu không hợp lệ.
     """
     import pandas as pd
-    if v is None or (isinstance(v, float) and pd.isna(v)):
+    import numpy as np
+    
+    if v is None:
         return pd.NA
+    if isinstance(v, (float, int, np.number)):
+        if pd.isna(v):
+            return pd.NA
+        return float(v)
+        
     s = str(v).strip()
-    s = s.replace('-', '')
-    s = s.replace(',', '.')  # Chuẩn hóa dấu phẩy ngăn cách thập phân thành dấu chấm trước khi regex
-    if not s or s.lower() == "nan":
+    
+    # Kiểm tra xem chuỗi có rỗng hoặc chỉ toàn gạch ngang (ví dụ "---", "----") không
+    s_check = s.replace('-', '').strip()
+    if not s_check or s_check.lower() == "nan":
         return pd.NA
-    m = re.search(r"(\d+(?:\.\d+)?)\s*([kKmM])?", s)
+        
+    # Chuẩn hóa dấu phẩy thập phân sang dấu chấm (kiểu Việt Nam)
+    if ',' in s and '.' not in s:
+        s = s.replace(',', '.')
+        
+    # Thử chuyển đổi trực tiếp bằng pd.to_numeric (tốt nhất cho số mũ như +7.215E+02 hoặc +1.994E-01)
+    try:
+        val = pd.to_numeric(s)
+        return float(val)
+    except (ValueError, TypeError):
+        pass
+        
+    # Thử tìm đơn vị k/M (ví dụ: "15k" hoặc "2.5M")
+    m = re.search(r"(-?\d+(?:\.\d+)?)\s*([kKmM])?", s)
     if m:
-        base = float(m.group(1))
-        unit = (m.group(2) or "").lower()
-        if unit == "k":
-            base *= 1_000.0
-        elif unit == "m":
-            base *= 1_000_000.0
-        return base
+        try:
+            base = float(m.group(1))
+            unit = (m.group(2) or "").lower()
+            if unit == "k":
+                base *= 1_000.0
+            elif unit == "m":
+                base *= 1_000_000.0
+            return base
+        except Exception:
+            pass
+            
     return pd.to_numeric(s, errors="coerce")
 
 def _mba_extract(df: "pd.DataFrame") -> "tuple[pd.DataFrame, list[str]]":

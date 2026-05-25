@@ -837,14 +837,14 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     # Tìm các cột dòng điện trung bình
     current_cols = []
     for prefix in ("AVG_A1", "AVG_A2", "AVG_A3"):
-        col = next((c for c in df.columns if c.upper().startswith(prefix)), None)
+        col = next((c for c in df.columns if c.upper().startswith(prefix) and "DEG" not in c.upper()), None)
         if col:
             current_cols.append(col)
 
     if not current_cols:
         current_cols = [
             c for c in df.columns 
-            if "AVG_A" in c.upper() and not any(x in c.upper() for x in ("_MIN", "_MAX"))
+            if "AVG_A" in c.upper() and not any(x in c.upper() for x in ("_MIN", "_MAX", "DEG"))
         ]
 
     if not current_cols:
