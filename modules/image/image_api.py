@@ -120,7 +120,9 @@ def apply_text_to_image(img, img_draw, config, text, digits_dir):
 def _safe_screen(idx):
     if not SCREENS:
         return {'overlays': []}
-    return SCREENS[idx % len(SCREENS)]
+    keys = list(SCREENS.keys())
+    key = keys[idx % len(keys)]
+    return SCREENS[key]
 
 
 def _build_bmp_name(filename):
