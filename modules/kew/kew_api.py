@@ -32,31 +32,48 @@ _MBA_TEMPLATE_PATH = os.path.join(
 
 kew_bp = Blueprint('kew_bp', __name__)
 
+import threading
+import uuid
+import time
 
+# Bộ lưu trữ tiến độ tạm thời trong RAM (Thread-safe)
+kew_tasks = {}
+kew_tasks_lock = threading.Lock()
 
+def _cleanup_old_tasks():
+    """Xóa các task cũ để giải phóng tài nguyên hệ thống (temp files & memory)."""
+    with kew_tasks_lock:
+        now = time.time()
+        expired = [tid for tid, task in kew_tasks.items() if now - task.get("created_at", 0) > 1800]
+        for tid in expired:
+            res_path = kew_tasks[tid].get("result_path")
+            if res_path and os.path.isfile(res_path):
+                try:
+                    os.remove(res_path)
+                except Exception:
+                    pass
+            work_dir = kew_tasks[tid].get("work_dir")
+            if work_dir and os.path.exists(work_dir):
+                try:
+                    shutil.rmtree(work_dir, ignore_errors=True)
+                except Exception:
+                    pass
+            del kew_tasks[tid]
 
 
 @kew_bp.route("/organize-field-zip", methods=["POST"])
 def organize_field_zip():
     """
-    API endpoint để tổ chức lại file ZIP hồ sơ hiện trường.
+    API endpoint để tổ chức lại file ZIP hồ sơ hiện trường (Bất đồng bộ).
     
     Thực hiện:
     1. Đọc file Excel kế hoạch trong ZIP.
-    2. Đổi tên các thư mục Sxxxx thành tên thiết bị tương ứng.
-    3. Di chuyển các file ảnh PS-SDxxx.BMP vào đúng thư mục thiết bị.
-    4. (Tùy chọn) Chạy OCR tự động đọc các thông số đo từ ảnh BMP và ghi vào Excel.
-    5. Nén lại thành file ZIP kết quả.
-
-    Form params:
-        zip / file: File ZIP đầu vào.
-        run_ocr: '1' hoặc 'true' để chạy OCR sau khi sắp xếp (mặc định: true).
-        ocr_overwrite: '1' hoặc 'true' để ghi đè các ô Excel đã có giá trị (mặc định: false).
-    
-    Returns:
-        Response: File ZIP đã tổ chức lại hoặc lỗi JSON.
+    2. Khởi chạy luồng xử lý riêng chạy nền.
+    3. Trả về task_id ngay lập tức để client poll tiến độ.
     """
     from modules.kew import organize_field_zip as organize_mod
+
+    _cleanup_old_tasks()
 
     zf = request.files.get("zip") or request.files.get("file")
     if zf is None or not getattr(zf, "filename", None):
@@ -72,19 +89,105 @@ def organize_field_zip():
     if not zip_bytes:
         return jsonify({"error": "File ZIP rỗng."}), 400
 
-    # Tham số OCR từ form (CẢI TIẾN: Luôn luôn OCR và ghi đè theo yêu cầu của USER)
-    run_ocr = True
-    ocr_overwrite = True
+    task_id = str(uuid.uuid4())
+    work_dir = tempfile.mkdtemp(prefix=f"kew_field_org_{task_id}_")
 
-    work = tempfile.mkdtemp(prefix="kew_field_org_")
+    with kew_tasks_lock:
+        kew_tasks[task_id] = {
+            "status": "processing",
+            "progress": 0,
+            "step": "Giải nén tệp ZIP hiện trường...",
+            "created_at": time.time(),
+            "work_dir": work_dir,
+            "original_filename": original_filename,
+            "result_path": None,
+            "warnings": [],
+            "errors": []
+        }
+
+    def worker_task():
+        try:
+            def update_progress(pct, step_name):
+                with kew_tasks_lock:
+                    if task_id in kew_tasks:
+                        kew_tasks[task_id]["progress"] = pct
+                        kew_tasks[task_id]["step"] = step_name
+
+            out_path, warnings, fatal = organize_mod.process_field_zip_bytes(
+                zip_bytes=zip_bytes,
+                work_dir=work_dir,
+                run_ocr=True,
+                ocr_overwrite=True,
+                original_filename=original_filename,
+                progress_callback=update_progress
+            )
+
+            with kew_tasks_lock:
+                if task_id in kew_tasks:
+                    if fatal:
+                        kew_tasks[task_id].update({
+                            "status": "failed",
+                            "errors": fatal,
+                            "warnings": warnings
+                        })
+                    else:
+                        kew_tasks[task_id].update({
+                            "status": "completed",
+                            "progress": 100,
+                            "step": "Hoàn tất xử lý!",
+                            "result_path": out_path,
+                            "warnings": warnings
+                        })
+        except Exception as e:
+            traceback.print_exc()
+            with kew_tasks_lock:
+                if task_id in kew_tasks:
+                    kew_tasks[task_id].update({
+                        "status": "failed",
+                        "errors": [f"Lỗi hệ thống: {e}"]
+                    })
+
+    threading.Thread(target=worker_task, daemon=True).start()
+
+    return jsonify({"task_id": task_id})
+
+
+@kew_bp.route("/task-status/<task_id>", methods=["GET"])
+def get_task_status(task_id):
+    """API truy vấn trạng thái tiến trình của Task."""
+    with kew_tasks_lock:
+        task = kew_tasks.get(task_id)
+    if not task:
+        return jsonify({"error": "Không tìm thấy thông tin tiến trình hoặc tiến trình đã quá hạn."}), 404
+    
+    return jsonify({
+        "status": task["status"],
+        "progress": task["progress"],
+        "step": task["step"],
+        "warnings": task["warnings"],
+        "errors": task["errors"]
+    })
+
+
+@kew_bp.route("/download-task/<task_id>", methods=["GET"])
+def download_task(task_id):
+    """API tải file ZIP sau khi task hoàn thành."""
+    with kew_tasks_lock:
+        task = kew_tasks.get(task_id)
+    if not task:
+        return jsonify({"error": "Không tìm thấy tệp kết quả hoặc tệp đã bị xóa do hết hạn."}), 404
+
+    if task["status"] != "completed":
+        return jsonify({"error": f"Tiến trình chưa hoàn thành. Trạng thái: {task['status']}"}), 400
+
+    out_path = task["result_path"]
+    original_filename = task["original_filename"]
+    warnings = task["warnings"]
+
+    if not out_path or not os.path.isfile(out_path):
+        return jsonify({"error": "Không tìm thấy file kết quả trên máy chủ."}), 404
+
     try:
-        out_path, warnings, fatal = organize_mod.process_field_zip_bytes(
-            zip_bytes, work, run_ocr=run_ocr, ocr_overwrite=ocr_overwrite, original_filename=original_filename
-        )
-        if fatal:
-            return jsonify({"errors": fatal, "warnings": warnings}), 400
-        if not out_path or not os.path.isfile(out_path):
-            return jsonify({"error": "Không tạo được file kết quả.", "warnings": warnings}), 500
         with open(out_path, "rb") as fh:
             buf = io.BytesIO(fh.read())
         buf.seek(0)
@@ -98,10 +201,7 @@ def organize_field_zip():
             resp.headers["X-KEW-Field-Warnings"] = urllib.parse.quote("; ".join(warnings))
         return resp
     except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": f"Lỗi xử lý hồ sơ KEW: {e}"}), 500
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
+        return jsonify({"error": f"Lỗi khi gửi tệp: {e}"}), 500
 
 
 @kew_bp.route("/generate-word-report", methods=["POST"])

@@ -31,13 +31,13 @@ FIELD_XLSX_REQUIRED: tuple[str, ...] = (
     "imgend",        # Chỉ số ảnh cuối dải
     "type",          # Loại section: MBA / device (thiết bị)
     "pdm",           # Công suất định mức (kVA) — dùng tính % tải MBA
-    "current_char",  # Đặc tính dòng điện: Ổn định / Dao động nhẹ / ...
 )
 
 # ── Cột tự chọn (không bắt buộc có trong Excel) ──────────────────────────────
 FIELD_XLSX_OPTIONAL: tuple[str, ...] = (
     "imgomit",       # Chỉ số ảnh bỏ qua trong dải (tuỳ chọn)
     "imglu",         # Chỉ số ảnh load/unload → đổi tên load-unload-xxx.BMP
+    "current_char",  # Đặc tính dòng điện: Ổn định / Dao động nhẹ / ...
 )
 
 # ── Cột do OCR tự động điền sau khi nhận dạng ảnh BMP ────────────────────────
@@ -714,6 +714,9 @@ def run_ocr_and_update_excel(
     plans: list[RowPlan],
     bmp_map: dict[int, str],
     overwrite_existing: bool = False,
+    progress_callback = None,
+    start_pct: int = 20,
+    end_pct: int = 60,
 ) -> list[str]:
     """Chạy OCR nhận dạng thông số từ ảnh và cập nhật vào file Excel.
 
@@ -722,6 +725,9 @@ def run_ocr_and_update_excel(
         plans (list[RowPlan]): Danh sách kế hoạch.
         bmp_map (dict[int, str]): Map file ảnh BMP.
         overwrite_existing (bool): Có ghi đè các ô đã có dữ liệu hay không.
+        progress_callback: Hàm cập nhật tiến độ (%).
+        start_pct: Phần trăm tiến độ bắt đầu.
+        end_pct: Phần trăm tiến độ kết thúc.
 
     Returns:
         list[str]: Danh sách các cảnh báo nhận dạng được.
@@ -768,7 +774,11 @@ def run_ocr_and_update_excel(
             col_indices[field] = max_col
             warnings_out.append(f"OCR: tạo mới cột «{field}» tại cột số {max_col}.")
 
-    for plan in plans:
+    for idx, plan in enumerate(plans):
+        if progress_callback:
+            pct = start_pct + int((idx / len(plans)) * (end_pct - start_pct))
+            progress_callback(pct, f"OCR: Nhận dạng thông số đo cho «{plan.device_raw}» ({idx+1}/{len(plans)})...")
+
         # Lấy danh sách ảnh thực tế sau khi loại bỏ omit
         valid_indices = [
             i if i not in plan.img_omit else None
@@ -896,8 +906,24 @@ def auto_fill_current_char(
     plans: list[RowPlan],
     s_map: dict[str, str],
     overwrite_existing: bool = False,
+    progress_callback = None,
+    start_pct: int = 60,
+    end_pct: int = 85,
 ) -> list[str]:
-    """Tự động phân tích file INPS để điền/cập nhật cột current_char trong Excel."""
+    """Tự động phân tích file INPS để điền/cập nhật cột current_char trong Excel.
+
+    Args:
+        excel_path (str): Đường dẫn đến file Excel cần cập nhật.
+        plans (list[RowPlan]): Danh sách kế hoạch.
+        s_map (dict[str, str]): Map thư mục Sxxxx.
+        overwrite_existing (bool): Có ghi đè các ô đã có dữ liệu hay không.
+        progress_callback: Hàm cập nhật tiến độ (%).
+        start_pct: Phần trăm tiến độ bắt đầu.
+        end_pct: Phần trăm tiến độ kết thúc.
+
+    Returns:
+        list[str]: Danh sách các cảnh báo nhận dạng được.
+    """
     try:
         from openpyxl import load_workbook
     except ImportError:
@@ -921,11 +947,20 @@ def auto_fill_current_char(
 
     col_idx = existing_col_map.get("current_char")
     if not col_idx:
-        return ["Không tìm thấy cột 'current_char' trong Excel hiện trường."]
+        max_col = 0
+        for col_idx_temp, _ in enumerate(ws[header_row], start=1):
+            max_col = col_idx_temp
+        col_idx = max_col + 1
+        ws.cell(row=header_row, column=col_idx, value="current_char")
+        warnings_out.append(f"Tạo mới cột «current_char» tại cột số {col_idx}.")
 
     from modules.kew.analyse_kew import find_file, parse_inps
 
-    for plan in plans:
+    for idx, plan in enumerate(plans):
+        if progress_callback:
+            pct = start_pct + int((idx / len(plans)) * (end_pct - start_pct))
+            progress_callback(pct, f"Dòng điện: Ước lượng current_char cho «{plan.device_raw}» ({idx+1}/{len(plans)})...")
+
         # Kiểm tra xem ô đã có giá trị chưa
         cell = ws.cell(row=plan.excel_row, column=col_idx)
         if not overwrite_existing and cell.value is not None and str(cell.value).strip():
@@ -962,6 +997,7 @@ def process_field_zip_bytes(
     run_ocr: bool = True,
     ocr_overwrite: bool = False,
     original_filename: str = "KEW",
+    progress_callback = None,
 ) -> tuple[str, list[str], list[str]]:
     """Xử lý toàn bộ quy trình tổ chức hồ sơ từ dữ liệu ZIP.
 
@@ -973,6 +1009,7 @@ def process_field_zip_bytes(
         run_ocr (bool): Có chạy OCR hay không.
         ocr_overwrite (bool): Có ghi đè dữ liệu OCR hay không.
         original_filename (str): Tên file ZIP gốc (không có đuôi).
+        progress_callback: Hàm cập nhật tiến độ (%).
 
     Returns:
         tuple[str, list[str], list[str]]: Một tuple gồm:
@@ -981,6 +1018,10 @@ def process_field_zip_bytes(
             - Danh sách các lỗi nghiêm trọng (khiến quy trình dừng lại).
     """
     warnings: list[str] = []
+    
+    if progress_callback:
+        progress_callback(5, "Giải nén tệp ZIP hiện trường...")
+
     extract = os.path.join(work_dir, "in")
     os.makedirs(extract, exist_ok=True)
     bio = io.BytesIO(zip_bytes)
@@ -992,6 +1033,9 @@ def process_field_zip_bytes(
         with zipfile.ZipFile(bio, "r") as zf:
             zf.extractall(extract)
 
+    if progress_callback:
+        progress_callback(10, "Tìm tệp Excel và phân tích thư mục...")
+
     excel_path = find_first_excel(extract)
     if not excel_path:
         return "", warnings, ["Không tìm thấy file Excel (.xlsx/.xlsm/.xls) trong ZIP."]
@@ -1000,6 +1044,9 @@ def process_field_zip_bytes(
     warnings.extend(s_err)
     bmp_map, bmp_dup = scan_bmp_files(extract)
     warnings.extend(bmp_dup)
+
+    if progress_callback:
+        progress_callback(15, "Đọc danh sách kế hoạch từ Excel...")
 
     try:
         plans, w2 = read_plans_from_excel(excel_path)
@@ -1016,22 +1063,35 @@ def process_field_zip_bytes(
     run_ocr_forced = True
     ocr_overwrite_forced = True
     if run_ocr_forced:
+        if progress_callback:
+            progress_callback(20, "OCR: Bắt đầu nhận dạng thông số đo từ ảnh...")
         ocr_warns = run_ocr_and_update_excel(
             excel_path=excel_path,
             plans=plans,
             bmp_map=bmp_map,
             overwrite_existing=ocr_overwrite_forced,
+            progress_callback=progress_callback,
+            start_pct=20,
+            end_pct=60,
         )
         warnings.extend(ocr_warns)
 
     # ── Tự động điền current_char từ file INPS ──────────────────────────────
+    if progress_callback:
+        progress_callback(60, "Dòng điện: Bắt đầu ước lượng đặc tính dòng điện...")
     inps_warns = auto_fill_current_char(
         excel_path=excel_path,
         plans=plans,
         s_map=s_map,
         overwrite_existing=ocr_overwrite_forced,
+        progress_callback=progress_callback,
+        start_pct=60,
+        end_pct=85,
     )
     warnings.extend(inps_warns)
+
+    if progress_callback:
+        progress_callback(85, "Sắp xếp thư mục và copy ảnh...")
 
     staging = os.path.join(work_dir, "staging")
     os.makedirs(staging, exist_ok=True)
@@ -1039,12 +1099,22 @@ def process_field_zip_bytes(
     out_folder_name = f"KEW_{original_filename}"
     build_project_output(extract, staging, plans, s_map, bmp_map, warnings, output_folder_name=out_folder_name)
 
+    if progress_callback:
+        progress_callback(93, "Sao chép tệp Excel đã cập nhật...")
+
     # Copy Excel (đã cập nhật nếu run_ocr=True) vào thư mục kết quả
     excel_dst = os.path.join(staging, out_folder_name, os.path.basename(excel_path))
     if not os.path.exists(excel_dst):
         shutil.copy2(excel_path, excel_dst)
 
+    if progress_callback:
+        progress_callback(96, "Đóng gói kết quả thành tệp ZIP...")
+
     out_zip = os.path.join(work_dir, f"{original_filename}_processed.zip")
     proj = os.path.join(staging, out_folder_name)
     zip_directory(proj, out_zip)
+
+    if progress_callback:
+        progress_callback(100, "Hoàn tất xử lý sơ bộ!")
+
     return out_zip, warnings, []
