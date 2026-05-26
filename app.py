@@ -26,7 +26,7 @@ def _env_int(name, default):
 
 app = Flask(__name__)
 app.json.ensure_ascii = False
-app.config["MAX_CONTENT_LENGTH"] = _env_int("MAX_UPLOAD_MB", 256) * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = _env_int("MAX_UPLOAD_MB", 512) * 1024 * 1024
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # Register Blueprints for specialized toolset
