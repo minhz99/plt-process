@@ -716,7 +716,7 @@ def run_ocr_and_update_excel(
     overwrite_existing: bool = False,
     progress_callback = None,
     start_pct: int = 20,
-    end_pct: int = 60,
+    end_pct: int = 95,
 ) -> list[str]:
     """Chạy OCR nhận dạng thông số từ ảnh và cập nhật vào file Excel.
 
@@ -907,8 +907,8 @@ def auto_fill_current_char(
     s_map: dict[str, str],
     overwrite_existing: bool = False,
     progress_callback = None,
-    start_pct: int = 60,
-    end_pct: int = 85,
+    start_pct: int = 95,
+    end_pct: int = 97,
 ) -> list[str]:
     """Tự động phân tích file INPS để điền/cập nhật cột current_char trong Excel.
 
@@ -1072,26 +1072,26 @@ def process_field_zip_bytes(
             overwrite_existing=ocr_overwrite_forced,
             progress_callback=progress_callback,
             start_pct=20,
-            end_pct=60,
+            end_pct=95,
         )
         warnings.extend(ocr_warns)
 
     # ── Tự động điền current_char từ file INPS ──────────────────────────────
     if progress_callback:
-        progress_callback(60, "Dòng điện: Bắt đầu ước lượng đặc tính dòng điện...")
+        progress_callback(95, "Dòng điện: Bắt đầu ước lượng đặc tính dòng điện...")
     inps_warns = auto_fill_current_char(
         excel_path=excel_path,
         plans=plans,
         s_map=s_map,
         overwrite_existing=ocr_overwrite_forced,
         progress_callback=progress_callback,
-        start_pct=60,
-        end_pct=85,
+        start_pct=95,
+        end_pct=97,
     )
     warnings.extend(inps_warns)
 
     if progress_callback:
-        progress_callback(85, "Sắp xếp thư mục và copy ảnh...")
+        progress_callback(97, "Sắp xếp thư mục và copy ảnh...")
 
     staging = os.path.join(work_dir, "staging")
     os.makedirs(staging, exist_ok=True)
@@ -1100,7 +1100,7 @@ def process_field_zip_bytes(
     build_project_output(extract, staging, plans, s_map, bmp_map, warnings, output_folder_name=out_folder_name)
 
     if progress_callback:
-        progress_callback(93, "Sao chép tệp Excel đã cập nhật...")
+        progress_callback(98, "Sao chép tệp Excel đã cập nhật...")
 
     # Copy Excel (đã cập nhật nếu run_ocr=True) vào thư mục kết quả
     excel_dst = os.path.join(staging, out_folder_name, os.path.basename(excel_path))
@@ -1108,7 +1108,7 @@ def process_field_zip_bytes(
         shutil.copy2(excel_path, excel_dst)
 
     if progress_callback:
-        progress_callback(96, "Đóng gói kết quả thành tệp ZIP...")
+        progress_callback(99, "Đóng gói kết quả thành tệp ZIP...")
 
     out_zip = os.path.join(work_dir, f"{original_filename}_processed.zip")
     proj = os.path.join(staging, out_folder_name)
