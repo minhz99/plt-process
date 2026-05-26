@@ -772,7 +772,7 @@ def run_ocr_and_update_excel(
             max_col += 1
             ws.cell(row=header_row, column=max_col, value=field)
             col_indices[field] = max_col
-            warnings_out.append(f"OCR: tạo mới cột «{field}» tại cột số {max_col}.")
+            print(f"OCR: tạo mới cột «{field}» tại cột số {max_col}.")
 
     for idx, plan in enumerate(plans):
         if progress_callback:
@@ -952,7 +952,7 @@ def auto_fill_current_char(
             max_col = col_idx_temp
         col_idx = max_col + 1
         ws.cell(row=header_row, column=col_idx, value="current_char")
-        warnings_out.append(f"Tạo mới cột «current_char» tại cột số {col_idx}.")
+        print(f"Tạo mới cột «current_char» tại cột số {col_idx}.")
 
     from modules.kew.analyse_kew import find_file, parse_inps
 
@@ -979,7 +979,7 @@ def auto_fill_current_char(
             estimated = _estimate_current_char_from_df(df)
             if estimated:
                 cell.value = estimated
-                warnings_out.append(f"[{plan.device_raw}] Tự động nhận diện current_char: {estimated}")
+                print(f"[{plan.device_raw}] Tự động nhận diện current_char: {estimated}")
         except Exception as e:
             warnings_out.append(f"[{plan.device_raw}] Lỗi ước lượng current_char: {e}")
 
