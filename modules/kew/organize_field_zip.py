@@ -507,9 +507,10 @@ def read_plans_from_excel(excel_path: str) -> tuple[list[RowPlan], list[str]]:
             raise ValueError(
                 f"Dòng {int(idx) + 2}: IMG end ({i1}) ngoài giới hạn 000–999."
             )
-        if s_name in used_s:
-            raise ValueError(f"Dòng {int(idx) + 2}: mã thư mục {s_name} bị lặp trong Excel.")
-        used_s.add(s_name)
+        # Cho phép các thiết bị trỏ cùng 1 file ghi (Sxxxx)
+        # if s_name in used_s:
+        #     raise ValueError(f"Dòng {int(idx) + 2}: mã thư mục {s_name} bị lặp trong Excel.")
+        # used_s.add(s_name)
         omit_col = colmap.get("imgomit")
         omit_all, w_omit = _parse_img_omit(row[omit_col]) if omit_col else (frozenset(), [])
         warnings.extend(w_omit)
@@ -641,6 +642,32 @@ def build_project_output(
         if os.path.exists(dest_dir):
             shutil.rmtree(dest_dir)
         shutil.copytree(src_dir, dest_dir)
+
+        # Loại bỏ các ảnh không thuộc dải ảnh được giao cho thiết bị này khỏi thư mục đã sao chép
+        allowed_img_indices = set(n for n in _iter_img_range(p.img_start, p.img_end) if n not in p.img_omit)
+        if p.img_lu is not None:
+            allowed_img_indices.add(p.img_lu)
+
+        for fn in os.listdir(dest_dir):
+            m_bmp = _BMP_RE.match(fn)
+            if m_bmp:
+                idx = int(m_bmp.group(1))
+                if idx not in allowed_img_indices:
+                    try:
+                        os.remove(os.path.join(dest_dir, fn))
+                    except OSError:
+                        pass
+                continue
+
+            m_lu = re.match(r"^load-unload-(\d{3})\.bmp$", fn, re.IGNORECASE)
+            if m_lu:
+                idx = int(m_lu.group(1))
+                if idx != p.img_lu:
+                    try:
+                        os.remove(os.path.join(dest_dir, fn))
+                    except OSError:
+                        pass
+                continue
 
         for n in _iter_img_range(p.img_start, p.img_end):
             if n in p.img_omit:
