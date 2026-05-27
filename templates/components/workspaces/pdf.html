@@ -5,8 +5,8 @@
     <div class="card excel-hero" style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
       <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚡ Tách file in</h2>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
-        Tính năng hỗ trợ tách một file PDF gốc thành 3 file phục vụ in ấn: 
-        1 file bìa (trang 1), 1 file màu (các trang còn lại giữ nguyên màu), và 1 file không màu (các trang còn lại chuyển trắng đen). 
+        Tính năng hỗ trợ tách một file PDF gốc thành các file phục vụ in ấn tối ưu chi phí: 
+        1 file bìa (trang 1 để in bìa cứng), 1 file màu (chứa riêng các trang còn lại có màu), và 1 file không màu (chứa riêng các trang còn lại là trắng đen). 
         Tất cả sẽ được đóng gói tự động thành file ZIP và tải xuống máy tính của bạn.
       </p>
     </div>
@@ -65,10 +65,10 @@
         💡 Thông tin thêm về cách hoạt động
       </h3>
       <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
-        <li><strong>Tệp bìa (<code>bìa-[tên].pdf</code>):</strong> Chỉ chứa đúng trang đầu tiên (thường là trang giới thiệu hoặc bìa báo cáo) để in màu một mặt riêng.</li>
-        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chứa toàn bộ các trang từ trang 2 trở đi, giữ nguyên màu sắc gốc để in màu các trang sơ đồ, biểu đồ.</li>
-        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa toàn bộ các trang từ trang 2 trở đi nhưng được chuyển sang trắng đen (grayscale) để in laser thông thường nhằm tiết kiệm chi phí mực màu.</li>
-        <li>Hệ thống sử dụng công nghệ xử lý PDF chất lượng cao thông qua <strong>Ghostscript</strong> giúp bảo toàn định dạng vector, đảm bảo độ sắc nét cao khi in và không làm tăng kích thước tệp như phương pháp chuyển đổi sang ảnh thông thường.</li>
+        <li><strong>Tệp bìa (<code>bìa-[tên].pdf</code>):</strong> Chỉ chứa đúng trang đầu tiên (thường là trang giới thiệu hoặc bìa báo cáo) để in màu một mặt riêng trên giấy cứng.</li>
+        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chỉ chứa các trang từ trang 2 trở đi mà hệ thống tự động phát hiện có chứa màu sắc để in màu riêng biệt.</li>
+        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chỉ chứa các trang từ trang 2 trở đi mà hệ thống tự động phát hiện không chứa màu sắc (chỉ có đen/xám) và được ép trắng đen (grayscale) hoàn chỉnh để in laser thông thường nhằm tiết kiệm chi phí mực màu tối đa.</li>
+        <li>Hệ thống sử dụng công nghệ phân tích độ phủ mực CMYK thông qua **Ghostscript**, tự động phân loại thông minh từng trang mà không làm thay đổi hay suy giảm chất lượng định dạng vector của PDF.</li>
       </ul>
     </div>
 
