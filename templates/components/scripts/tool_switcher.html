@@ -1,7 +1,7 @@
 <script>
 
 /* ── GLOBAL TOOL SWITCHING ── */
-function switchTool(toolId) {
+function switchTool(toolId, updateUrl = true) {
     const allowedTools = ['kew', 'img', 'excel', 'pdf'];
     const activeTool = allowedTools.includes(toolId) ? toolId : 'kew';
 
@@ -24,6 +24,11 @@ function switchTool(toolId) {
     if (btn) btn.classList.add('active');
 
     localStorage.setItem('plt_active_tool', activeTool);
+
+    // Cập nhật đường dẫn URL của trình duyệt
+    if (updateUrl) {
+        history.pushState(null, '', '/' + activeTool);
+    }
 }
 
 /* ── THEME SWITCHING ── */
@@ -56,10 +61,31 @@ function setTheme(theme) {
     }
 }
 
+// Lắng nghe sự kiện quay lại/tiến tới của trình duyệt (Back/Forward)
+window.addEventListener('popstate', () => {
+    const path = window.location.pathname.replace(/^\/|\/$/g, '');
+    const allowedTools = ['kew', 'img', 'excel', 'pdf'];
+    const activeTool = allowedTools.includes(path) ? path : 'kew';
+    switchTool(activeTool, false);
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('plt_theme') || 'dark';
     setTheme(savedTheme);
-    const savedTool = localStorage.getItem('plt_active_tool') || 'kew';
-    switchTool(savedTool);
+    
+    // Xác định tab hoạt động từ đường dẫn URL hiện tại
+    const path = window.location.pathname.replace(/^\/|\/$/g, '');
+    const allowedTools = ['kew', 'img', 'excel', 'pdf'];
+    
+    let activeTool = 'kew';
+    if (allowedTools.includes(path)) {
+        activeTool = path;
+    } else {
+        activeTool = localStorage.getItem('plt_active_tool') || 'kew';
+        // Nếu ở trang chủ /, cập nhật lại URL khớp với activeTool
+        history.replaceState(null, '', '/' + activeTool);
+    }
+    
+    switchTool(activeTool, false);
 });
 </script>

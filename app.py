@@ -55,6 +55,10 @@ def handle_request_entity_too_large(_exc):
     return f"File upload vượt quá giới hạn {max_upload_mb} MB của server.", 413
 
 @app.route('/')
+@app.route('/kew')
+@app.route('/img')
+@app.route('/excel')
+@app.route('/pdf')
 def index():
     """Render the main dashboard UI application."""
     return render_template('dashboard.html')
