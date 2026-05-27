@@ -1,0 +1,76 @@
+<!-- ══════════════════ PDF SPLIT WORKSPACE ══════════════════ -->
+<div id="workspace-pdf" class="workspace" style="display:none;">
+  <div id="app-container" style="padding: 1.5rem;">
+    
+    <div class="card excel-hero" style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚡ Tách file in</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Tính năng hỗ trợ tách một file PDF gốc thành 3 file phục vụ in ấn: 
+        1 file bìa (trang 1), 1 file màu (các trang còn lại giữ nguyên màu), và 1 file không màu (các trang còn lại chuyển trắng đen). 
+        Tất cả sẽ được đóng gói tự động thành file ZIP và tải xuống máy tính của bạn.
+      </p>
+    </div>
+
+    <!-- Vùng tải file -->
+    <div class="chart-card" style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-file-earmark-pdf" style="color: var(--accent2)"></i> Tải lên tệp PDF gốc (.pdf)
+      </h3>
+
+      <input type="file" id="pdf-file-input" accept=".pdf,application/pdf" style="display:none">
+
+      <div id="pdf-drop-area" 
+        style="border: 2px dashed rgba(109, 40, 217, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; background: var(--upload-bg); transition: all 0.2s;"
+        ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+        ondragleave="this.style.borderColor='rgba(109, 40, 217, 0.45)';"
+        onclick="document.getElementById('pdf-file-input').click()">
+        <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">🖨️</div>
+        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Chọn hoặc kéo thả file PDF cần tách vào đây</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Yêu cầu file PDF chứa từ 2 trang trở lên</div>
+      </div>
+
+      <!-- Khu vực điều khiển & hiển thị trạng thái -->
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1rem;">
+        <button type="button" class="btn" id="btn-pdf-process"
+          style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+          disabled>
+          <span id="pdf-spinner"
+            style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+          <span id="pdf-btn-text">🚀 Bắt đầu tách file</span>
+        </button>
+
+        <span id="pdf-file-label" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Chưa chọn file PDF</span>
+        <span id="pdf-status" style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;"></span>
+      </div>
+
+      <!-- Cảnh báo lỗi -->
+      <div id="pdf-error" class="kew-upload-feedback is-error" style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+      </div>
+
+      <!-- Thanh tiến trình xử lý giả lập hoặc tải lên -->
+      <div id="pdf-progress-container" style="display:none; margin-top: 1.5rem; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; background: var(--surface2)">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px;">
+          <span id="pdf-progress-step" style="color:var(--text-muted)">Đang tải file lên máy chủ...</span>
+          <span id="pdf-progress-percent" style="font-weight:600; color:var(--accent2)">0%</span>
+        </div>
+        <div style="width:100%; height:8px; background:var(--grid); border-radius:4px; overflow:hidden; border:1px solid var(--border)">
+          <div id="pdf-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hướng dẫn sử dụng chi tiết -->
+    <div class="chart-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3 style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+        💡 Thông tin thêm về cách hoạt động
+      </h3>
+      <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
+        <li><strong>Tệp bìa (<code>bìa-[tên].pdf</code>):</strong> Chỉ chứa đúng trang đầu tiên (thường là trang giới thiệu hoặc bìa báo cáo) để in màu một mặt riêng.</li>
+        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chứa toàn bộ các trang từ trang 2 trở đi, giữ nguyên màu sắc gốc để in màu các trang sơ đồ, biểu đồ.</li>
+        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa toàn bộ các trang từ trang 2 trở đi nhưng được chuyển sang trắng đen (grayscale) để in laser thông thường nhằm tiết kiệm chi phí mực màu.</li>
+        <li>Hệ thống sử dụng công nghệ xử lý PDF chất lượng cao thông qua <strong>Ghostscript</strong> giúp bảo toàn định dạng vector, đảm bảo độ sắc nét cao khi in và không làm tăng kích thước tệp như phương pháp chuyển đổi sang ảnh thông thường.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>

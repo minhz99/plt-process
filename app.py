@@ -6,6 +6,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from modules.excel.excel_api import excel_bp
 from modules.kew.kew_api import kew_bp
 from modules.image.image_api import image_bp
+from modules.pdf.pdf_api import pdf_bp
 
 def _env_int(name, default):
     """
@@ -33,6 +34,8 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 app.register_blueprint(excel_bp, url_prefix='/api/excel')
 app.register_blueprint(kew_bp, url_prefix='/api/kew')
 app.register_blueprint(image_bp, url_prefix='/api/image')
+app.register_blueprint(pdf_bp, url_prefix='/api/pdf')
+
 
 
 @app.errorhandler(RequestEntityTooLarge)
