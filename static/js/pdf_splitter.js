@@ -136,7 +136,7 @@
     if (progressPercent) progressPercent.textContent = '0%';
     if (progressStep) progressStep.textContent = 'Đang tải file PDF lên máy chủ...';
 
-    // Giả lập thanh tiến trình chạy từ 0% đến 92% trong quá trình server xử lý (vì PDF split + grayscale của Ghostscript chạy đồng bộ)
+    // Giả lập thanh tiến trình chạy từ 0% đến 92% trong quá trình server xử lý (vì PDF split chạy đồng bộ)
     let percent = 0;
     _progressInterval = setInterval(() => {
       if (percent < 90) {
@@ -151,7 +151,7 @@
         } else if (percent < 60) {
           if (progressStep) progressStep.textContent = 'Đang phân tách bìa và trang nội dung...';
         } else {
-          if (progressStep) progressStep.textContent = 'Đang chuyển đổi màu sắc (Grayscale) bằng Ghostscript...';
+          if (progressStep) progressStep.textContent = 'Đang trích xuất các trang không màu...';
         }
       }
     }, 400);

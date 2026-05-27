@@ -10,7 +10,7 @@
       <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
         Tính năng hỗ trợ tách một file PDF gốc thành các file phục vụ in ấn tối ưu chi phí:
         1 file bìa (trang 1 để in bìa cứng), 1 file màu (chứa riêng các trang còn lại có màu), và 1 file không màu (chứa
-        riêng các trang còn lại là trắng đen).
+        riêng các trang còn lại không có màu).
         Tất cả sẽ được đóng gói tự động thành file ZIP và tải xuống máy tính của bạn.
       </p>
     </div>
@@ -43,11 +43,11 @@
         <div style="flex: 1; min-width: 250px;">
           <label for="pdf-gray-exceptions"
             style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
-            ⚠️ Ngoại lệ không màu (ép trắng đen)
+            ⚠️ Ngoại lệ không màu
           </label>
           <input type="text" id="pdf-gray-exceptions" placeholder="Ví dụ: 5, 9, 10, 75"
             style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none; box-sizing: border-box;">
-          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Ép các trang này sang đen trắng
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Đưa các trang này vào tệp không màu
           </div>
         </div>
 
@@ -112,8 +112,7 @@
           thiệu hoặc bìa báo cáo) để in màu một mặt riêng trên giấy cứng.</li>
         <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chứa các trang được phân loại là trang màu để in màu
           riêng biệt.</li>
-        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa các trang trắng đen (đã được ép sang
-          grayscale hoàn chỉnh) để in laser thông thường.</li>
+        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa các trang không màu để in laser thông thường.</li>
         <li><strong>Ngoại lệ thủ công:</strong> Bạn có thể nhập số trang (ví dụ: `5, 9, 10, 75`) hoặc dải trang (ví dụ:
           `81-83`) để ép chuyển đổi màu/không màu theo ý muốn, giúp xử lý tối ưu các trang có dấu đỏ hoặc chữ ký màu một
           cách linh hoạt nhất.</li>

@@ -371,14 +371,11 @@ def split_pdf():
             
         # 3. Trích xuất trang không màu (nếu có)
         if gray_page_indices:
-            temp_gray_path = os.path.join(work_dir, "temp_gray.pdf")
             gray_writer = PdfWriter()
             for p in gray_page_indices:
                 gray_writer.add_page(reader.pages[p - 1]) # pypdf dùng 0-index
-            with open(temp_gray_path, 'wb') as f:
+            with open(gray_path, 'wb') as f:
                 gray_writer.write(f)
-            # Ép chuyển đổi trắng đen triệt để bằng Ghostscript
-            run_gs(temp_gray_path, gray_path, to_gray=True)
             generated_files.append((gray_path, gray_name))
             
         # Đóng gói ZIP các tệp được sinh ra
