@@ -420,8 +420,7 @@ def read_device_ocr(
         result[field_name] = val
         if val is None:
             warnings.append(
-                f"OCR: không đọc được giá trị '{field_name}' "
-                f"(screen {screen_id}, overlays {overlay_ids})."
+                f"OCR: không đọc được giá trị '{field_name}'."
             )
 
     return result, warnings
