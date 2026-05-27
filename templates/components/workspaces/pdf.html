@@ -37,8 +37,35 @@
           lên</div>
       </div>
 
+      <!-- Khu vực nhập ngoại lệ thủ công -->
+      <div
+        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; gap: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+          <label for="pdf-gray-exceptions"
+            style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+            ⚠️ Ngoại lệ không màu (ép trắng đen)
+          </label>
+          <input type="text" id="pdf-gray-exceptions" placeholder="Ví dụ: 5, 9, 10, 75"
+            style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none; box-sizing: border-box;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Ép các trang này sang đen trắng
+          </div>
+        </div>
+
+        <div style="flex: 1; min-width: 250px;">
+          <label for="pdf-color-exceptions"
+            style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+            🎨 Ngoại lệ màu (ép in màu)
+          </label>
+          <input type="text" id="pdf-color-exceptions" placeholder="Ví dụ: 2, 3, 81-83"
+            style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none; box-sizing: border-box;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Ép các trang này sang trang in màu
+            (bỏ qua nhận diện tự động)</div>
+        </div>
+      </div>
+
       <!-- Khu vực điều khiển & hiển thị trạng thái -->
-      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1rem;">
+      <div
+        style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
         <button type="button" class="btn" id="btn-pdf-process"
           style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
           disabled>
@@ -83,13 +110,15 @@
       <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
         <li><strong>Tệp bìa (<code>bìa-[tên].pdf</code>):</strong> Chỉ chứa đúng trang đầu tiên (thường là trang giới
           thiệu hoặc bìa báo cáo) để in màu một mặt riêng trên giấy cứng.</li>
-        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chỉ chứa các trang từ trang 2 trở đi mà hệ thống tự
-          động phát hiện có chứa màu sắc để in màu riêng biệt.</li>
-        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chỉ chứa các trang từ trang 2 trở đi mà
-          hệ thống tự động phát hiện không chứa màu sắc (chỉ có đen/xám) và được ép trắng đen (grayscale) hoàn chỉnh để
-          in laser thông thường.</li>
-        <li>Hệ thống sử dụng công nghệ phân tích độ phủ mực CMYK thông qua Ghostscript, tự động phân loại thông minh
-          từng trang mà không làm thay đổi hay suy giảm chất lượng định dạng vector của PDF.</li>
+        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chứa các trang được phân loại là trang màu để in màu
+          riêng biệt.</li>
+        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa các trang trắng đen (đã được ép sang
+          grayscale hoàn chỉnh) để in laser thông thường.</li>
+        <li><strong>Ngoại lệ thủ công:</strong> Bạn có thể nhập số trang (ví dụ: `5, 9, 10, 75`) hoặc dải trang (ví dụ:
+          `81-83`) để ép chuyển đổi màu/không màu theo ý muốn, giúp xử lý tối ưu các trang có dấu đỏ hoặc chữ ký màu một
+          cách linh hoạt nhất.</li>
+        <li>Hệ thống sử dụng công nghệ dựng hình thông minh ở độ phân giải thấp, tự động phân tích chính xác từng điểm
+          ảnh mà không làm thay đổi hay suy giảm chất lượng định dạng gốc của PDF.</li>
       </ul>
     </div>
 

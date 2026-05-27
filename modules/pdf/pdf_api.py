@@ -7,6 +7,8 @@ import zipfile
 import subprocess
 import traceback
 from flask import Blueprint, request, jsonify, send_file, current_app
+from PIL import Image
+import numpy as np
 
 pdf_bp = Blueprint('pdf_bp', __name__)
 
@@ -99,6 +101,90 @@ def check_pdf_pages_color(filepath):
         current_app.logger.error("Failed to detect PDF page colors: %s", e)
         return None
 
+def check_pdf_pages_color_visually(filepath, work_dir, split_mode='normal'):
+    """
+    Renders PDF pages to PNG at 72 DPI and counts chromatic pixels.
+    Returns a dictionary mapping page number (1-indexed) to boolean (True if page has color).
+    """
+    gs_executable = "gs"
+    for path in ["gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
+        try:
+            subprocess.run([path, "--version"], capture_output=True, check=True)
+            gs_executable = path
+            break
+        except Exception:
+            continue
+
+    render_dir = os.path.join(work_dir, "render")
+    os.makedirs(render_dir, exist_ok=True)
+    
+    cmd = [
+        gs_executable,
+        "-dNOPAUSE",
+        "-dBATCH",
+        "-sDEVICE=png16m",
+        "-r72",  # Use 72 DPI for better small text color retention
+        f"-sOutputFile={render_dir}/page_%d.png",
+        filepath
+    ]
+    
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+        files = os.listdir(render_dir)
+        
+        pages_color = {}
+        for f in files:
+            if not f.startswith("page_") or not f.endswith(".png"):
+                continue
+            try:
+                p_num = int(f.split('_')[1].split('.')[0])
+                img_path = os.path.join(render_dir, f)
+                with Image.open(img_path) as img:
+                    arr = np.array(img)
+                
+                # Check pixel channel differences
+                r = arr[:, :, 0].astype(int)
+                g = arr[:, :, 1].astype(int)
+                b = arr[:, :, 2].astype(int)
+                
+                diff_rg = np.abs(r - g)
+                diff_gb = np.abs(g - b)
+                diff_br = np.abs(b - r)
+                
+                # Count pixels where channel difference is > 10
+                max_diff = np.max([diff_rg, diff_gb, diff_br], axis=0)
+                colored_pixels = np.sum(max_diff > 10)
+                total_pixels = r.size
+                pct = (colored_pixels / total_pixels) * 100
+                
+                # Count printed pixels (brightness < 240)
+                brightness = (r + g + b) // 3
+                printed_pixels = np.sum(brightness < 240)
+                colored_ratio_to_printed = (colored_pixels / max(1, printed_pixels)) * 100
+                
+                if split_mode == 'smart':
+                    # Kiểu 2: Tách lọc dấu đỏ/vạch màu
+                    # Trang có màu nếu:
+                    # 1. Có màu rõ rệt (> 0.05% diện tích)
+                    # 2. VÀ:
+                    #    - Diện tích màu lớn (> 2.5% diện tích toàn trang)
+                    #    - HOẶC tỷ lệ màu so với nội dung in cao (>= 20% - nghĩa là màu chữ/nội dung chính chứ không phải dấu đỏ/vạch chỉ dẫn đơn lẻ)
+                    is_color = (pct > 0.05) and (pct > 2.5 or colored_ratio_to_printed >= 20.0)
+                else:
+                    # Kiểu 1: Tách thông thường
+                    is_color = pct > 0.05
+                    
+                pages_color[p_num] = is_color
+            except Exception as pe:
+                current_app.logger.error("Failed parsing rendered page %s: %s", f, pe)
+                
+        return pages_color
+    except Exception as e:
+        current_app.logger.error("Failed visual PDF page color detection: %s", e)
+        return None
+    finally:
+        shutil.rmtree(render_dir, ignore_errors=True)
+
 def run_gs(input_path, output_path, first_page=None, last_page=None, to_gray=False):
     """
     Chạy lệnh Ghostscript để trích xuất trang và tùy chọn chuyển sang trắng đen (grayscale).
@@ -139,6 +225,34 @@ def run_gs(input_path, output_path, first_page=None, last_page=None, to_gray=Fal
     except subprocess.CalledProcessError as e:
         current_app.logger.error("Ghostscript failed. cmd=%s, stderr=%s, stdout=%s", cmd, e.stderr, e.stdout)
         raise RuntimeError(f"Lỗi xử lý PDF qua Ghostscript: {e.stderr or e.stdout or str(e)}")
+
+def parse_page_exceptions(ex_str):
+    """
+    Parses a string of page numbers or page ranges (e.g. '5, 9, 10, 81-83')
+    into a set of integer page numbers.
+    """
+    pages = set()
+    if not ex_str:
+        return pages
+    # Replace common separators with comma
+    ex_str = ex_str.replace(';', ',').replace(' ', ',')
+    parts = ex_str.split(',')
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        if '-' in part:
+            try:
+                start, end = map(int, part.split('-'))
+                pages.update(range(start, end + 1))
+            except ValueError:
+                pass
+        else:
+            try:
+                pages.add(int(part))
+            except ValueError:
+                pass
+    return pages
 
 @pdf_bp.route('/split', methods=['POST'])
 def split_pdf():
@@ -187,8 +301,21 @@ def split_pdf():
         if num_pages < 2:
             return jsonify({"error": "File PDF phải có ít nhất 2 trang để thực hiện tách file in."}), 400
             
-        # Kiểm tra màu sắc từng trang
-        pages_color = check_pdf_pages_color(original_path)
+        # Lấy ngoại lệ từ request
+        gray_exceptions_str = request.form.get('gray_exceptions', '')
+        color_exceptions_str = request.form.get('color_exceptions', '')
+        
+        gray_exceptions = parse_page_exceptions(gray_exceptions_str)
+        color_exceptions = parse_page_exceptions(color_exceptions_str)
+        
+        # Kiểm tra màu sắc từng trang theo phương pháp dựng hình trực quan ('normal' mode)
+        pages_color = check_pdf_pages_color_visually(original_path, work_dir, 'normal')
+        
+        # Fallback về phương pháp cũ (inkcov) nếu kiểm tra trực quan thất bại
+        if not pages_color:
+            current_app.logger.warning("Visual color check failed, falling back to inkcov.")
+            pages_color = check_pdf_pages_color(original_path)
+            
         if not pages_color:
             return jsonify({"error": "Không thể phân tích thông tin màu sắc của file PDF."}), 400
             
@@ -197,7 +324,15 @@ def split_pdf():
         gray_page_indices = []
         
         for p in range(2, num_pages + 1):
-            if pages_color.get(p, True): # mặc định là có màu nếu không phân tích được
+            is_color = pages_color.get(p, True) # mặc định là có màu nếu không phân tích được
+            
+            # Áp dụng ngoại lệ thủ công
+            if p in gray_exceptions:
+                is_color = False
+            elif p in color_exceptions:
+                is_color = True
+                
+            if is_color:
                 color_page_indices.append(p)
             else:
                 gray_page_indices.append(p)

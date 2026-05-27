@@ -114,13 +114,17 @@
     const btn = document.getElementById('btn-pdf-process');
     const spin = document.getElementById('pdf-spinner');
     const btnText = document.getElementById('pdf-btn-text');
+    
     const progressContainer = document.getElementById('pdf-progress-container');
     const progressBar = document.getElementById('pdf-progress-bar');
     const progressPercent = document.getElementById('pdf-progress-percent');
     const progressStep = document.getElementById('pdf-progress-step');
 
+    const grayEx = document.getElementById('pdf-gray-exceptions') ? document.getElementById('pdf-gray-exceptions').value : '';
+    const colorEx = document.getElementById('pdf-color-exceptions') ? document.getElementById('pdf-color-exceptions').value : '';
+
     // Reset UI & Khóa tương tác
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     if (spin) spin.style.display = 'inline-block';
     if (btnText) btnText.textContent = 'Đang xử lý...';
     showError('');
@@ -154,6 +158,8 @@
 
     const fd = new FormData();
     fd.append('file', _selectedPdfFile, _selectedPdfFile.name);
+    fd.append('gray_exceptions', grayEx);
+    fd.append('color_exceptions', colorEx);
 
     try {
       const response = await fetch('/api/pdf/split', {
@@ -213,7 +219,7 @@
       showError(err.message || 'Có lỗi xảy ra trong quá trình xử lý PDF.');
       showStatus('Thất bại', 'danger');
     } finally {
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
       if (spin) spin.style.display = 'none';
       if (btnText) btnText.textContent = '🚀 Bắt đầu tách file';
     }
