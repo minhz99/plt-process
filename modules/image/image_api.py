@@ -218,6 +218,8 @@ def _parse_timestamp_values(form):
     
     Returns:
         dict: Một dictionary chứa các chuỗi đã chuẩn hóa (zfill) cho dd, mo, yyyy, hh, mi, ss.
+              Các trường không được cung cấp hoặc chứa placeholder sẽ được trả về dưới dạng chuỗi rỗng
+              để tránh ghi đè đè giá trị mặc định lên ảnh gốc.
     """
     timestamp = form.get('timestamp', '').strip()
     if timestamp:
@@ -235,13 +237,19 @@ def _parse_timestamp_values(form):
         mi_s = form.get('mi', '')
         ss_s = form.get('ss', '')
 
+    def clean_val(val, length, placeholder):
+        s_val = str(val or '').strip()
+        if not s_val or s_val == placeholder or s_val.lower() == 'nan':
+            return ''
+        return s_val.zfill(length)
+
     return {
-        'dd': dd_s.zfill(2),
-        'mo': mo_s.zfill(2),
-        'yyyy': yyyy_s.zfill(4),
-        'hh': hh_s.zfill(2),
-        'mi': mi_s.zfill(2),
-        'ss': ss_s.zfill(2),
+        'dd': clean_val(dd_s, 2, '__'),
+        'mo': clean_val(mo_s, 2, '__'),
+        'yyyy': clean_val(yyyy_s, 4, '____'),
+        'hh': clean_val(hh_s, 2, '__'),
+        'mi': clean_val(mi_s, 2, '__'),
+        'ss': clean_val(ss_s, 2, '__'),
     }
 
 

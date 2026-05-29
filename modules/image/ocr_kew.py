@@ -416,7 +416,11 @@ def read_device_ocr(
     for field_name, (screen_id, overlay_ids, agg_mode) in FIELD_SCREEN_MAP.items():
         sv = screen_cache.get(screen_id, {})
         raw_vals = [sv.get(ov_id) for ov_id in overlay_ids]
-        val = _aggregate(raw_vals, agg_mode)
+        # Nếu là tdd và có bất kỳ pha nào không đọc được (None), không điền (set val = None)
+        if field_name == "tdd" and any(v is None for v in raw_vals):
+            val = None
+        else:
+            val = _aggregate(raw_vals, agg_mode)
         result[field_name] = val
         if val is None:
             warnings.append(

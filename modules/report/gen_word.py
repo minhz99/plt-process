@@ -374,6 +374,23 @@ def _tri(d: Mapping, dec: int = 1) -> tuple[str, str, str]:
     """
     return _f(d.get("max"), dec), _f(d.get("min"), dec), _f(d.get("avg"), dec)
 
+def _tri_tdd(d: Mapping, dec: int = 1) -> tuple[str, str, str]:
+    """Chuyển đổi bộ ba thống kê TDD (min, max, avg) sang chuỗi đã định dạng.
+    Nếu không có dữ liệu, trả về "lớn hơn 100".
+    """
+    def _f_tdd(v):
+        if v is None:
+            return "lớn hơn 100"
+        try:
+            x = float(v)
+            if x != x:  # NaN
+                return "lớn hơn 100"
+            return f"{x:.{dec}f}".replace(".", ",")
+        except (TypeError, ValueError):
+            return "lớn hơn 100"
+
+    return _f_tdd(d.get("max")), _f_tdd(d.get("min")), _f_tdd(d.get("avg"))
+
 # ════════════════════════════════════════════════════════════════════
 #                       INPS aggregation helpers
 # ════════════════════════════════════════════════════════════════════
@@ -796,7 +813,7 @@ def _compose_remarks_from_excel_fields(
         loi_dem += 1
     if thd_max is not None and thd_max > _THDV_LIMIT_PCT:
         loi_dem += 1
-    if tdd_max is not None and tdd_max > tdd_lim:
+    if tdd_max is None or tdd_max > tdd_lim:
         loi_dem += 1
     if delta_u is not None and delta_u > _V_DEV_LIMIT_PCT:
         loi_dem += 2  # Mất cân bằng điện áp — lỗi nghiêm trọng, cộng 2
@@ -866,34 +883,46 @@ def _compose_remarks_from_excel_fields(
 
     # ── Câu Sóng hài THD / TDD (Mẫu 2) ──────────────────────────────────
     lim_s = _pct(tdd_lim, 1)
-    th_s, td_s = _pct(thd_max), _pct(tdd_max)
+    th_s = _pct(thd_max)
+    td_s = "lớn hơn 100" if tdd_max is None else _pct(tdd_max)
+    
     thd_ok = thd_max is not None and thd_max <= _THDV_LIMIT_PCT
     tdd_ok = tdd_max is not None and tdd_max <= tdd_lim
 
-    if thd_max is None and tdd_max is None:
-        harm_sent = ""
-    elif thd_ok and tdd_ok:
-        harm_sent = (
-            f"Tổng biến dạng sóng hài điện áp và dòng điện đều ở mức cho phép "
-            f"(THDmax = {th_s}% {_LT} 8,0% {_AMP} TDDmax = {td_s}% {_LT} {lim_s}%)."
-        )
-    elif thd_ok and not tdd_ok:
-        harm_sent = (
-            f"Tổng biến dạng sóng hài điện áp ở mức cho phép (THDmax = {th_s}% {_LT} 8,0%); "
-            f"tuy nhiên, tổng biến dạng sóng hài dòng điện vượt mức cho phép "
-            f"(TDDmax = {td_s}% {_GT} {lim_s}%)."
-        )
-    elif not thd_ok and tdd_ok:
-        harm_sent = (
-            f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%); "
-            f"tuy nhiên, tổng biến dạng sóng hài điện áp vượt mức cho phép "
-            f"(THDmax = {th_s}% {_GT} 8,0%)."
-        )
+    # Nếu tdd_max không có, nó được coi là "lớn hơn 100", tức là vượt mức (tdd_ok = False)
+    if tdd_max is None:
+        tdd_ok = False
+
+    if thd_max is None:
+        # Nếu THD không có, chỉ đánh giá TDD
+        if tdd_ok:
+            harm_sent = f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%)."
+        else:
+            harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax = {td_s}% {_GT} {lim_s}%)."
     else:
-        harm_sent = (
-            f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
-            f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax = {td_s}% {_GT} {lim_s}%)."
-        )
+        # Nếu có THD
+        if thd_ok and tdd_ok:
+            harm_sent = (
+                f"Tổng biến dạng sóng hài điện áp và dòng điện đều ở mức cho phép "
+                f"(THDmax = {th_s}% {_LT} 8,0% {_AMP} TDDmax = {td_s}% {_LT} {lim_s}%)."
+            )
+        elif thd_ok and not tdd_ok:
+            harm_sent = (
+                f"Tổng biến dạng sóng hài điện áp ở mức cho phép (THDmax = {th_s}% {_LT} 8,0%); "
+                f"tuy nhiên, tổng biến dạng sóng hài dòng điện vượt mức cho phép "
+                f"(TDDmax = {td_s}% {_GT} {lim_s}%)."
+            )
+        elif not thd_ok and tdd_ok:
+            harm_sent = (
+                f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%); "
+                f"tuy nhiên, tổng biến dạng sóng hài điện áp vượt mức cho phép "
+                f"(THDmax = {th_s}% {_GT} 8,0%)."
+            )
+        else:
+            harm_sent = (
+                f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
+                f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax = {td_s}% {_GT} {lim_s}%)."
+            )
 
     # ── MBA: format mới ──────────────────────────────────────────────────────
     # Câu 1: % tải (nếu có đủ dữ liệu)
@@ -1297,6 +1326,7 @@ def mba_kwargs_from_inps(
     cap_fig_mba: str | None = None,
     remarks_mba: str = "",
     cap_tab_mba: str | None = None,
+    excel_params: dict | None = None,
 ) -> dict:
     """Đọc dữ liệu từ file INPSxxxx.KEW và chuẩn bị bộ tham số (kwargs) để render template MBA.
 
@@ -1367,11 +1397,39 @@ def mba_kwargs_from_inps(
         [thd1.get("avg"), thd2.get("avg"), thd3.get("avg")],
         _THDV_LIMIT_PCT
     )
-    tddeval = _eval_thd(
-        [tdd1.get("max"), tdd2.get("max"), tdd3.get("max")],
-        [tdd1.get("avg"), tdd2.get("avg"), tdd3.get("avg")],
-        _TDD_LIMIT_PCT
-    )
+
+    # Kiểm tra xem có TDD trong excel_params hay không.
+    # Nếu excel_params có cung cấp nhưng tdd không có giá trị, hoặc cả hai không có dữ liệu:
+    ep = excel_params or {}
+    has_excel_tdd = False
+    if "tdd" in ep:
+        v_tdd = ep.get("tdd")
+        if v_tdd is not None:
+            try:
+                import pandas as _pd
+                if not (isinstance(v_tdd, float) and _pd.isna(v_tdd)):
+                    has_excel_tdd = True
+            except Exception:
+                has_excel_tdd = True
+
+    tdd_in_inps = any(tdd1.get(k) is not None for k in ("max", "min", "avg")) or \
+                  any(tdd2.get(k) is not None for k in ("max", "min", "avg")) or \
+                  any(tdd3.get(k) is not None for k in ("max", "min", "avg"))
+
+    # Nếu (có excel_params nhưng không có tdd) HOẶC (không có tdd ở cả excel và inps):
+    force_no_tdd = (excel_params is not None and not has_excel_tdd) or (not has_excel_tdd and not tdd_in_inps)
+
+    if force_no_tdd:
+        tdd1 = {}
+        tdd2 = {}
+        tdd3 = {}
+        tddeval = "Không đạt"
+    else:
+        tddeval = _eval_thd(
+            [tdd1.get("max"), tdd2.get("max"), tdd3.get("max")],
+            [tdd1.get("avg"), tdd2.get("avg"), tdd3.get("avg")],
+            _TDD_LIMIT_PCT
+        )
 
     u12max, u12min, u12avg = _tri(u12, 1)
     u23max, u23min, u23avg = _tri(u23, 1)
@@ -1388,9 +1446,9 @@ def mba_kwargs_from_inps(
     thd1max, thd1min, thd1avg = _tri(thd1, 2)
     thd2max, thd2min, thd2avg = _tri(thd2, 2)
     thd3max, thd3min, thd3avg = _tri(thd3, 2)
-    tdd1max, tdd1min, tdd1avg = _tri(tdd1, 2)
-    tdd2max, tdd2min, tdd2avg = _tri(tdd2, 2)
-    tdd3max, tdd3min, tdd3avg = _tri(tdd3, 2)
+    tdd1max, tdd1min, tdd1avg = _tri_tdd(tdd1, 2)
+    tdd2max, tdd2min, tdd2avg = _tri_tdd(tdd2, 2)
+    tdd3max, tdd3min, tdd3avg = _tri_tdd(tdd3, 2)
 
     nm = _format_name_mid(name)
     return {
@@ -1457,6 +1515,7 @@ def mba_kwargs_from_folder(
         cap_fig_mba=cap_fig_mba,
         remarks_mba="",
         cap_tab_mba=cap_tab_mba,
+        excel_params=excel_params,
         **images,
     )
     kw["remarks_mba"] = _resolve_remarks_field(

@@ -398,7 +398,7 @@ function parseStrictTimestampDate(dd, mo, yyyy, hh, mi, ss) {
 }
 
 function formatTimestampString(dd, mo, yyyy, hh, mi, ss) {
-    return `${String(dd || '00').padStart(2, '0')}/${String(mo || '00').padStart(2, '0')}/${String(yyyy || '0000').padStart(4, '0')} ${String(hh || '00').padStart(2, '0')}:${String(mi || '00').padStart(2, '0')}:${String(ss || '00').padStart(2, '0')}`;
+    return `${String(dd || '__').padStart(2, '0')}/${String(mo || '__').padStart(2, '0')}/${String(yyyy || '____').padStart(4, '0')} ${String(hh || '__').padStart(2, '0')}:${String(mi || '__').padStart(2, '0')}:${String(ss || '__').padStart(2, '0')}`;
 }
 
 function randomIntInclusive(min, max) {
@@ -416,187 +416,236 @@ function generateAndFillParameters() {
     }
 
     try {
-        const pVal = parseFloat(document.getElementById('gen-P').value.replace(/,/g, '.'));
-        const pfVal = parseFloat(document.getElementById('gen-PF').value.replace(/,/g, '.'));
-        const a1 = parseFloat(document.getElementById('gen-A1').value.replace(/,/g, '.'));
-        const a2 = parseFloat(document.getElementById('gen-A2').value.replace(/,/g, '.'));
-        const a3 = parseFloat(document.getElementById('gen-A3').value.replace(/,/g, '.'));
-        const aUnb = parseFloat(document.getElementById('gen-Aunb').value.replace(/,/g, '.'));
-        const uUnb = parseFloat(document.getElementById('gen-Uunb').value.replace(/,/g, '.'));
-        const thdMax = parseFloat(document.getElementById('gen-THDmax').value.replace(/,/g, '.'));
-        const tddMax = parseFloat(document.getElementById('gen-TDDmax').value.replace(/,/g, '.'));
-
-        if (isNaN(pVal) || isNaN(pfVal) || isNaN(a1) || isNaN(a2) || isNaN(a3) || isNaN(aUnb) || isNaN(uUnb) || isNaN(thdMax) || isNaN(tddMax)) {
-            throw new Error("Vui lòng nhập đầy đủ và đúng định dạng số cho cả 9 thông số cốt lõi.");
-        }
-
-        if (pfVal <= 0 || pfVal > 1) {
-            throw new Error("Hệ số công suất (PF) phải nằm trong khoảng (0, 1].");
-        }
-
-        // 1. Dòng điện trung bình
-        const A_avg = (a1 + a2 + a3) / 3;
-
-        // 2. Điện áp dây trung bình (Tự động phát hiện kW hay W)
-        // P = sqrt(3) * U_dây * I * PF => U_dây_avg = P / (sqrt(3) * I * PF)
-        let isKw = false;
-        let U_avg = (Math.sqrt(3) * pVal) / (pfVal * (a1 + a2 + a3));
-        if (U_avg < 10.0) {
-            isKw = true;
-            U_avg *= 1000;
-        }
-
-        // 3. Phân phối điện áp pha lệch theo U_unb
-        const deltaU = U_avg * (uUnb / 100);
-        const u1 = U_avg + deltaU;
-        const u2 = U_avg - deltaU;
-        const u3 = U_avg;
-
-        // 4. Góc pha điện áp (Định mức lệch 120 độ)
-        const vdeg1 = 0.0;
-        const vdeg2 = -120.0;
-        const vdeg3 = 120.0;
-
-        // 5. Góc pha dòng điện (Chậm pha do tải cảm kháng)
-        const thetaRad = Math.acos(pfVal);
-        const thetaDeg = thetaRad * (180 / Math.PI);
-        
-        function normalizeAngle(angle) {
-            while (angle > 180) angle -= 360;
-            while (angle <= -180) angle += 360;
-            return angle;
-        }
-        
-        const adeg1 = normalizeAngle(vdeg1 - thetaDeg);
-        const adeg2 = normalizeAngle(vdeg2 - thetaDeg);
-        const adeg3 = normalizeAngle(vdeg3 - thetaDeg);
-
-        // 6. Tính toán công suất biểu kiến S từng pha (Vì u1, u2, u3 là điện áp dây, S_pha = U_dây * I / sqrt(3))
-        const factor = isKw ? 1000 : 1;
-        const s1 = (u1 * a1) / (Math.sqrt(3) * factor);
-        const s2 = (u2 * a2) / (Math.sqrt(3) * factor);
-        const s3 = (u3 * a3) / (Math.sqrt(3) * factor);
-
-        // 7. Tính công suất tác dụng và phản kháng (Hiệu chỉnh khớp số liệu tổng)
-        const p1_tmp = s1 * pfVal;
-        const p2_tmp = s2 * pfVal;
-        const p3_tmp = s3 * pfVal;
-        const p_sum_tmp = p1_tmp + p2_tmp + p3_tmp;
-        const k_p = pVal / p_sum_tmp;
-
-        const p1 = p1_tmp * k_p;
-        const p2 = p2_tmp * k_p;
-        const p3 = p3_tmp * k_p;
-
-        const q1_tmp = Math.sqrt(Math.max(0, s1*s1 - p1*p1));
-        const q2_tmp = Math.sqrt(Math.max(0, s2*s2 - p2*p2));
-        const q3_tmp = Math.sqrt(Math.max(0, s3*s3 - p3*p3));
-        
-        const q_total = pVal * Math.tan(thetaRad);
-        const q_sum_tmp = q1_tmp + q2_tmp + q3_tmp;
-        const m_q = q_sum_tmp > 0 ? (q_total / q_sum_tmp) : 0;
-
-        const q1 = q1_tmp * m_q;
-        const q2 = q2_tmp * m_q;
-        const q3 = q3_tmp * m_q;
-
-        const S_total = Math.sqrt(pVal*pVal + q_total*q_total);
-        const PF_total = pfVal;
-
-        const pf1 = s1 > 0 ? (p1 / s1) : pfVal;
-        const pf2 = s2 > 0 ? (p2 / s2) : pfVal;
-        const pf3 = s3 > 0 ? (p3 / s3) : pfVal;
-
-        // 8. Dòng điện trung tính An
-        const r1 = a1 * Math.cos(adeg1 * Math.PI / 180);
-        const i1 = a1 * Math.sin(adeg1 * Math.PI / 180);
-        const r2 = a2 * Math.cos(adeg2 * Math.PI / 180);
-        const i2 = a2 * Math.sin(adeg2 * Math.PI / 180);
-        const r3 = a3 * Math.cos(adeg3 * Math.PI / 180);
-        const i3 = a3 * Math.sin(adeg3 * Math.PI / 180);
-        const r_n = r1 + r2 + r3;
-        const i_n = i1 + i2 + i3;
-        const an = Math.sqrt(r_n*r_n + i_n*i_n);
-
-        // 9. THDV (Sóng hài áp)
-        const thdv1 = thdMax;
-        const thdv2 = Math.max(0, thdMax - (0.1 + Math.random() * 0.3));
-        const thdv3 = Math.max(0, thdMax - (0.1 + Math.random() * 0.3));
-
-        // 10. THDA (Sóng hài dòng - TDD)
-        const currents = [
-            { id: 1, val: a1 },
-            { id: 2, val: a2 },
-            { id: 3, val: a3 }
+        const fields = [
+            'V1', 'V2', 'V3', 'A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3',
+            'S1', 'S2', 'S3', 'PF1', 'PF2', 'PF3', 'Vdeg1', 'Vdeg2', 'Vdeg3',
+            'Adeg1', 'Adeg2', 'Adeg3', 'THDV1', 'THDV2', 'THDV3',
+            'THDA1', 'THDA2', 'THDA3', 'P', 'Q', 'S', 'PF', 'freq', 'An', 'V_unb', 'A_unb'
         ];
-        currents.sort((x, y) => y.val - x.val);
-        const maxIdx = currents[0].id;
 
-        const thda = [];
-        thda[maxIdx] = tddMax;
-        for (let i = 1; i <= 3; i++) {
-            if (i !== maxIdx) {
-                thda[i] = Math.max(0, tddMax - (0.2 + Math.random() * 0.8));
+        let vals = {};
+        fields.forEach(f => {
+            // Kiểm tra khung trên trước (gen-*)
+            const genEl = document.getElementById('gen-' + f);
+            if (genEl && genEl.value.trim() !== '') {
+                const num = parseFloat(genEl.value.replace(/,/g, '.'));
+                vals[f] = isNaN(num) ? null : num;
+            } else {
+                // Nếu khung trên trống, dùng khung dưới làm fallback (ei-*)
+                const eiEl = document.getElementById('ei-' + f);
+                if (eiEl && eiEl.value.trim() !== '') {
+                    const num = parseFloat(eiEl.value.replace(/,/g, '.'));
+                    vals[f] = isNaN(num) ? null : num;
+                } else {
+                    vals[f] = null;
+                }
+            }
+        });
+
+        // Đếm số thông số đã được cung cấp
+        const numKnowns = Object.values(vals).filter(v => v !== null).length;
+        if (numKnowns === 0) {
+            throw new Error("Vui lòng nhập ít nhất một thông số ở khung trên hoặc khung dưới để hệ thống thực hiện dự đoán.");
+        }
+
+        // Tự động phát hiện đơn vị công suất (kW/kVar/kVA vs W/Var/VA)
+        let isKw = true;
+        const powerVals = [vals.P, vals.P1, vals.P2, vals.P3, vals.Q, vals.Q1, vals.Q2, vals.Q3, vals.S, vals.S1, vals.S2, vals.S3].filter(v => v !== null && v > 0);
+        if (powerVals.length > 0) {
+            const maxP = Math.max(...powerVals);
+            if (maxP > 5000) {
+                isKw = false;
+            }
+        }
+        const factor = isKw ? 1000 : 1;
+
+        // Vòng lặp giải quyết các ràng buộc toán học / kỹ thuật điện
+        for (let pass = 0; pass < 5; pass++) {
+            // 1. Điện áp (V1, V2, V3, V_unb)
+            let vList = [vals.V1, vals.V2, vals.V3].filter(v => v !== null);
+            let U_avg = vList.length > 0 ? (vList.reduce((a, b) => a + b, 0) / vList.length) : null;
+
+            if (U_avg === null && vals.P !== null && vals.PF !== null && vals.PF > 0) {
+                let aList = [vals.A1, vals.A2, vals.A3].filter(v => v !== null);
+                if (aList.length > 0) {
+                    let A_avg_temp = aList.reduce((a, b) => a + b, 0) / aList.length;
+                    if (A_avg_temp > 0) {
+                        U_avg = (vals.P * factor) / (Math.sqrt(3) * A_avg_temp * vals.PF);
+                    }
+                }
+            }
+            if (U_avg === null || U_avg <= 0) {
+                U_avg = 380.0;
+            }
+
+            let vUnbVal = vals.V_unb !== null ? vals.V_unb : 1.2;
+            if (vals.V1 === null) vals.V1 = U_avg + U_avg * (vUnbVal / 200);
+            if (vals.V2 === null) vals.V2 = U_avg - U_avg * (vUnbVal / 200);
+            if (vals.V3 === null) vals.V3 = U_avg;
+            
+            if (vals.V_unb === null) {
+                let vAvg = (vals.V1 + vals.V2 + vals.V3) / 3;
+                vals.V_unb = vAvg > 0 ? (Math.max(Math.abs(vals.V1 - vAvg), Math.abs(vals.V2 - vAvg), Math.abs(vals.V3 - vAvg)) / vAvg) * 100 : 0;
+            }
+
+            // 2. Dòng điện (A1, A2, A3, A_unb)
+            let aList = [vals.A1, vals.A2, vals.A3].filter(v => v !== null);
+            let A_avg = aList.length > 0 ? (aList.reduce((a, b) => a + b, 0) / aList.length) : null;
+
+            if (A_avg === null && vals.P !== null && vals.PF !== null && vals.PF > 0) {
+                let uAvg = (vals.V1 + vals.V2 + vals.V3) / 3;
+                A_avg = (vals.P * factor) / (Math.sqrt(3) * uAvg * vals.PF);
+            }
+            if (A_avg === null || A_avg <= 0) {
+                A_avg = 100.0;
+            }
+
+            let aUnbVal = vals.A_unb !== null ? vals.A_unb : 5.0;
+            if (vals.A1 === null) vals.A1 = A_avg + A_avg * (aUnbVal / 200);
+            if (vals.A2 === null) vals.A2 = A_avg - A_avg * (aUnbVal / 200);
+            if (vals.A3 === null) vals.A3 = A_avg;
+
+            if (vals.A_unb === null) {
+                let aAvg = (vals.A1 + vals.A2 + vals.A3) / 3;
+                vals.A_unb = aAvg > 0 ? (Math.max(Math.abs(vals.A1 - aAvg), Math.abs(vals.A2 - aAvg), Math.abs(vals.A3 - aAvg)) / aAvg) * 100 : 0;
+            }
+
+            // 3. Hệ số công suất (PF1, PF2, PF3, PF)
+            let pfList = [vals.PF1, vals.PF2, vals.PF3].filter(v => v !== null);
+            let PF_avg = pfList.length > 0 ? (pfList.reduce((a, b) => a + b, 0) / pfList.length) : (vals.PF !== null ? vals.PF : 0.85);
+            if (PF_avg <= 0 || PF_avg > 1) PF_avg = 0.85;
+
+            if (vals.PF1 === null) vals.PF1 = PF_avg;
+            if (vals.PF2 === null) vals.PF2 = PF_avg;
+            if (vals.PF3 === null) vals.PF3 = PF_avg;
+            if (vals.PF === null) vals.PF = PF_avg;
+
+            // 4. Công suất biểu kiến từng pha (S1, S2, S3)
+            if (vals.S1 === null) vals.S1 = (vals.V1 * vals.A1) / (Math.sqrt(3) * factor);
+            if (vals.S2 === null) vals.S2 = (vals.V2 * vals.A2) / (Math.sqrt(3) * factor);
+            if (vals.S3 === null) vals.S3 = (vals.V3 * vals.A3) / (Math.sqrt(3) * factor);
+
+            // 5. Công suất tác dụng từng pha (P1, P2, P3) và Tổng P
+            if (vals.P1 === null) vals.P1 = vals.S1 * vals.PF1;
+            if (vals.P2 === null) vals.P2 = vals.S2 * vals.PF2;
+            if (vals.P3 === null) vals.P3 = vals.S3 * vals.PF3;
+
+            let P_sum = vals.P1 + vals.P2 + vals.P3;
+            if (vals.P === null) {
+                vals.P = P_sum;
+            } else {
+                if (P_sum > 0) {
+                    let kP = vals.P / P_sum;
+                    vals.P1 *= kP;
+                    vals.P2 *= kP;
+                    vals.P3 *= kP;
+                }
+            }
+
+            // 6. Công suất phản kháng (Q1, Q2, Q3) và Tổng Q
+            if (vals.Q1 === null) vals.Q1 = Math.sqrt(Math.max(0, vals.S1 * vals.S1 - vals.P1 * vals.P1));
+            if (vals.Q2 === null) vals.Q2 = Math.sqrt(Math.max(0, vals.S2 * vals.S2 - vals.P2 * vals.P2));
+            if (vals.Q3 === null) vals.Q3 = Math.sqrt(Math.max(0, vals.S3 * vals.S3 - vals.P3 * vals.P3));
+
+            let Q_sum = vals.Q1 + vals.Q2 + vals.Q3;
+            if (vals.Q === null) {
+                vals.Q = Q_sum;
+            } else {
+                if (Q_sum > 0) {
+                    let kQ = vals.Q / Q_sum;
+                    vals.Q1 *= kQ;
+                    vals.Q2 *= kQ;
+                    vals.Q3 *= kQ;
+                }
+            }
+
+            // 7. Tính lại S và PF để đảm bảo logic
+            vals.S = Math.sqrt(vals.P * vals.P + vals.Q * vals.Q);
+            if (vals.S > 0) {
+                vals.PF = vals.P / vals.S;
+            }
+            if (vals.S1 > 0) vals.PF1 = vals.P1 / vals.S1; else vals.PF1 = PF_avg;
+            if (vals.S2 > 0) vals.PF2 = vals.P2 / vals.S2; else vals.PF2 = PF_avg;
+            if (vals.S3 > 0) vals.PF3 = vals.P3 / vals.S3; else vals.PF3 = PF_avg;
+
+            // 8. Góc lệch pha
+            if (vals.Vdeg1 === null) vals.Vdeg1 = 0.0;
+            if (vals.Vdeg2 === null) vals.Vdeg2 = -120.0;
+            if (vals.Vdeg3 === null) vals.Vdeg3 = 120.0;
+
+            const thetaRad1 = Math.acos(Math.min(1.0, Math.max(-1.0, vals.PF1)));
+            const thetaRad2 = Math.acos(Math.min(1.0, Math.max(-1.0, vals.PF2)));
+            const thetaRad3 = Math.acos(Math.min(1.0, Math.max(-1.0, vals.PF3)));
+
+            function normalizeAngle(angle) {
+                while (angle > 180) angle -= 360;
+                while (angle <= -180) angle += 360;
+                return angle;
+            }
+
+            if (vals.Adeg1 === null) vals.Adeg1 = normalizeAngle(vals.Vdeg1 - thetaRad1 * (180 / Math.PI));
+            if (vals.Adeg2 === null) vals.Adeg2 = normalizeAngle(vals.Vdeg2 - thetaRad2 * (180 / Math.PI));
+            if (vals.Adeg3 === null) vals.Adeg3 = normalizeAngle(vals.Vdeg3 - thetaRad3 * (180 / Math.PI));
+
+            // 9. THDV và THDA
+            let thdvList = [vals.THDV1, vals.THDV2, vals.THDV3].filter(v => v !== null);
+            let THDV_avg = thdvList.length > 0 ? (thdvList.reduce((a, b) => a + b, 0) / thdvList.length) : 1.5;
+            if (vals.THDV1 === null) vals.THDV1 = THDV_avg;
+            if (vals.THDV2 === null) vals.THDV2 = Math.max(0, THDV_avg - (0.1 + Math.random() * 0.3));
+            if (vals.THDV3 === null) vals.THDV3 = Math.max(0, THDV_avg - (0.1 + Math.random() * 0.3));
+
+            let thdaList = [vals.THDA1, vals.THDA2, vals.THDA3].filter(v => v !== null);
+            let THDA_avg = thdaList.length > 0 ? (thdaList.reduce((a, b) => a + b, 0) / thdaList.length) : 4.5;
+            if (vals.THDA1 === null) vals.THDA1 = THDA_avg;
+            if (vals.THDA2 === null) vals.THDA2 = Math.max(0, THDA_avg - (0.2 + Math.random() * 0.8));
+            if (vals.THDA3 === null) vals.THDA3 = Math.max(0, THDA_avg - (0.2 + Math.random() * 0.8));
+
+            // 10. Dòng trung tính An
+            if (vals.An === null) {
+                const r1 = vals.A1 * Math.cos(vals.Adeg1 * Math.PI / 180);
+                const i1 = vals.A1 * Math.sin(vals.Adeg1 * Math.PI / 180);
+                const r2 = vals.A2 * Math.cos(vals.Adeg2 * Math.PI / 180);
+                const i2 = vals.A2 * Math.sin(vals.Adeg2 * Math.PI / 180);
+                const r3 = vals.A3 * Math.cos(vals.Adeg3 * Math.PI / 180);
+                const i3 = vals.A3 * Math.sin(vals.Adeg3 * Math.PI / 180);
+                const r_n = r1 + r2 + r3;
+                const i_n = i1 + i2 + i3;
+                vals.An = Math.sqrt(r_n * r_n + i_n * i_n);
+            }
+
+            // 11. Tần số freq
+            if (vals.freq === null) {
+                vals.freq = 50.0 + (Math.random() > 0.5 ? 0.01 : -0.01);
             }
         }
 
-        // Điền dữ liệu vào form
-        document.getElementById('ei-V1').value = u1.toFixed(1);
-        document.getElementById('ei-V2').value = u2.toFixed(1);
-        document.getElementById('ei-V3').value = u3.toFixed(1);
+        // Định dạng làm tròn các giá trị theo quy tắc của người dùng
+        const formattingMap = {
+            V1: 1, V2: 1, V3: 1,
+            A1: 0, A2: 0, A3: 0, An: 0,
+            P1: 0, P2: 0, P3: 0, P: 0,
+            Q1: 0, Q2: 0, Q3: 0, Q: 0,
+            S1: 0, S2: 0, S3: 0, S: 0,
+            PF1: 3, PF2: 3, PF3: 3, PF: 3,
+            Vdeg1: 1, Vdeg2: 1, Vdeg3: 1,
+            Adeg1: 1, Adeg2: 1, Adeg3: 1,
+            THDV1: 2, THDV2: 2, THDV3: 2,
+            THDA1: 2, THDA2: 2, THDA3: 2,
+            freq: 2, V_unb: 2, A_unb: 2
+        };
 
-        document.getElementById('ei-A1').value = a1.toFixed(2);
-        document.getElementById('ei-A2').value = a2.toFixed(2);
-        document.getElementById('ei-A3').value = a3.toFixed(2);
-
-        document.getElementById('ei-P1').value = p1.toFixed(3);
-        document.getElementById('ei-P2').value = p2.toFixed(3);
-        document.getElementById('ei-P3').value = p3.toFixed(3);
-
-        document.getElementById('ei-Q1').value = q1.toFixed(3);
-        document.getElementById('ei-Q2').value = q2.toFixed(3);
-        document.getElementById('ei-Q3').value = q3.toFixed(3);
-
-        document.getElementById('ei-S1').value = s1.toFixed(3);
-        document.getElementById('ei-S2').value = s2.toFixed(3);
-        document.getElementById('ei-S3').value = s3.toFixed(3);
-
-        document.getElementById('ei-PF1').value = pf1.toFixed(3);
-        document.getElementById('ei-PF2').value = pf2.toFixed(3);
-        document.getElementById('ei-PF3').value = pf3.toFixed(3);
-
-        document.getElementById('ei-Vdeg1').value = vdeg1.toFixed(1);
-        document.getElementById('ei-Vdeg2').value = vdeg2.toFixed(1);
-        document.getElementById('ei-Vdeg3').value = vdeg3.toFixed(1);
-
-        document.getElementById('ei-Adeg1').value = adeg1.toFixed(1);
-        document.getElementById('ei-Adeg2').value = adeg2.toFixed(1);
-        document.getElementById('ei-Adeg3').value = adeg3.toFixed(1);
-
-        document.getElementById('ei-THDV1').value = thdv1.toFixed(2);
-        document.getElementById('ei-THDV2').value = thdv2.toFixed(2);
-        document.getElementById('ei-THDV3').value = thdv3.toFixed(2);
-
-        document.getElementById('ei-THDA1').value = thda[1].toFixed(2);
-        document.getElementById('ei-THDA2').value = thda[2].toFixed(2);
-        document.getElementById('ei-THDA3').value = thda[3].toFixed(2);
-
-        document.getElementById('ei-P').value = pVal.toFixed(3);
-        document.getElementById('ei-Q').value = q_total.toFixed(3);
-        document.getElementById('ei-S').value = S_total.toFixed(3);
-        document.getElementById('ei-PF').value = PF_total.toFixed(3);
-
-        document.getElementById('ei-freq').value = (50.0 + (Math.random() > 0.5 ? 0.02 : -0.02)).toFixed(2);
-        document.getElementById('ei-An').value = an.toFixed(2);
-        document.getElementById('ei-V_unb').value = uUnb.toFixed(2);
-        document.getElementById('ei-A_unb').value = aUnb.toFixed(2);
+        // Điền lại vào các trường của form
+        fields.forEach(f => {
+            const el = document.getElementById('ei-' + f);
+            if (el) {
+                const dec = formattingMap[f] !== undefined ? formattingMap[f] : 2;
+                const val = (vals[f] !== null && !isNaN(vals[f])) ? vals[f] : 0;
+                el.value = val.toFixed(dec);
+            }
+        });
 
         // Hiệu ứng nhấp nháy xanh nhẹ để người dùng nhận thấy dữ liệu đã đổi
-        const fieldsToHighlight = ['V1', 'V2', 'V3', 'A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'Q1', 'Q2', 'Q3',
-                                   'S1', 'S2', 'S3', 'PF1', 'PF2', 'PF3', 'Vdeg1', 'Vdeg2', 'Vdeg3',
-                                   'Adeg1', 'Adeg2', 'Adeg3', 'THDV1', 'THDV2', 'THDV3', 'THDA1', 'THDA2', 'THDA3',
-                                   'P', 'Q', 'S', 'PF', 'freq', 'An', 'V_unb', 'A_unb'];
-        fieldsToHighlight.forEach(f => {
+        fields.forEach(f => {
             const el = document.getElementById('ei-' + f);
             if (el) {
                 const oldTransition = el.style.transition;

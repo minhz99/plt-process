@@ -71,77 +71,156 @@
       </div>
     </div>
 
-    <div class="chart-card" style="margin-bottom: 1.5rem;">
-      <h3>Thông số cấu hình & thời gian</h3>
-
-      <!-- Bộ tạo số liệu tự động -->
+    <!-- Thông số đầu vào (Có sẵn) -->
+    <div class="chart-card" style="margin-bottom: 1.5rem; border: 1px dashed var(--accent);">
+      <h3 style="color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+        ⚡ Thông số đầu vào (Có sẵn)
+      </h3>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 15px;">
+        Điền các thông số bạn đã biết vào đây (càng điền nhiều, kết quả tính toán càng chính xác).
+      </p>
       <div
-        style="background: var(--surface-card); border: 1px dashed var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-        <h4
-          style="margin: 0 0 10px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; color: var(--accent);">
-          ⚡ Bộ tạo số liệu tự động
-        </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0 0 15px 0;">
-          Nhập các thông số bên dưới, hệ thống sẽ tự động tính toán các thông số còn lại mà không bị xung đột logic kỹ
-          thuật.
-        </p>
-        <div
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 15px;">
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">P (kW/W tổng)</label>
-            <input type="text" id="gen-P"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">PF (Tổng)</label>
-            <input type="text" id="gen-PF"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">A1 (A)</label>
-            <input type="text" id="gen-A1"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">A2 (A)</label>
-            <input type="text" id="gen-A2"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">A3 (A)</label>
-            <input type="text" id="gen-A3"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">A_unb (%)</label>
-            <input type="text" id="gen-Aunb"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">U_unb (%)</label>
-            <input type="text" id="gen-Uunb"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">THDmax (%)</label>
-            <input type="text" id="gen-THDmax"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-muted)">TDDmax (%)</label>
-            <input type="text" id="gen-TDDmax"
-              style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size: 0.85rem;" />
-          </div>
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px;">
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V1</label><input type="text" id="gen-V1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button type="button" onclick="generateAndFillParameters()"
-            style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-            <span>Tạo bộ số và điền</span>
-          </button>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V2</label><input type="text" id="gen-V2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
         </div>
-        <div id="gen-error" style="color: var(--danger); font-size: 0.75rem; margin-top: 8px; display: none;"></div>
-      </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V3</label><input type="text" id="gen-V3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A1</label><input type="text" id="gen-A1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A2</label><input type="text" id="gen-A2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A3</label><input type="text" id="gen-A3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
 
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P1</label><input type="text" id="gen-P1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P2</label><input type="text" id="gen-P2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P3</label><input type="text" id="gen-P3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q1</label><input type="text" id="gen-Q1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q2</label><input type="text" id="gen-Q2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q3</label><input type="text" id="gen-Q3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S1</label><input type="text" id="gen-S1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S2</label><input type="text" id="gen-S2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S3</label><input type="text" id="gen-S3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF1</label><input type="text" id="gen-PF1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF2</label><input type="text" id="gen-PF2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF3</label><input type="text" id="gen-PF3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg1</label><input type="text" id="gen-Vdeg1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg2</label><input type="text" id="gen-Vdeg2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Vdeg3</label><input type="text" id="gen-Vdeg3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg1</label><input type="text" id="gen-Adeg1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg2</label><input type="text" id="gen-Adeg2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Adeg3</label><input type="text" id="gen-Adeg3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV1</label><input type="text" id="gen-THDV1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV2</label><input type="text" id="gen-THDV2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDV3</label><input type="text" id="gen-THDV3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA1</label><input type="text" id="gen-THDA1"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA2</label><input type="text" id="gen-THDA2"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">THDA3</label><input type="text" id="gen-THDA3"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">P</label><input type="text" id="gen-P"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">Q</label><input type="text" id="gen-Q"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">S</label><input type="text" id="gen-S"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">PF</label><input type="text" id="gen-PF"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">freq</label><input type="text" id="gen-freq"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">An</label><input type="text" id="gen-An"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">V_unb</label><input type="text" id="gen-V_unb"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+        <div><label style="font-size:0.8rem; color:var(--text-muted)">A_unb</label><input type="text" id="gen-A_unb"
+            style="width:100%; padding:6px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:4px;" />
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="generateAndFillParameters()"
+          style="background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+          <span>Tính toán & Điền thông số ⬇️</span>
+        </button>
+      </div>
+      <div id="gen-error" style="color: var(--danger); font-size: 0.75rem; margin-top: 8px; display: none;"></div>
+    </div>
+
+    <!-- Thông số đưa vào ảnh -->
+    <div class="chart-card" style="margin-bottom: 1.5rem;">
+      <h3>📸 Thông số đưa vào ảnh (Ghi đè)</h3>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 15px;">
+        Các thông số dưới đây sẽ được in đè trực tiếp lên ảnh.
+      </p>
       <div
         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 15px;">
         <div><label style="font-size:0.8rem; color:var(--text-muted)">V1</label><input type="text" id="ei-V1"

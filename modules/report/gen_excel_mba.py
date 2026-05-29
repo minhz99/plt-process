@@ -246,6 +246,7 @@ def _evaluate_for_excel(df: "pd.DataFrame") -> dict[int, str]:
         avg_vals = [df[c].mean() for c in thd_cols if not df[c].dropna().empty]
         res[20] = _eval_thd(max_vals, avg_vals, _THDV_LIMIT_PCT)
         
+    res[23] = "Không đạt"
     tdd_cols = [c for c in ["AVG_Athd1[%]", "AVG_Athd2[%]", "AVG_Athd3[%]"] if c in df.columns]
     if tdd_cols:
         max_vals = [df[c].max() for c in tdd_cols if not df[c].dropna().empty]
@@ -259,7 +260,8 @@ def _evaluate_for_excel(df: "pd.DataFrame") -> dict[int, str]:
             tdd_lim = 12.0 if p_val > 50.0 else 20.0
         else:
             tdd_lim = _TDD_LIMIT_PCT
-        res[23] = _eval_thd(max_vals, avg_vals, tdd_lim)
+        if any(v is not None for v in max_vals):
+            res[23] = _eval_thd(max_vals, avg_vals, tdd_lim)
         
     return res
 
@@ -383,6 +385,21 @@ def generate_mba_excel_from_devices(
                         df_raw.columns = df_raw.columns.str.strip()
                         df, warnings = _mba_extract(df_raw)
                         _mba_write(ws, df)
+                        
+                        # Ghi đè đánh giá AE23 sang "Không đạt" nếu tdd không có trong excel_params
+                        tdd_in_excel = ep.get("tdd")
+                        has_tdd = False
+                        if tdd_in_excel is not None:
+                            try:
+                                import pandas as _pd
+                                if not (isinstance(tdd_in_excel, float) and _pd.isna(tdd_in_excel)):
+                                    has_tdd = True
+                            except Exception:
+                                has_tdd = True
+                        
+                        if not has_tdd:
+                            ws["AE23"] = "Không đạt"
+
                         inps_found = True
             except Exception as e:
                 print(f"Lỗi đọc file INPS cho {name}: {e}")
@@ -418,7 +435,11 @@ def generate_mba_excel_from_devices(
                 tdd_lim = 12.0 if p_val > 50.0 else 20.0
             else:
                 tdd_lim = _TDD_LIMIT_PCT
-            ws["AE23"] = _eval_thd([tdd], [tdd], tdd_lim)
+            
+            if tdd is not None:
+                ws["AE23"] = _eval_thd([tdd], [tdd], tdd_lim)
+            else:
+                ws["AE23"] = "Không đạt"
 
     # 4. Cập nhật bảng tổng hợp tại sheet "Tổn thất MBA"
     if "Tổn thất MBA" in wb.sheetnames:
