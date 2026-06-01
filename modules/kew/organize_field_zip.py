@@ -806,10 +806,10 @@ def run_ocr_and_update_excel(
             pct = start_pct + int((idx / len(plans)) * (end_pct - start_pct))
             progress_callback(pct, f"OCR: Nhận dạng thông số đo cho «{plan.device_raw}» ({idx+1}/{len(plans)})...")
 
-        # Lấy danh sách ảnh thực tế sau khi loại bỏ omit
+        # Lấy danh sách ảnh thực tế sau khi loại bỏ omit (loại bỏ hoàn toàn khỏi chuỗi để không bị lệch thứ tự)
         valid_indices = [
-            i if i not in plan.img_omit else None
-            for i in _iter_img_range(plan.img_start, plan.img_end)
+            i for i in _iter_img_range(plan.img_start, plan.img_end)
+            if i not in plan.img_omit
         ]
 
         # Chạy OCR cho thiết bị này
