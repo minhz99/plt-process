@@ -787,6 +787,13 @@ def _compose_remarks_from_excel_fields(
     def _pct(v: float | None, d: int = 2) -> str:
         return "—" if v is None else f"{v:.{d}f}".replace(".", ",")
 
+    def _get_random_choice(choices: list[str], seed_text: str) -> str:
+        import hashlib
+        import random
+        seed_int = int(hashlib.md5(seed_text.encode('utf-8')).hexdigest(), 16)
+        r = random.Random(seed_int)
+        return r.choice(choices)
+
     def _volt(v: float | None, d: int = 1) -> str:
         return "—" if v is None else f"{v:.{d}f}".replace(".", ",")
 
@@ -823,7 +830,7 @@ def _compose_remarks_from_excel_fields(
         if loi_dem == 0:
             quality = "tốt"
         elif loi_dem == 1:
-            quality = "khá tốt"
+            quality = "tốt"
         elif loi_dem == 2:
             quality = "tương đối tốt"
         else:
@@ -832,7 +839,7 @@ def _compose_remarks_from_excel_fields(
         if loi_dem == 0:
             quality = "tốt"
         elif loi_dem == 1:
-            quality = "khá tốt"
+            quality = "tốt"
         elif loi_dem == 2:
             quality = "tương đối tốt"
         else:
@@ -924,6 +931,52 @@ def _compose_remarks_from_excel_fields(
                 f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax = {td_s}% {_GT} {lim_s}%)."
             )
 
+    # ── Gộp câu nếu có nhiều thông số vượt mức ───────────────────────────
+    params_info = []
+    if du_num is not None:
+        params_info.append({"name": "độ lệch pha điện áp", "val": f"ΔU = {du_s}%", "is_bad": not du_pass, "op": _GT if not du_pass else _LT, "lim": "5,0%"})
+    if di_num is not None:
+        params_info.append({"name": "độ lệch pha dòng điện", "val": f"ΔI = {di_s}%", "is_bad": not di_pass, "op": _GT if not di_pass else _LT, "lim": "10,0%"})
+    if thd_max is not None:
+        params_info.append({"name": "tổng biến dạng sóng hài điện áp", "val": f"THDmax = {th_s}%", "is_bad": not thd_ok, "op": _GT if not thd_ok else _LT, "lim": "8,0%"})
+    if True:
+        params_info.append({"name": "tổng biến dạng sóng hài dòng điện", "val": f"TDDmax = {td_s}%", "is_bad": not tdd_ok, "op": _GT if not tdd_ok else _LT, "lim": f"{lim_s}%"})
+
+    bad_params = [p for p in params_info if p["is_bad"]]
+    good_params = [p for p in params_info if not p["is_bad"]]
+
+    if len(bad_params) > 1:
+        def _join_names(names: list[str]) -> str:
+            if not names: return ""
+            if len(names) == 1: return names[0]
+            return ", ".join(names[:-1]) + " và " + names[-1]
+
+        def _join_vals(items: list[dict]) -> str:
+            parts = []
+            for item in items:
+                if "lớn hơn 100" in item["val"]:
+                    parts.append(f"{item['val']} {_GT} {item['lim']}")
+                else:
+                    parts.append(f"{item['val']} {item['op']} {item['lim']}")
+            return "; ".join(parts)
+
+        if len(good_params) > 0:
+            good_names = _join_names([p["name"] for p in good_params])
+            good_names = good_names[0].upper() + good_names[1:]
+            good_vals = _join_vals(good_params)
+            bad_names = _join_names([p["name"] for p in bad_params])
+            bad_vals = _join_vals(bad_params)
+            
+            combined_sent = f"{good_names} ở mức cho phép ({good_vals}); tuy nhiên, {bad_names} vượt mức cho phép ({bad_vals})."
+        else:
+            bad_names = _join_names([p["name"] for p in bad_params])
+            bad_names = bad_names[0].upper() + bad_names[1:]
+            bad_vals = _join_vals(bad_params)
+            combined_sent = f"{bad_names} đều vượt mức cho phép ({bad_vals})."
+            
+        unbalance_sent = combined_sent
+        harm_sent = ""
+
     # ── MBA: format mới ──────────────────────────────────────────────────────
     # Câu 1: % tải (nếu có đủ dữ liệu)
     # Câu 2: Biểu đồ dòng điện
@@ -961,8 +1014,16 @@ def _compose_remarks_from_excel_fields(
             unbalance_part = f"độ lệch pha điện áp ở mức {du_level}"
             di_separate = di_level is not None  # Câu 4 riêng nếu có ΔI
 
+        mba_openings = [
+            f"Chất lượng điện đo tại {name_mid} ở mức {quality}",
+            f"Đánh giá tổng quan, chất lượng điện năng của {name_mid} đạt mức {quality}",
+            f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}",
+            f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}"
+        ]
+        chosen_mba_opening = _get_random_choice(mba_openings, name)
+
         quality_sent = (
-            f"Chất lượng điện đo tại {name_mid} ở mức {quality}, "
+            f"{chosen_mba_opening}, "
             f"{unbalance_part}, "
             f"hệ số công suất cosφ ở mức {pf_txt}."
         )
@@ -1001,11 +1062,25 @@ def _compose_remarks_from_excel_fields(
     else:
         volt_sent = ""
 
-    parts: list[str] = [
-        f"Chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-        f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm.",
-        f"Hệ số công suất cosφ ở mức {pf_txt}.",
-    ]
+    if quality == "chưa tốt":
+        parts: list[str] = [
+            f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm.",
+            f"Hệ số công suất cosφ ở mức {pf_txt}.",
+        ]
+    else:
+        openings = [
+            f"Chất lượng điện cấp cho {name_mid} ở mức {quality}.",
+            f"Đánh giá tổng quan, chất lượng điện năng của {name_mid} đạt mức {quality}.",
+            f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}.",
+            f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}."
+        ]
+        chosen_opening = _get_random_choice(openings, name)
+        
+        parts: list[str] = [
+            chosen_opening,
+            f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm.",
+            f"Hệ số công suất cosφ ở mức {pf_txt}.",
+        ]
     if volt_sent:
         parts.append(volt_sent)
     if unbalance_sent:

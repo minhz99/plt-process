@@ -44,3 +44,5 @@ test_vba.py
 test.zip
 /test-bmp
 *.pdf
+*.mp4
+*.txt
