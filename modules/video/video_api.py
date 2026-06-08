@@ -160,6 +160,17 @@ def process_video():
 
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+            # Nếu danh sách ROI trống, mặc định nhận dạng toàn bộ khung hình
+            if not rois:
+                rois = [{
+                    'id': 'Full_Frame',
+                    'x': 0,
+                    'y': 0,
+                    'w': width,
+                    'h': height
+                }]
+
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -181,10 +192,10 @@ def process_video():
             # map: roi_id -> last_ocr_value
             last_ocr_values = {}
 
-            # Cấu hình whitelist của Tesseract
-            tess_config = '--psm 7'
+            # Cấu hình cơ bản của Tesseract (vô hiệu hóa từ điển để tăng độ chính xác của số và ký hiệu đo)
+            base_config = '-c load_system_dawg=0 -c load_freq_dawg=0 -c load_punc_dawg=0 -c load_number_dawg=0 -c load_unambig_dawg=0 -c load_bigram_dawg=0 -c load_fixed_length_dawgs=0'
             if numeric_only:
-                tess_config = '--psm 7 -c tessedit_char_whitelist=0123456789.-: '
+                base_config += ' -c tessedit_char_whitelist=0123456789.-:,+ '
 
             # Duyệt qua các khung hình theo bước nhảy
             frame_idx = 0
@@ -221,8 +232,16 @@ def process_video():
                         frame_results[roi_id] = ""
                         continue
 
-                    # Chuyển grayscale
-                    gray_crop = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+                    # Chuyển grayscale (kiểm tra số kênh màu để tránh lỗi trên ảnh/video đã xử lý trắng đen)
+                    if len(crop_img.shape) == 3:
+                        if crop_img.shape[2] == 3:
+                            gray_crop = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+                        elif crop_img.shape[2] == 4:
+                            gray_crop = cv2.cvtColor(crop_img, cv2.COLOR_BGRA2GRAY)
+                        else:
+                            gray_crop = crop_img.copy()
+                    else:
+                        gray_crop = crop_img.copy()
 
                     # Lọc nhiễu ảnh nếu bật
                     if denoise_enabled:
@@ -258,44 +277,65 @@ def process_video():
                         # Copy kết quả của khung hình trước, không chạy OCR
                         frame_results[roi_id] = last_ocr_values[roi_id]
                     else:
-                        # Phóng to vùng ảnh lên 3.0 lần để chữ số rõ ràng hơn
-                        resized = cv2.resize(gray_crop, (0, 0), fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
+                        # Phóng to vùng ảnh hợp lý dựa trên kích thước vùng chọn
+                        crop_h, crop_w = gray_crop.shape[:2]
+                        if crop_w < 300 or crop_h < 150:
+                            # Với vùng chọn nhỏ, upscale lên để chữ số rõ ràng hơn
+                            scale_factor = max(1.5, min(3.0, 300.0 / crop_w, 150.0 / crop_h))
+                            resized = cv2.resize(gray_crop, (0, 0), fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_CUBIC)
+                        else:
+                            # Tránh phóng to vùng chọn đã lớn (như Full Frame) để tránh làm mờ biên và tốn tài nguyên
+                            resized = gray_crop.copy()
 
-                        # Tạo danh sách các ứng viên tiền xử lý (Preprocessing Candidates)
+                        # Xác định các chế độ phân đoạn trang (PSM) phù hợp
+                        # Nếu là vùng chọn lớn (như Full Frame), thử PSM 6 (single block) và PSM 11 (sparse text) hoặc PSM 3 (auto)
+                        # Nếu là vùng chọn nhỏ (chỉ chứa một tham số đơn lẻ), thử PSM 7 (single line) và PSM 8 (single word)
+                        is_large_roi = (w > width * 0.4) or (h > height * 0.4) or (roi_id == 'Full_Frame')
+                        if is_large_roi:
+                            psm_modes = [('--psm 6', 'PSM6'), ('--psm 11', 'PSM11'), ('--psm 3', 'PSM3')]
+                        else:
+                            psm_modes = [('--psm 7', 'PSM7'), ('--psm 8', 'PSM8')]
+
+                        # Tạo danh sách các ứng viên tiền xử lý (Preprocessing + PSM Candidates)
                         candidates = []
                         
-                        # 1. Ảnh xám thô (CLAHE + Bilateral)
-                        candidates.append(("Grayscale", resized))
-
-                        # 2. Ảnh nhị phân thường (Chữ tối, nền sáng)
+                        # Danh sách biến thể ảnh
+                        img_variants = [("Grayscale", resized)]
+                        
+                        # Thêm ảnh nhị phân Otsu & Adaptive
                         if display_mode in ['auto', 'dark_on_light']:
                             otsu_norm = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                            candidates.append(("Otsu Normal", otsu_norm))
+                            img_variants.append(("Otsu Normal", otsu_norm))
                             
                             adapt_norm = cv2.adaptiveThreshold(resized, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 5)
-                            candidates.append(("Adaptive Gaussian Normal", adapt_norm))
-
-                        # 3. Ảnh nhị phân đảo ngược (Chữ sáng, nền tối)
+                            img_variants.append(("Adaptive Gaussian Normal", adapt_norm))
+                            
                         if display_mode in ['auto', 'light_on_dark']:
                             otsu_inv = cv2.threshold(resized, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-                            candidates.append(("Otsu Inverted", otsu_inv))
+                            img_variants.append(("Otsu Inverted", otsu_inv))
                             
                             adapt_inv = cv2.adaptiveThreshold(resized, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 5)
-                            candidates.append(("Adaptive Gaussian Inverted", adapt_inv))
+                            img_variants.append(("Adaptive Gaussian Inverted", adapt_inv))
 
-                        # Chạy OCR song song trên từng phương thức để tìm ra kết quả tốt nhất dựa trên độ tin cậy (Confidence)
+                        # Tạo tổ hợp các ứng viên (Ảnh biến thể x Chế độ PSM)
+                        for img_name, img_data in img_variants:
+                            for psm_flag, psm_name in psm_modes:
+                                cand_config = f"{psm_flag} {base_config}"
+                                candidates.append((f"{img_name} ({psm_name})", img_data, cand_config))
+
+                        # Chạy OCR trên từng phương thức ứng viên để tìm ra kết quả tốt nhất dựa trên độ tin cậy (Confidence)
                         best_text = ""
                         best_score = -999.0
                         best_method = ""
 
                         import re
-                        # Chữ số, dấu chấm, dấu trừ, dấu hai chấm, dấu phẩy, khoảng trắng, dấu cộng
-                        numeric_pattern = re.compile(r"^[0-9\.\-\:\s\,\+]+$")
+                        # Chữ số, dấu chấm, dấu trừ, dấu hai chấm, dấu phẩy, khoảng trắng, dấu cộng, đơn vị đo cơ bản
+                        numeric_pattern = re.compile(r"^[0-9\.\-\:\s\,\+a-zA-Z\%]+$")
 
-                        for name, img_cand in candidates:
+                        for name, img_cand, cand_config in candidates:
                             try:
                                 # Chạy image_to_data để lấy confidence cụ thể cho từng chữ/từ
-                                ocr_data = pytesseract.image_to_data(img_cand, output_type=pytesseract.Output.DICT, config=tess_config)
+                                ocr_data = pytesseract.image_to_data(img_cand, output_type=pytesseract.Output.DICT, config=cand_config)
                                 confs = [int(c) for c in ocr_data['conf'] if int(c) != -1]
                                 words = [w.strip() for i, w in enumerate(ocr_data['text']) if int(ocr_data['conf'][i]) != -1 and w.strip()]
                                 text = " ".join(words).strip()
@@ -320,14 +360,18 @@ def process_video():
                             except Exception as cand_err:
                                 current_app.logger.warning("Error in OCR candidate %s: %s", name, cand_err)
 
-                        # Nếu toàn bộ candidates đều thất bại hoặc rỗng
+                        # Nếu toàn bộ candidates đều thất bại hoặc rỗng, thử chạy trực tiếp với fallback
                         if best_score < -100.0:
-                            try:
-                                best_text = pytesseract.image_to_string(resized, config=tess_config).strip().replace('\n', ' ')
-                                best_method = "Fallback Raw"
-                            except Exception:
-                                best_text = ""
-                                best_method = "Error"
+                            for psm_flag, psm_name in psm_modes:
+                                try:
+                                    cand_config = f"{psm_flag} {base_config}"
+                                    best_text = pytesseract.image_to_string(resized, config=cand_config).strip().replace('\n', ' ')
+                                    if best_text:
+                                        best_method = f"Fallback Raw ({psm_name})"
+                                        break
+                                except Exception:
+                                    best_text = ""
+                                    best_method = "Error"
 
                         # Làm sạch văn bản kết quả
                         best_text = best_text.strip()

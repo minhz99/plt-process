@@ -150,8 +150,17 @@ function loadPreviewImage(dataUrl) {
     canvas.width = previewImg.width;
     canvas.height = previewImg.height;
     
-    // Reset ROI
-    rois = [];
+    // Reset và mặc định thêm vùng nhận dạng toàn bộ khung hình (Full Frame)
+    rois = [
+      {
+        id: "Full_Frame",
+        x: 0,
+        y: 0,
+        w: previewImg.width,
+        h: previewImg.height,
+        color: ROI_COLORS[0]
+      }
+    ];
     updateRoiList();
     drawCanvas();
   };
