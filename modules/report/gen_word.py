@@ -376,18 +376,18 @@ def _tri(d: Mapping, dec: int = 1) -> tuple[str, str, str]:
 
 def _tri_tdd(d: Mapping, dec: int = 1) -> tuple[str, str, str]:
     """Chuyển đổi bộ ba thống kê TDD (min, max, avg) sang chuỗi đã định dạng.
-    Nếu không có dữ liệu, trả về "lớn hơn 100".
+    Nếu không có dữ liệu, trả về "100,0".
     """
     def _f_tdd(v):
         if v is None:
-            return "lớn hơn 100"
+            return f"{100.0:.{dec}f}".replace(".", ",")
         try:
             x = float(v)
             if x != x:  # NaN
-                return "lớn hơn 100"
+                return f"{100.0:.{dec}f}".replace(".", ",")
             return f"{x:.{dec}f}".replace(".", ",")
         except (TypeError, ValueError):
-            return "lớn hơn 100"
+            return f"{100.0:.{dec}f}".replace(".", ",")
 
     return _f_tdd(d.get("max")), _f_tdd(d.get("min")), _f_tdd(d.get("avg"))
 
@@ -891,7 +891,7 @@ def _compose_remarks_from_excel_fields(
     # ── Câu Sóng hài THD / TDD (Mẫu 2) ──────────────────────────────────
     lim_s = _pct(tdd_lim, 1)
     th_s = _pct(thd_max)
-    td_s = "lớn hơn 100" if tdd_max is None else _pct(tdd_max)
+    td_s = "100,0" if tdd_max is None else _pct(tdd_max)
     
     thd_ok = thd_max is not None and thd_max <= _THDV_LIMIT_PCT
     tdd_ok = tdd_max is not None and tdd_max <= tdd_lim
@@ -905,7 +905,10 @@ def _compose_remarks_from_excel_fields(
         if tdd_ok:
             harm_sent = f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%)."
         else:
-            harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax = {td_s}% {_GT} {lim_s}%)."
+            if tdd_max is None:
+                harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax {_GT} 100%)."
+            else:
+                harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax = {td_s}% {_GT} {lim_s}%)."
     else:
         # Nếu có THD
         if thd_ok and tdd_ok:
@@ -914,11 +917,17 @@ def _compose_remarks_from_excel_fields(
                 f"(THDmax = {th_s}% {_LT} 8,0% {_AMP} TDDmax = {td_s}% {_LT} {lim_s}%)."
             )
         elif thd_ok and not tdd_ok:
-            harm_sent = (
-                f"Tổng biến dạng sóng hài điện áp ở mức cho phép (THDmax = {th_s}% {_LT} 8,0%); "
-                f"tuy nhiên, tổng biến dạng sóng hài dòng điện vượt mức cho phép "
-                f"(TDDmax = {td_s}% {_GT} {lim_s}%)."
-            )
+            if tdd_max is None:
+                harm_sent = (
+                    f"Tổng biến dạng sóng hài điện áp ở mức cho phép (THDmax = {th_s}% {_LT} 8,0%); "
+                    f"tuy nhiên, tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax {_GT} 100%)."
+                )
+            else:
+                harm_sent = (
+                    f"Tổng biến dạng sóng hài điện áp ở mức cho phép (THDmax = {th_s}% {_LT} 8,0%); "
+                    f"tuy nhiên, tổng biến dạng sóng hài dòng điện vượt mức cho phép "
+                    f"(TDDmax = {td_s}% {_GT} {lim_s}%)."
+                )
         elif not thd_ok and tdd_ok:
             harm_sent = (
                 f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%); "
@@ -926,10 +935,16 @@ def _compose_remarks_from_excel_fields(
                 f"(THDmax = {th_s}% {_GT} 8,0%)."
             )
         else:
-            harm_sent = (
-                f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
-                f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax = {td_s}% {_GT} {lim_s}%)."
-            )
+            if tdd_max is None:
+                harm_sent = (
+                    f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
+                    f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax {_GT} 100%)."
+                )
+            else:
+                harm_sent = (
+                    f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
+                    f"đều vượt mức cho phép (THDmax = {th_s}% {_GT} 8,0% {_AMP} TDDmax = {td_s}% {_GT} {lim_s}%)."
+                )
 
     # ── Gộp câu nếu có nhiều thông số vượt mức ───────────────────────────
     params_info = []
@@ -955,7 +970,7 @@ def _compose_remarks_from_excel_fields(
             parts = []
             for item in items:
                 if "lớn hơn 100" in item["val"]:
-                    parts.append(f"{item['val']} {_GT} {item['lim']}")
+                    parts.append(f"TDDmax {_GT} 100%")
                 else:
                     parts.append(f"{item['val']} {item['op']} {item['lim']}")
             return "; ".join(parts)
@@ -1016,7 +1031,6 @@ def _compose_remarks_from_excel_fields(
 
         mba_openings = [
             f"Chất lượng điện đo tại {name_mid} ở mức {quality}",
-            f"Đánh giá tổng quan, chất lượng điện năng của {name_mid} đạt mức {quality}",
             f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}",
             f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}"
         ]
@@ -1070,7 +1084,6 @@ def _compose_remarks_from_excel_fields(
     else:
         openings = [
             f"Chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-            f"Đánh giá tổng quan, chất lượng điện năng của {name_mid} đạt mức {quality}.",
             f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}.",
             f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}."
         ]
