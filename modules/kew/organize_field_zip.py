@@ -699,14 +699,16 @@ def build_project_output(
             else:
                 lu_dest_name = f"load-unload-{p.img_lu:03d}.BMP"
                 lu_dest = os.path.join(dest_dir, lu_dest_name)
-                # Nếu img_lu nằm trong dải thường, file đã được copy vào dest_dir
-                # với tên PS-SDxxx.BMP (và nguồn gốc có thể đã bị xoá).
-                # Ưu tiên dùng bản đã copy; chỉ fallback sang bmp_map nếu chưa có.
+                
                 already_copied = os.path.join(dest_dir, bmp_basename_for_index(p.img_lu))
                 if os.path.exists(already_copied):
                     lu_src = already_copied
                     shutil.copy2(lu_src, lu_dest)
-                    # Không xoá bản gốc vì nó đã nằm trong dest_dir
+                    # Xóa bản gốc vì ta chỉ cần ảnh load-unload
+                    try:
+                        os.remove(lu_src)
+                    except OSError:
+                        pass
                 else:
                     lu_src = bmp_map[p.img_lu]
                     shutil.copy2(lu_src, lu_dest)
