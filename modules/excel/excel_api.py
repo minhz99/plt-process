@@ -71,12 +71,15 @@ def apply_updates():
             
             worksheet.insert_rows(row_idx)
             
-            # Copy styles from the row above
+            # Copy styles and formulas from the row above
             src_row = row_idx - 1
             if src_row > 0:
+                # Need to import Translator here or at the top
+                from openpyxl.formula.translate import Translator
                 for col_idx in range(1, worksheet.max_column + 1):
                     src_cell = worksheet.cell(row=src_row, column=col_idx)
                     tgt_cell = worksheet.cell(row=row_idx, column=col_idx)
+                    
                     if src_cell.has_style:
                         tgt_cell.font = copy(src_cell.font)
                         tgt_cell.border = copy(src_cell.border)
@@ -84,6 +87,49 @@ def apply_updates():
                         tgt_cell.number_format = copy(src_cell.number_format)
                         tgt_cell.protection = copy(src_cell.protection)
                         tgt_cell.alignment = copy(src_cell.alignment)
+                    
+                    if src_cell.data_type == 'f':
+                        try:
+                            tgt_cell.value = Translator(src_cell.value, origin=src_cell.coordinate).translate_formula(tgt_cell.coordinate)
+                        except Exception:
+                            # Fallback if formula translation fails
+                            tgt_cell.value = src_cell.value
+                            
+            # Fix all formulas below the inserted row because openpyxl insert_rows doesn't update references
+            def shift_formula(formula, insert_row_idx, num_rows=1):
+                def repl(m):
+                    if m.group(5):  # Range reference
+                        col1_abs, col1, row1_abs, row1_str = m.group(1), m.group(2), m.group(3), m.group(4)
+                        col2_abs, col2, row2_abs, row2_str = m.group(6), m.group(7), m.group(8), m.group(9)
+                        row1 = int(row1_str)
+                        row2 = int(row2_str)
+                        
+                        if row1_abs != '$' and row1 >= insert_row_idx:
+                            row1 += num_rows
+                            
+                        # Expand the range if inserted exactly at boundary (row2 + 1)
+                        if row2_abs != '$':
+                            if row2 >= insert_row_idx or row2 == insert_row_idx - 1:
+                                row2 += num_rows
+                                
+                        return f"{col1_abs}{col1}{row1_abs}{row1}:{col2_abs}{col2}{row2_abs}{row2}"
+                    else:  # Single cell reference
+                        col_abs, col, row_abs, row_str = m.group(1), m.group(2), m.group(3), m.group(4)
+                        row = int(row_str)
+                        if row_abs != '$' and row >= insert_row_idx:
+                            row += num_rows
+                        return f"{col_abs}{col}{row_abs}{row}"
+
+                pattern = r'(?<![a-zA-Z])(\$?)([A-Z]{1,3})(\$?)(\d+)(?:(:)(\$?)([A-Z]{1,3})(\$?)(\d+))?(?!\()'
+                return re.sub(pattern, repl, formula)
+
+            for row in worksheet.iter_rows():
+                for cell in row:
+                    if cell.row != row_idx and cell.data_type == 'f' and cell.value and isinstance(cell.value, str):
+                        new_formula = shift_formula(cell.value, row_idx)
+                        if new_formula != cell.value:
+                            cell.value = new_formula
+                            
             continue
 
         cell_address = str(item.get("address", "")).strip().upper()

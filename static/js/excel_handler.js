@@ -1,9 +1,8 @@
 let currentMode = 'string_mode';
 let historyData = [];
-let workbook = null; // Store active workbook object
-let sourceExcelFile = null; // Keep original uploaded file for server-side export
-const pendingUpdatesArray = []; // List of updates [{type, sheet, address/row, value}]
+let filesData = {}; // { filename: { updates: [], workbook: null } }
 let currentFilename = "";
+let defaultTemplateBlob = null;
 const DEFAULT_TEMPLATE_URL = "/static/excel-template/excel-so-dien.xlsx";
 const DEFAULT_TEMPLATE_NAME = "excel-so-dien.xlsx";
 
@@ -37,7 +36,7 @@ function find_row(ws, target_month, target_period) {
     // Read target cells (Column D/4 is Month, Column E/5 is Period)
     // ws indexing is A1, B1... or {c:3, r:4}
     let month_row = null;
-    
+
     if (!ws['!ref']) {
         return (target_month - 1) * 4 + 4 + target_period;
     }
@@ -93,7 +92,7 @@ function fill_excel(ws, pairs, row) {
 
 function registerPendingUpdates(sheetName, updates) {
     updates.forEach(update => {
-        pendingUpdatesArray.push({
+        filesData[currentFilename].updates.push({
             type: 'cell_update',
             sheet: sheetName,
             address: update.address,
@@ -103,7 +102,7 @@ function registerPendingUpdates(sheetName, updates) {
 }
 
 function registerInsertRow(sheetName, rowIndex) {
-    pendingUpdatesArray.push({
+    filesData[currentFilename].updates.push({
         type: 'insert_row',
         sheet: sheetName,
         row: rowIndex
@@ -181,212 +180,213 @@ function showMessage(msg, isError = false) {
 }
 
 
-// CLIENT-SIDE Upload File
-async function uploadFile() {
-    const fileInput = document.getElementById('excel_file');
-    if (!fileInput.files.length) {
-        alert('Vui lòng chọn ít nhất một tệp Excel (.xlsx).');
+// Quản lý Đa File
+async function initDefaultTemplate() {
+    try {
+        const response = await fetch(DEFAULT_TEMPLATE_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error("Không tìm thấy file mẫu mặc định trên server.");
+        defaultTemplateBlob = await response.blob();
+        
+        await createNewFile("excel-so-dien.xlsx");
+    } catch (error) {
+        showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDefaultTemplate();
+});
+
+window.createNewFile = async function(name) {
+    let filename = name || document.getElementById('new_filename').value.trim();
+    if (!filename) {
+        alert('Vui lòng nhập tên file.');
+        return;
+    }
+    if (!filename.toLowerCase().endsWith('.xlsx')) {
+        filename += '.xlsx';
+    }
+    
+    if (filesData[filename]) {
+        alert('File này đã tồn tại trong danh sách.');
+        return;
+    }
+    
+    if (!defaultTemplateBlob) {
+        alert('Đang tải file mẫu, vui lòng thử lại sau giây lát.');
         return;
     }
 
-    await loadWorkbookFromFile(fileInput.files[0], { isTemplate: false });
-    fileInput.value = '';
-}
-
-async function loadWorkbookFromFile(file, { isTemplate = false } = {}) {
-    sourceExcelFile = file;
-    currentFilename = file.name || DEFAULT_TEMPLATE_NAME;
-    resetSessionEdits();
-
-    const buffer = await file.arrayBuffer();
+    // Tự động xoá file mặc định nếu người dùng tự nhập tên file mới
+    if (!name && filesData["excel-so-dien.xlsx"]) {
+        if (filesData["excel-so-dien.xlsx"].updates.length === 0) {
+            delete filesData["excel-so-dien.xlsx"];
+            const selectEl = document.getElementById('active_filename');
+            for (let i = 0; i < selectEl.options.length; i++) {
+                if (selectEl.options[i].value === "excel-so-dien.xlsx") {
+                    selectEl.remove(i);
+                    break;
+                }
+            }
+        }
+    }
+    
+    const buffer = await defaultTemplateBlob.arrayBuffer();
     const data = new Uint8Array(buffer);
-    workbook = XLSX.read(data, { type: 'array' });
-
-    // Update UI
+    const newWorkbook = XLSX.read(data, { type: 'array' });
+    
+    filesData[filename] = {
+        updates: [],
+        workbook: newWorkbook
+    };
+    
+    if (!name && document.getElementById('new_filename')) {
+        document.getElementById('new_filename').value = '';
+    }
+    
+    const selectEl = document.getElementById('active_filename');
+    const option = document.createElement('option');
+    option.value = filename;
+    option.textContent = filename;
+    selectEl.appendChild(option);
+    
+    selectEl.value = filename;
+    window.switchFile();
+    
     document.getElementById('data_entry_section').style.opacity = '1';
     document.getElementById('data_entry_section').style.pointerEvents = 'auto';
     document.getElementById('active_file_display').style.display = 'flex';
+    
+    showMessage(`Đã tạo file ${filename} thành công!`);
+}
 
+window.switchFile = function() {
     const selectEl = document.getElementById('active_filename');
-    const displayName = isTemplate ? `${currentFilename} (mặc định)` : currentFilename;
-    selectEl.innerHTML = `<option value="${currentFilename}">${displayName}</option>`;
-
-    // Populate sheet_name dropdown
+    currentFilename = selectEl.value;
+    
+    const fileInfo = filesData[currentFilename];
+    if (!fileInfo) return;
+    
     const sheetSelectEl = document.getElementById('sheet_name');
     if (sheetSelectEl) {
         sheetSelectEl.innerHTML = '';
-        workbook.SheetNames.forEach(sheetName => {
+        fileInfo.workbook.SheetNames.forEach(sheetName => {
             const option = document.createElement('option');
             option.value = sheetName;
             option.textContent = sheetName;
             sheetSelectEl.appendChild(option);
         });
     }
-
-    document.getElementById('btn_download').style.display = 'block';
-    showMessage(isTemplate
-        ? `Đã nạp file mẫu mặc định ${currentFilename}.`
-        : `Đã tải file ${currentFilename} thành công!`);
 }
 
-async function ensureWorkbookLoaded() {
-    if (workbook && sourceExcelFile) return true;
+window.downloadFile = async function() {
+    if (!currentFilename || !filesData[currentFilename]) return;
 
-    try {
-        const response = await fetch(DEFAULT_TEMPLATE_URL, { cache: 'no-store' });
-        if (!response.ok) throw new Error("Không tìm thấy file mẫu mặc định trên server.");
-
-        const blob = await response.blob();
-        const templateFile = new File(
-            [blob],
-            DEFAULT_TEMPLATE_NAME,
-            { type: blob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
-        );
-        await loadWorkbookFromFile(templateFile, { isTemplate: true });
-        return true;
-    } catch (error) {
-        showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
-        return false;
-    }
-}
-
-async function useDefaultTemplate() {
-    try {
-        const response = await fetch(DEFAULT_TEMPLATE_URL, { cache: 'no-store' });
-        if (!response.ok) throw new Error("Không tìm thấy file mẫu mặc định trên server.");
-
-        const blob = await response.blob();
-        const templateFile = new File(
-            [blob],
-            DEFAULT_TEMPLATE_NAME,
-            { type: blob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
-        );
-        await loadWorkbookFromFile(templateFile, { isTemplate: true });
-    } catch (error) {
-        showMessage(error.message || "Không thể tải file mẫu mặc định.", true);
-    }
-}
-
-// SERVER-SIDE Download File (preserve workbook formatting)
-async function downloadFile() {
-    const ready = await ensureWorkbookLoaded();
-    if (!ready || !sourceExcelFile) return;
-
-    const updates = pendingUpdatesArray;
+    const fileInfo = filesData[currentFilename];
+    const updates = fileInfo.updates;
     if (updates.length === 0) {
         showMessage("Chưa có dữ liệu nào để xuất file.", true);
         return;
     }
 
     const btnDownload = document.getElementById('btn_download');
-    const originalLabel = btnDownload ? btnDownload.textContent : null;
-    if (btnDownload) {
-        btnDownload.disabled = true;
-        btnDownload.textContent = 'Đang tạo file...';
-    }
+    const originalLabel = btnDownload.textContent;
+    btnDownload.disabled = true;
+    btnDownload.textContent = 'Đang tạo...';
 
     try {
         const formData = new FormData();
-        formData.append('file', sourceExcelFile, currentFilename || sourceExcelFile.name);
+        const sourceFile = new File([defaultTemplateBlob], currentFilename, { type: defaultTemplateBlob.type });
+        formData.append('file', sourceFile);
         formData.append('updates', JSON.stringify(updates));
-        formData.append('filename', currentFilename || sourceExcelFile.name || `KetQua_Excel_${new Date().getTime()}.xlsx`);
+        formData.append('filename', currentFilename);
 
         const response = await fetch('/api/excel/apply-updates', {
             method: 'POST',
             body: formData
         });
 
-        if (!response.ok) {
-            let errorMessage = 'Không thể tạo file Excel kết quả.';
-            try {
-                const payload = await response.json();
-                if (payload && payload.error) errorMessage = payload.error;
-            } catch (_error) {
-                // ignore parse errors and use fallback error message
-            }
-            throw new Error(errorMessage);
-        }
+        if (!response.ok) throw new Error('Không thể tạo file Excel kết quả.');
 
         const blob = await response.blob();
-        const headerName = parseFilenameFromContentDisposition(response.headers.get('Content-Disposition') || '');
-        const outputName = headerName || currentFilename || `KetQua_Excel_${new Date().getTime()}.xlsx`;
-
         const downloadUrl = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = downloadUrl;
-        anchor.download = outputName;
+        anchor.download = currentFilename;
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
         URL.revokeObjectURL(downloadUrl);
 
-        showMessage("✓ Đã tạo file Excel thành công, định dạng ô được giữ nguyên.");
+        showMessage("✓ Đã tạo file Excel thành công.");
     } catch (error) {
         showMessage(error.message || "Xuất file thất bại.", true);
     } finally {
-        if (btnDownload) {
-            btnDownload.disabled = false;
-            btnDownload.textContent = originalLabel;
+        btnDownload.disabled = false;
+        btnDownload.textContent = originalLabel;
+    }
+}
+
+window.downloadAllFiles = async function() {
+    const fileNames = Object.keys(filesData);
+    if (fileNames.length === 0) return;
+
+    const btn = document.getElementById('btn_download_all');
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Đang xử lý...';
+    
+    try {
+        const zip = new JSZip();
+        let hasData = false;
+        
+        for (const filename of fileNames) {
+            const fileInfo = filesData[filename];
+            if (fileInfo.updates.length === 0) continue; 
+            
+            const formData = new FormData();
+            const sourceFile = new File([defaultTemplateBlob], filename, { type: defaultTemplateBlob.type });
+            formData.append('file', sourceFile);
+            formData.append('updates', JSON.stringify(fileInfo.updates));
+            formData.append('filename', filename);
+
+            const response = await fetch('/api/excel/apply-updates', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                zip.file(filename, blob);
+                hasData = true;
+            }
         }
+        
+        if (!hasData) {
+            showMessage("Không có file nào chứa dữ liệu để tải xuống.", true);
+            return;
+        }
+        
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        const anchor = document.createElement('a');
+        anchor.href = downloadUrl;
+        anchor.download = `Danh_Sach_File_Excel_${new Date().getTime()}.zip`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(downloadUrl);
+        
+        showMessage("✓ Đã tải tất cả file thành công.");
+    } catch (err) {
+        showMessage("Lỗi khi tải nhiều file: " + err.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
     }
 }
 
 // Kéo thả file vào màn hình để upload
-const dropZone = document.body;
-const dragOverlay = document.createElement('div');
-dragOverlay.id = 'drag_overlay';
-dragOverlay.innerHTML = '<h2>Kéo thả file(s) Excel vào đây để tải lên</h2>';
-dragOverlay.style.cssText = `
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(10, 18, 34, 0.94);
-            border: 2px dashed rgba(34, 197, 94, 0.7);
-            color: #dcfce7;
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        `;
-document.body.appendChild(dragOverlay);
-
-function isExcelWorkspaceActive() {
-    const excelWorkspace = document.getElementById('workspace-excel');
-    return excelWorkspace && excelWorkspace.style.display !== 'none';
-}
-
-function hasFilesInDragEvent(e) {
-    return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
-}
-
-let dragCounter = 0;
-dropZone.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    if (!isExcelWorkspaceActive() || !hasFilesInDragEvent(e)) return;
-    dragCounter++;
-    dragOverlay.style.display = 'flex';
-});
-dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    if (!isExcelWorkspaceActive()) return;
-    dragCounter--;
-    if (dragCounter === 0) dragOverlay.style.display = 'none';
-});
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    if (!isExcelWorkspaceActive()) return;
-});
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (!isExcelWorkspaceActive()) return;
-    dragCounter = 0;
-    dragOverlay.style.display = 'none';
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        document.getElementById('excel_file').files = e.dataTransfer.files;
-        uploadFile();
-    }
-});
-
 // Xử lý Paste cho tất cả các field Manual (Trợ giúp nhanh cho Manual Mode)
 document.getElementById('bt_price').addEventListener('paste', function (event) {
     const pasteData = (event.clipboardData || window.clipboardData).getData('text');
@@ -405,19 +405,19 @@ document.getElementById('bt_price').addEventListener('paste', function (event) {
 
 // CLIENT-SIDE Submit Dữ Liệu
 async function submitData() {
-    const ready = await ensureWorkbookLoaded();
-    if (!ready || !workbook) return;
+    if (!currentFilename || !filesData[currentFilename]) return;
 
     const sheetName = document.getElementById('sheet_name').value.trim();
     const month = parseInt(document.getElementById('month').value);
     const period = parseInt(document.getElementById('period').value);
 
-    if (!workbook.Sheets[sheetName]) {
+    const fileInfo = filesData[currentFilename];
+    if (!fileInfo.workbook.Sheets[sheetName]) {
         showMessage(`Không tìm thấy sheet "${sheetName}"`, true);
         return;
     }
 
-    const ws = workbook.Sheets[sheetName];
+    const ws = fileInfo.workbook.Sheets[sheetName];
     let parsed_groups = [];
 
     function format_val(v) {
@@ -499,7 +499,7 @@ async function submitData() {
     }
 
     renderHistoryTable();
-    showMessage("✓ Đã ghi dữ liệu thành công! Có thể tải file xuống và giữ nguyên định dạng ô.");
+    showMessage("✓ Đã ghi dữ liệu thành công!");
 }
 
 // Bảng History

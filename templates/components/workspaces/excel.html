@@ -9,22 +9,27 @@
 
     <!-- 1. Quản lý File Excel -->
     <div class="card">
-      <h3 class="excel-step-title">Bước 1: Chọn tệp Excel mẫu</h3>
+      <h3 class="excel-step-title">Bước 1: Quản lý danh sách file</h3>
+      <p class="excel-hero-sub" style="margin-bottom: 15px; font-size: 14px;">Bạn có thể tạo và nhập cùng lúc nhiều file
+        khác nhau.</p>
 
       <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="excel_file" accept=".xlsx" multiple style="flex-grow: 1; max-width: 300px;">
-        <button onclick="uploadFile()">Tải lên file cần nhập</button>
-        <span style="font-size: 14px; opacity: 0.7;">hoặc</span>
-        <button class="btn-outline" onclick="useDefaultTemplate()">Sử dụng mẫu excel sẵn có</button>
+        <input type="text" id="new_filename" placeholder="Nhập tên file (VD: Cong_ty_A)"
+          style="flex-grow: 1; max-width: 300px;" class="form-control">
+        <button onclick="createNewFile()">Thêm file</button>
       </div>
 
-      <div id="active_file_display">
-        <div class="excel-active-file-meta">
-          <label class="excel-active-file-label">Tệp đang xử lý (có thể đổi):</label>
-          <select id="active_filename"></select>
+      <div id="active_file_display" style="display: none; margin-top: 15px; align-items: center; gap: 10px;">
+        <div class="excel-active-file-meta" style="flex-grow: 1;">
+          <label class="excel-active-file-label">File đang thao tác:</label>
+          <select id="active_filename" onchange="switchFile()" class="form-select"
+            style="max-width: 300px; display: inline-block;"></select>
         </div>
-        <button class="btn-outline btn-small" onclick="downloadFile()" id="btn_download" style="display: none;">
-          Tải file kết quả
+        <button class="btn-outline btn-small" onclick="downloadFile()" id="btn_download">
+          Tải file hiện tại
+        </button>
+        <button class="btn-outline btn-small" onclick="downloadAllFiles()" id="btn_download_all">
+          Tải tất cả (ZIP)
         </button>
       </div>
     </div>

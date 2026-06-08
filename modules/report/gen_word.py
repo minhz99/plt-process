@@ -2191,25 +2191,46 @@ def _find_first_excel(root: Path) -> Path | None:
 def _find_project_root(extract_root: Path) -> Path:
     """Tìm thư mục chứa các thư mục thiết bị.
 
-    Tìm thư mục chứa ít nhất 1 file Excel và các thư mục con (thiết bị).
-    Nếu không thấy, mặc định dùng extract_root.
+    Dấu hiệu nhận biết thư mục thiết bị: bên trong nó có chứa file .BMP, .PNG, hoặc .KEW.
+    Thư mục gốc của dự án (project root) sẽ là thư mục cha chứa các thư mục thiết bị này.
+    Nếu không tìm thấy rõ ràng, có thể áp dụng heuristic: 
+    Nếu thư mục hiện tại có 1 thư mục con duy nhất (có thể kèm file Excel), đi sâu vào thư mục đó.
     """
-    # Kiểm tra ngay tại extract_root
-    excels = list(extract_root.glob("*.xlsx")) + list(extract_root.glob("*.xlsm"))
-    subdirs = [d for d in extract_root.iterdir() if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"]
-    
-    if excels and subdirs:
-        return extract_root
-        
-    # Nếu không có ở gốc, tìm sâu hơn
+    device_dirs = []
+    # Tìm tất cả các thư mục có vẻ là thư mục thiết bị
     for p in extract_root.rglob("*"):
         if p.is_dir() and not p.name.startswith(".") and p.name != "__MACOSX":
-            sub_excels = list(p.glob("*.xlsx")) + list(p.glob("*.xlsm"))
-            sub_dirs = [d for d in p.iterdir() if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"]
-            if sub_excels and sub_dirs:
-                return p
+            files = [f for f in p.iterdir() if f.is_file() and not f.name.startswith(".") and f.name != "__MACOSX"]
+            if any(f.suffix.lower() in {".bmp", ".png", ".kew", ".jpg", ".jpeg"} for f in files):
+                device_dirs.append(p)
                 
-    return extract_root
+    if device_dirs:
+        # Lấy thư mục cha chung của các thư mục thiết bị
+        parents = {d.parent for d in device_dirs}
+        if len(parents) == 1:
+            return parents.pop()
+        
+        # Nếu có nhiều cha (cấu trúc phân tán), tìm ancestor chung
+        common = device_dirs[0].parent
+        for d in device_dirs[1:]:
+            common_parts = []
+            for p1, p2 in zip(common.parts, d.parent.parts):
+                if p1 == p2:
+                    common_parts.append(p1)
+                else:
+                    break
+            common = Path(*common_parts)
+        return common
+
+    # Fallback heuristic: 
+    # Nếu không tìm thấy file đặc trưng, nhưng có đúng 1 thư mục lớn, ta coi thư mục lớn đó là project_root.
+    current = extract_root
+    while True:
+        subdirs = [d for d in current.iterdir() if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"]
+        if len(subdirs) == 1:
+            current = subdirs[0]
+        else:
+            return current
 
 def build_word_report_from_zip(
     zip_bytes: bytes,
