@@ -122,6 +122,12 @@
 
     const grayEx = document.getElementById('pdf-gray-exceptions') ? document.getElementById('pdf-gray-exceptions').value : '';
     const colorEx = document.getElementById('pdf-color-exceptions') ? document.getElementById('pdf-color-exceptions').value : '';
+    const twoSidedRadio = document.querySelector('input[name="pdf-two-sided"]:checked');
+    const twoSided = twoSidedRadio ? twoSidedRadio.value : 'false';
+    const separateCoverRadio = document.querySelector('input[name="pdf-separate-cover"]:checked');
+    const separateCover = separateCoverRadio ? separateCoverRadio.value : 'true';
+    const customNameEl = document.getElementById('pdf-custom-name');
+    const customName = customNameEl ? customNameEl.value.trim() : '';
 
     // Reset UI & Khóa tương tác
     if (btn) btn.disabled = true;
@@ -160,6 +166,9 @@
     fd.append('file', _selectedPdfFile, _selectedPdfFile.name);
     fd.append('gray_exceptions', grayEx);
     fd.append('color_exceptions', colorEx);
+    fd.append('two_sided', twoSided);
+    fd.append('separate_cover', separateCover);
+    fd.append('custom_filename', customName);
 
     try {
       const response = await fetch('/api/pdf/split', {
@@ -193,7 +202,13 @@
       if (origName.toLowerCase().endsWith('.pdf')) {
         origName = origName.slice(0, -4);
       }
-      const downloadName = `in-${origName}.zip`;
+      let downloadName = customName ? `${customName}.zip` : `${origName}.zip`;
+      if (customName && customName.toLowerCase().endsWith('.zip')) {
+        downloadName = customName;
+      } else if (!customName) {
+        // Fallback name if custom name not provided
+        downloadName = `in-${origName}.zip`;
+      }
 
       // Kích hoạt download
       const a = document.createElement('a');

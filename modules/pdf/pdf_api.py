@@ -276,6 +276,12 @@ def split_pdf():
     original_filename = file.filename
     base_name, _ = os.path.splitext(original_filename)
     
+    custom_filename = request.form.get('custom_filename', '').strip()
+    if custom_filename:
+        if custom_filename.lower().endswith('.zip'):
+            custom_filename = custom_filename[:-4]
+        base_name = custom_filename
+    
     # Xác định thư mục tạm bên trong thư mục temp của dự án
     project_temp_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 
@@ -304,6 +310,8 @@ def split_pdf():
         # Lấy ngoại lệ từ request
         gray_exceptions_str = request.form.get('gray_exceptions', '')
         color_exceptions_str = request.form.get('color_exceptions', '')
+        two_sided = request.form.get('two_sided', 'false').lower() in ('true', '1', 'yes')
+        separate_cover = request.form.get('separate_cover', 'true').lower() in ('true', '1', 'yes')
         
         gray_exceptions = parse_page_exceptions(gray_exceptions_str)
         color_exceptions = parse_page_exceptions(color_exceptions_str)
@@ -319,11 +327,16 @@ def split_pdf():
         if not pages_color:
             return jsonify({"error": "Không thể phân tích thông tin màu sắc của file PDF."}), 400
             
-        # Phân loại trang từ trang thứ 2 trở đi
+        # Phân loại trang
         color_page_indices = []
         gray_page_indices = []
         
-        for p in range(2, num_pages + 1):
+        start_page = 2 if separate_cover else 1
+        
+        for p in range(start_page, num_pages + 1):
+            if separate_cover and two_sided and p == 2:
+                continue
+                
             is_color = pages_color.get(p, True) # mặc định là có màu nếu không phân tích được
             
             # Áp dụng ngoại lệ thủ công
@@ -336,12 +349,33 @@ def split_pdf():
                 color_page_indices.append(p)
             else:
                 gray_page_indices.append(p)
+        
+        # Áp dụng quy tắc 2-sided: nếu 1 trong 2 mặt giấy có màu -> cả 2 mặt đều vào file màu
+        # 1 tờ bao gồm trang lẻ (mặt trước) và trang chẵn (mặt sau).
+        # Ví dụ: (1, 2), (3, 4), (5, 6)...
+        if two_sided:
+            new_color_indices = set(color_page_indices)
+            for p in range(start_page, num_pages + 1):
+                if separate_cover and p == 2:
+                    continue
+                    
+                # Tìm trang cùng cặp với p (trang lẻ ghép trang chẵn, trang chẵn ghép trang lẻ)
+                pair_p = p + 1 if p % 2 != 0 else p - 1
+                
+                # Nếu trang p có màu, ép trang cặp (nếu nằm trong khoảng hợp lệ) vào tệp màu
+                if p in color_page_indices and start_page <= pair_p <= num_pages:
+                    new_color_indices.add(pair_p)
+            
+            # Sắp xếp lại danh sách để đảm bảo thứ tự trang đúng
+            color_page_indices = sorted(list(new_color_indices))
+            gray_page_indices = [x for x in gray_page_indices if x not in color_page_indices]
+            gray_page_indices.sort()
                 
         # Đường dẫn các tệp kết quả đầu ra
-        cover_name = f"bìa-{base_name}.pdf"
-        color_name = f"màu-{base_name}.pdf"
-        gray_name = f"không màu-{base_name}.pdf"
-        zip_name = f"in-{base_name}.zip"
+        cover_name = f"00-bia-{base_name}.pdf"
+        color_name = f"01-mau-{base_name}.pdf"
+        gray_name = f"02-khong-mau-{base_name}.pdf"
+        zip_name = f"{base_name}.zip" if custom_filename else f"in-{base_name}.zip"
         
         cover_path = os.path.join(work_dir, cover_name)
         color_path = os.path.join(work_dir, color_name)
@@ -352,14 +386,16 @@ def split_pdf():
         from pypdf import PdfReader, PdfWriter
         reader = PdfReader(original_path)
         
-        # 1. Trích xuất bìa (trang 1)
-        cover_writer = PdfWriter()
-        cover_writer.add_page(reader.pages[0])
-        with open(cover_path, 'wb') as f:
-            cover_writer.write(f)
-            
-        generated_files = [(cover_path, cover_name)]
+        generated_files = []
         
+        if separate_cover:
+            # 1. Trích xuất bìa (trang 1)
+            cover_writer = PdfWriter()
+            cover_writer.add_page(reader.pages[0])
+            with open(cover_path, 'wb') as f:
+                cover_writer.write(f)
+            generated_files.append((cover_path, cover_name))
+            
         # 2. Trích xuất trang màu (nếu có)
         if color_page_indices:
             color_writer = PdfWriter()

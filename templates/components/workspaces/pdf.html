@@ -37,6 +37,43 @@
           lên</div>
       </div>
 
+      <!-- Tùy chọn chế độ in -->
+      <div
+        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 8px;">
+        <label
+          style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text);">
+          📄 Chế độ in dự kiến
+        </label>
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer;">
+            <input type="radio" name="pdf-two-sided" value="false" checked style="accent-color: var(--accent);"> In 1 mặt (Tách độc lập từng trang)
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer;">
+            <input type="radio" name="pdf-two-sided" value="true" style="accent-color: var(--accent);"> In 2 mặt (Ghép cặp mặt tờ giấy)
+          </label>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-muted);">
+          * Nếu in 2 mặt, hệ thống sẽ gộp 2 mặt của cùng một tờ giấy vào chung tệp in màu (nếu có 1 mặt chứa màu).
+        </div>
+      </div>
+
+      <!-- Tùy chọn xử lý bìa -->
+      <div
+        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 8px;">
+        <label
+          style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text);">
+          📘 Xử lý trang bìa (Trang 1)
+        </label>
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer;">
+            <input type="radio" name="pdf-separate-cover" value="true" checked style="accent-color: var(--accent);"> Tách riêng trang 1 làm bìa
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer;">
+            <input type="radio" name="pdf-separate-cover" value="false" style="accent-color: var(--accent);"> Không tách bìa (Chỉ chia màu/không màu)
+          </label>
+        </div>
+      </div>
+
       <!-- Khu vực nhập ngoại lệ thủ công -->
       <div
         style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; gap: 16px; flex-wrap: wrap;">
@@ -60,6 +97,18 @@
             style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none; box-sizing: border-box;">
           <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Ép các trang này sang trang in màu
             (bỏ qua nhận diện tự động)</div>
+        </div>
+      </div>
+
+      <!-- Khu vực đổi tên file xuất -->
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
+        <label for="pdf-custom-name" style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+          🏷️ Tên file ZIP xuất ra (Tùy chọn)
+        </label>
+        <input type="text" id="pdf-custom-name" placeholder="Ví dụ: Tai-lieu-in-an"
+          style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none; box-sizing: border-box;">
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+          Nếu để trống, hệ thống sẽ tự động dùng tên của file PDF gốc.
         </div>
       </div>
 
@@ -108,16 +157,12 @@
         💡 Thông tin thêm về cách hoạt động
       </h3>
       <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
-        <li><strong>Tệp bìa (<code>bìa-[tên].pdf</code>):</strong> Chỉ chứa đúng trang đầu tiên (thường là trang giới
-          thiệu hoặc bìa báo cáo) để in màu một mặt riêng trên giấy cứng.</li>
-        <li><strong>Tệp màu (<code>màu-[tên].pdf</code>):</strong> Chứa các trang được phân loại là trang màu để in màu
-          riêng biệt.</li>
-        <li><strong>Tệp không màu (<code>không màu-[tên].pdf</code>):</strong> Chứa các trang không màu để in laser thông thường.</li>
-        <li><strong>Ngoại lệ thủ công:</strong> Bạn có thể nhập số trang (ví dụ: `5, 9, 10, 75`) hoặc dải trang (ví dụ:
-          `81-83`) để ép chuyển đổi màu/không màu theo ý muốn, giúp xử lý tối ưu các trang có dấu đỏ hoặc chữ ký màu một
-          cách linh hoạt nhất.</li>
-        <li>Hệ thống sử dụng công nghệ dựng hình thông minh ở độ phân giải thấp, tự động phân tích chính xác từng điểm
-          ảnh mà không làm thay đổi hay suy giảm chất lượng định dạng gốc của PDF.</li>
+        <li><strong>Tệp bìa (<code>00-bia-[tên].pdf</code>):</strong> (Tuỳ chọn) Tách riêng trang 1 để in màu trên bìa cứng. Nếu chọn in 2 mặt, trang 2 (mặt sau bìa) sẽ tự động được loại bỏ để không làm lộn xộn nội dung ruột.</li>
+        <li><strong>Tệp màu (<code>01-mau-[tên].pdf</code>):</strong> Chứa các trang nội dung có chứa màu sắc để đem đi in riêng.</li>
+        <li><strong>Tệp không màu (<code>02-khong-mau-[tên].pdf</code>):</strong> Chứa các trang nội dung hoàn toàn trắng đen để in laser.</li>
+        <li><strong>Logic in 2 mặt:</strong> Hệ thống bắt cặp chính xác các trang theo định dạng vật lý của một tờ giấy (Trang lẻ và Trang chẵn liên tiếp). Nếu một tờ có ít nhất 1 mặt màu, cả tờ (2 trang) sẽ được đẩy sang tệp màu để máy in 2 mặt có thể in đúng định dạng mà không bị lệch mặt trước/mặt sau.</li>
+        <li><strong>Đổi tên tệp:</strong> Cho phép tuỳ chỉnh tên của file ZIP đóng gói. Định dạng xuất mặc định sẽ là <code>00-bia</code>, <code>01-mau</code> và <code>02-khong-mau</code>.</li>
+        <li><strong>Ngoại lệ thủ công:</strong> Bạn có thể nhập số trang (`5, 9`) hoặc dải trang (`81-83`) để ép một số trang vào tệp màu hoặc không màu nhằm ghi đè nhận diện tự động.</li>
       </ul>
     </div>
 
