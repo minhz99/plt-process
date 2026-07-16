@@ -208,13 +208,38 @@ def extract_charts():
                     sheet_dir = os.path.join(charts_dir, sheet_name)
                     os.makedirs(sheet_dir, exist_ok=True)
                     
+                    used_names = {}
                     for idx, chart_obj in enumerate(chart_objects):
                         # Bỏ qua các object quá nhỏ (thường là icon, nút bấm, hình rác)
                         if chart_obj.Width < 50 or chart_obj.Height < 50:
                             continue
                             
                         chart = chart_obj.Chart
-                        image_path = os.path.join(sheet_dir, f"chart_{idx + 1}.svg")
+                        
+                        # Tên mặc định của biểu đồ
+                        chart_name = f"chart_{idx + 1}"
+                        
+                        # Thử lấy tiêu đề biểu đồ nếu có
+                        try:
+                            if chart.HasTitle:
+                                title_text = chart.ChartTitle.Text
+                                if title_text:
+                                    # Loại bỏ các ký tự không hợp lệ trong tên file
+                                    clean_title = re.sub(r'[\\/*?:"<>|\r\n\t]', "", title_text).strip()
+                                    if clean_title:
+                                        chart_name = clean_title[:100]
+                        except Exception:
+                            pass
+                            
+                        # Tránh trùng tên file trong cùng sheet
+                        base_name = chart_name
+                        if base_name in used_names:
+                            used_names[base_name] += 1
+                            chart_name = f"{base_name}_{used_names[base_name]}"
+                        else:
+                            used_names[base_name] = 1
+                            
+                        image_path = os.path.join(sheet_dir, f"{chart_name}.svg")
                         try:
                             chart.Export(os.path.abspath(image_path), "SVG")
                             # Lọc các file SVG lỗi hoặc rỗng (thường < 100 bytes)
