@@ -65,6 +65,8 @@ DEFAULT_TABLE6_TEMPLATE = _REPO_ROOT / "static" / "word-template" / "table6.docx
 
 WIDTH_LARGE, WIDTH_SMALL, HEIGHT_MBA = Mm(109.6), Mm(53.8), Mm(40.5)
 WIDTH_A, WIDTH_SUB, HEIGHT_A, HEIGHT_SUB = Mm(166.3), Mm(54.3), Mm(60.0), Mm(41.3)
+HEIGHT_BMP_MBA, WIDTH_BMP_MBA = Mm(40.5), Mm(54.6)
+HEIGHT_BMP_DEV, WIDTH_BMP_DEV = Mm(41.4), Mm(56.0)
 
 SectionKind = Literal["mba", "device", "device4", "total_mba"]
 
@@ -235,10 +237,10 @@ def mba(
     return {
         "mba_name": name,
         "imga": _inline(doc, imga, HEIGHT_MBA, WIDTH_LARGE),
-        "img1": _inline(doc, img1, HEIGHT_MBA, WIDTH_SMALL),
-        "img2": _inline(doc, img2, HEIGHT_MBA, WIDTH_SMALL),
-        "img4": _inline(doc, img4, HEIGHT_MBA, WIDTH_SMALL),
-        "img6": _inline(doc, img6, HEIGHT_MBA, WIDTH_SMALL),
+        "img1": _inline(doc, img1, HEIGHT_BMP_MBA, WIDTH_BMP_MBA),
+        "img2": _inline(doc, img2, HEIGHT_BMP_MBA, WIDTH_BMP_MBA),
+        "img4": _inline(doc, img4, HEIGHT_BMP_MBA, WIDTH_BMP_MBA),
+        "img6": _inline(doc, img6, HEIGHT_BMP_MBA, WIDTH_BMP_MBA),
         "cap_fig_mba": cap_fig_mba,
         "remarks_mba": remarks_mba,
         "cap_tab_mba": cap_tab_mba,
@@ -294,12 +296,12 @@ def device(
     return {
         "device_name": name,
         "imga": _inline(doc, imga, HEIGHT_A, WIDTH_A),
-        "img1": _inline(doc, img1, HEIGHT_SUB, WIDTH_SUB),
-        "img2": _inline(doc, img2, HEIGHT_SUB, WIDTH_SUB),
-        "img3": _inline(doc, img3, HEIGHT_SUB, WIDTH_SUB),
-        "img4": _inline(doc, img4, HEIGHT_SUB, WIDTH_SUB),
-        "img5": _inline(doc, img5, HEIGHT_SUB, WIDTH_SUB),
-        "img6": _inline(doc, img6, HEIGHT_SUB, WIDTH_SUB),
+        "img1": _inline(doc, img1, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
+        "img2": _inline(doc, img2, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
+        "img3": _inline(doc, img3, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
+        "img4": _inline(doc, img4, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
+        "img5": _inline(doc, img5, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
+        "img6": _inline(doc, img6, HEIGHT_BMP_DEV, WIDTH_BMP_DEV),
         "cap1": cap_device,
         "remarks": remarks_device,
     }
