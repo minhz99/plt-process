@@ -545,14 +545,40 @@ document.getElementById('raw_data').addEventListener('keydown', function (event)
 });
 
 // Trích xuất biểu đồ
-window.handleChartDrop = function(e) {
-    e.preventDefault();
-    document.getElementById('chart-drop-area').style.borderColor = 'rgba(109, 40, 217, 0.45)';
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        document.getElementById('chart_excel_file').files = e.dataTransfer.files;
-        window.updateChartFileLabel();
+// Khởi tạo drag & drop cho chart workspace
+document.addEventListener('DOMContentLoaded', () => {
+    const dropArea = document.getElementById('chart-drop-area');
+    if (dropArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+            dropArea.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(ev => {
+            dropArea.addEventListener(ev, () => {
+                dropArea.style.borderColor = 'var(--accent)';
+                dropArea.style.background = 'rgba(109, 40, 217, 0.08)';
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(ev => {
+            dropArea.addEventListener(ev, () => {
+                dropArea.style.borderColor = 'rgba(109, 40, 217, 0.45)';
+                dropArea.style.background = 'var(--upload-bg)';
+            });
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                document.getElementById('chart_excel_file').files = files;
+                window.updateChartFileLabel();
+            }
+        });
     }
-}
+});
 
 window.updateChartFileLabel = function() {
     const input = document.getElementById('chart_excel_file');
