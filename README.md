@@ -3,6 +3,9 @@
 Hệ thống Web tích hợp các công cụ hỗ trợ xử lý dữ liệu kỹ thuật và tự động hóa báo cáo chuyên dụng.
 
 ## Tính năng chính
+- **Trích xuất biểu đồ**: Tự động quét và trích xuất hàng loạt biểu đồ từ file Excel thành ảnh vector (SVG) chất lượng cực cao (yêu cầu chạy trên Windows có Microsoft Excel).
+- **Tách file PDF**: Tối ưu chi phí in ấn bằng cách phân loại tự động trang bìa, trang in màu và trang in trắng đen.
+- **Video OCR**: Trích xuất dữ liệu và văn bản tự động từ video.
 - **Phân tích KEW**: Xử lý dữ liệu điện năng từ máy đo Kyoritsu, phát hiện sự cố PQ và nội suy dữ liệu.
 - **Chỉnh sửa Ảnh**: Thay đổi thông số trực tiếp trên ảnh `.BMP`, xử lý hàng loạt và đồng bộ thời gian.
 - **Tự động hóa Excel**: Đọc dữ liệu thô và tự động điền vào các biểu mẫu báo cáo Excel.
