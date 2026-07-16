@@ -1,20 +1,53 @@
 <!-- ══════════════════ TRÍCH XUẤT BIỂU ĐỒ WORKSPACE ══════════════════ -->
 <div id="workspace-chart" class="workspace" style="display:none;">
-  <div class="main-wrapper">
+  <div id="app-container" style="padding: 1.5rem;">
 
-    <div class="card excel-hero">
-      <h2 class="excel-heading">Trích xuất biểu đồ</h2>
-      <p class="excel-hero-sub">Tải lên file Excel để trích xuất tự động tất cả biểu đồ dưới dạng ảnh chất lượng cao. Ảnh sẽ được nhóm theo từng sheet.</p>
+    <div class="card excel-hero"
+      style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2
+        style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚡ Trích xuất biểu đồ</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Tải lên file Excel để trích xuất tự động tất cả biểu đồ dưới dạng ảnh vector (SVG) chất lượng cực cao. Ảnh sẽ được nhóm tự động theo từng sheet và đóng gói thành file ZIP.
+      </p>
     </div>
 
-    <!-- Tiện ích: Trích xuất biểu đồ -->
-    <div class="card">
-      <h3 class="excel-step-title">Tải lên file Excel</h3>
-      <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="chart_excel_file" accept=".xlsx,.xls" class="form-control" style="flex-grow: 1; max-width: 300px;">
-        <button onclick="extractCharts()" id="btn_extract_charts">Trích xuất biểu đồ (ZIP)</button>
+    <!-- Vùng tải file -->
+    <div class="chart-card"
+      style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-file-earmark-excel" style="color: var(--accent2)"></i> Tải lên tệp Excel (.xlsx, .xls)
+      </h3>
+
+      <input type="file" id="chart_excel_file" accept=".xlsx,.xls" style="display:none" onchange="updateChartFileLabel()">
+
+      <div id="chart-drop-area"
+        style="border: 2px dashed rgba(109, 40, 217, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1.5rem; background: var(--upload-bg); transition: all 0.2s;"
+        ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+        ondragleave="this.style.borderColor='rgba(109, 40, 217, 0.45)';"
+        ondrop="handleChartDrop(event)"
+        onclick="document.getElementById('chart_excel_file').click()">
+        <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">📊</div>
+        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Chọn hoặc kéo thả file Excel vào đây</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Định dạng hỗ trợ: .xlsx, .xls</div>
       </div>
-      <div id="chart_message" style="margin-top: 15px;"></div>
+
+      <!-- Khu vực điều khiển & hiển thị trạng thái -->
+      <div
+        style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
+        <button type="button" class="btn" id="btn_extract_charts" onclick="extractCharts()"
+          style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+          disabled>
+          <span id="chart-spinner"
+            style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+          <span id="chart-btn-text">🚀 Trích xuất SVG (ZIP)</span>
+        </button>
+
+        <span id="chart-file-label" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Chưa chọn file Excel</span>
+      </div>
+
+      <div id="chart_message" style="margin-top: 15px; font-size: 0.85rem;"></div>
     </div>
 
   </div>

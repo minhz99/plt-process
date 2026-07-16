@@ -545,10 +545,36 @@ document.getElementById('raw_data').addEventListener('keydown', function (event)
 });
 
 // Trích xuất biểu đồ
+window.handleChartDrop = function(e) {
+    e.preventDefault();
+    document.getElementById('chart-drop-area').style.borderColor = 'rgba(109, 40, 217, 0.45)';
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        document.getElementById('chart_excel_file').files = e.dataTransfer.files;
+        window.updateChartFileLabel();
+    }
+}
+
+window.updateChartFileLabel = function() {
+    const input = document.getElementById('chart_excel_file');
+    const label = document.getElementById('chart-file-label');
+    const btn = document.getElementById('btn_extract_charts');
+    if (input.files && input.files.length > 0) {
+        label.textContent = "📁 " + input.files[0].name;
+        label.style.color = "var(--accent2)";
+        btn.disabled = false;
+    } else {
+        label.textContent = "Chưa chọn file Excel";
+        label.style.color = "var(--text-muted)";
+        btn.disabled = true;
+    }
+}
+
 window.extractCharts = async function() {
     const fileInput = document.getElementById('chart_excel_file');
     const msgDiv = document.getElementById('chart_message');
     const btn = document.getElementById('btn_extract_charts');
+    const spinner = document.getElementById('chart-spinner');
+    const btnText = document.getElementById('chart-btn-text');
     
     if (!fileInput.files || fileInput.files.length === 0) {
         msgDiv.textContent = "Vui lòng chọn một file Excel (.xlsx, .xls)";
@@ -560,11 +586,12 @@ window.extractCharts = async function() {
     const formData = new FormData();
     formData.append("file", file);
     
-    const originalLabel = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "Đang trích xuất...";
+    if (spinner) spinner.style.display = 'inline-block';
+    if (btnText) btnText.textContent = "Đang trích xuất...";
     msgDiv.textContent = "Đang xử lý, vui lòng đợi (có thể mất chút thời gian)...";
     msgDiv.className = "";
+    msgDiv.style.color = "var(--text-muted)";
     
     try {
         const response = await fetch('/api/excel/extract-charts', {
@@ -586,10 +613,9 @@ window.extractCharts = async function() {
         const anchor = document.createElement('a');
         anchor.href = downloadUrl;
         
-        let filename = response.headers.get("Content-Disposition");
-        if (filename && filename.includes('filename=')) {
-            filename = filename.split('filename=')[1].replace(/"/g, '');
-        } else {
+        let contentDisp = response.headers.get("Content-Disposition");
+        let filename = parseFilenameFromContentDisposition(contentDisp);
+        if (!filename) {
             const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
             filename = `Charts_${originalName}.zip`;
         }
@@ -602,11 +628,14 @@ window.extractCharts = async function() {
         
         msgDiv.textContent = "✓ Trích xuất biểu đồ thành công!";
         msgDiv.className = "success";
+        msgDiv.style.color = "var(--state-success-text)";
     } catch (error) {
         msgDiv.textContent = error.message;
         msgDiv.className = "error";
+        msgDiv.style.color = "var(--state-error-text)";
     } finally {
         btn.disabled = false;
-        btn.textContent = originalLabel;
+        if (spinner) spinner.style.display = 'none';
+        if (btnText) btnText.textContent = "🚀 Trích xuất SVG (ZIP)";
     }
 }

@@ -197,23 +197,34 @@ def extract_charts():
             
             wb = excel.Workbooks.Open(os.path.abspath(input_filepath))
             
-            has_charts = False
+            valid_charts_count = 0
             charts_dir = os.path.join(temp_dir, "charts")
             os.makedirs(charts_dir, exist_ok=True)
             
             for sheet in wb.Worksheets:
                 chart_objects = sheet.ChartObjects()
                 if chart_objects.Count > 0:
-                    has_charts = True
                     sheet_name = sheet.Name
                     sheet_dir = os.path.join(charts_dir, sheet_name)
                     os.makedirs(sheet_dir, exist_ok=True)
                     
                     for idx, chart_obj in enumerate(chart_objects):
+                        # Bỏ qua các object quá nhỏ (thường là icon, nút bấm, hình rác)
+                        if chart_obj.Width < 50 or chart_obj.Height < 50:
+                            continue
+                            
                         chart = chart_obj.Chart
-                        # Lưu ảnh định dạng SVG (chỉ hỗ trợ trên các bản Excel mới)
                         image_path = os.path.join(sheet_dir, f"chart_{idx + 1}.svg")
-                        chart.Export(os.path.abspath(image_path), "SVG")
+                        try:
+                            chart.Export(os.path.abspath(image_path), "SVG")
+                            # Lọc các file SVG lỗi hoặc rỗng (thường < 100 bytes)
+                            if os.path.exists(image_path):
+                                if os.path.getsize(image_path) < 100:
+                                    os.remove(image_path)
+                                else:
+                                    valid_charts_count += 1
+                        except Exception:
+                            pass
             
             wb.Close(SaveChanges=False)
             excel.Quit()
@@ -224,9 +235,9 @@ def extract_charts():
         finally:
             pythoncom.CoUninitialize()
 
-        if not has_charts:
+        if valid_charts_count == 0:
             shutil.rmtree(temp_dir, ignore_errors=True)
-            return jsonify({"error": "Không tìm thấy biểu đồ nào trong file Excel."}), 404
+            return jsonify({"error": "Không tìm thấy biểu đồ hợp lệ nào (có thể toàn bộ là biểu đồ trống hoặc hình rác)."}), 404
 
         # Nén thành zip
         zip_buffer = io.BytesIO()
