@@ -2,7 +2,7 @@
 
 /* ── GLOBAL TOOL SWITCHING ── */
 function switchTool(toolId, updateUrl = true) {
-    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video'];
+    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video', 'chart'];
     const activeTool = allowedTools.includes(toolId) ? toolId : 'kew';
 
     document.querySelectorAll('.workspace').forEach(el => { 
@@ -64,7 +64,7 @@ function setTheme(theme) {
 // Lắng nghe sự kiện quay lại/tiến tới của trình duyệt (Back/Forward)
 window.addEventListener('popstate', () => {
     const path = window.location.pathname.replace(/^\/|\/$/g, '');
-    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video'];
+    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video', 'chart'];
     const activeTool = allowedTools.includes(path) ? path : 'kew';
     switchTool(activeTool, false);
 });
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Xác định tab hoạt động từ đường dẫn URL hiện tại
     const path = window.location.pathname.replace(/^\/|\/$/g, '');
-    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video'];
+    const allowedTools = ['kew', 'img', 'excel', 'pdf', 'video', 'chart'];
     
     let activeTool = 'kew';
     if (allowedTools.includes(path)) {

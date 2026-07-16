@@ -401,6 +401,17 @@ function formatTimestampString(dd, mo, yyyy, hh, mi, ss) {
     return `${String(dd || '__').padStart(2, '0')}/${String(mo || '__').padStart(2, '0')}/${String(yyyy || '____').padStart(4, '0')} ${String(hh || '__').padStart(2, '0')}:${String(mi || '__').padStart(2, '0')}:${String(ss || '__').padStart(2, '0')}`;
 }
 
+function formatTimestampFromDate(d) {
+    return formatTimestampString(
+        d.getDate(),
+        d.getMonth() + 1,
+        d.getFullYear(),
+        d.getHours(),
+        d.getMinutes(),
+        d.getSeconds()
+    );
+}
+
 function randomIntInclusive(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }

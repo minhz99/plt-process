@@ -543,3 +543,70 @@ document.getElementById('raw_data').addEventListener('keydown', function (event)
         submitData();
     }
 });
+
+// Trích xuất biểu đồ
+window.extractCharts = async function() {
+    const fileInput = document.getElementById('chart_excel_file');
+    const msgDiv = document.getElementById('chart_message');
+    const btn = document.getElementById('btn_extract_charts');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        msgDiv.textContent = "Vui lòng chọn một file Excel (.xlsx, .xls)";
+        msgDiv.className = "error";
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Đang trích xuất...";
+    msgDiv.textContent = "Đang xử lý, vui lòng đợi (có thể mất chút thời gian)...";
+    msgDiv.className = "";
+    
+    try {
+        const response = await fetch('/api/excel/extract-charts', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            let errorText = "Lỗi khi trích xuất biểu đồ.";
+            try {
+                const errData = await response.json();
+                if (errData.error) errorText = errData.error;
+            } catch(e) {}
+            throw new Error(errorText);
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = downloadUrl;
+        
+        let filename = response.headers.get("Content-Disposition");
+        if (filename && filename.includes('filename=')) {
+            filename = filename.split('filename=')[1].replace(/"/g, '');
+        } else {
+            const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            filename = `Charts_${originalName}.zip`;
+        }
+        
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(downloadUrl);
+        
+        msgDiv.textContent = "✓ Trích xuất biểu đồ thành công!";
+        msgDiv.className = "success";
+    } catch (error) {
+        msgDiv.textContent = error.message;
+        msgDiv.className = "error";
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+    }
+}

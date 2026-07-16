@@ -1,6 +1,10 @@
 import io
 import json
 import re
+import os
+import tempfile
+import zipfile
+import shutil
 from copy import copy
 
 from flask import Blueprint, jsonify, request, send_file
@@ -9,6 +13,12 @@ try:
     from openpyxl import load_workbook
 except Exception:  # pragma: no cover - dependency guard
     load_workbook = None
+
+try:
+    import win32com.client
+    import pythoncom
+except ImportError:
+    win32com = None
 
 excel_bp = Blueprint('excel_bp', __name__)
 CELL_ADDR_RE = re.compile(r"^[A-Z]{1,3}[1-9][0-9]*$")
@@ -152,3 +162,94 @@ def apply_updates():
         download_name=output_name,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+@excel_bp.route('/extract-charts', methods=['POST'])
+def extract_charts():
+    """
+    Trích xuất toàn bộ biểu đồ từ file Excel và gom vào thư mục có tên của sheet.
+    Trả về file ZIP chứa tất cả các ảnh dưới dạng SVG.
+    """
+    if win32com is None:
+        return jsonify({"error": "Thiếu thư viện pywin32 hoặc không chạy trên môi trường Windows."}), 500
+
+    uploaded_file = request.files.get("file")
+    if uploaded_file is None:
+        return jsonify({"error": "Cần upload file Excel."}), 400
+
+    filename = uploaded_file.filename
+    if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+        return jsonify({"error": "Chỉ hỗ trợ file Excel (.xls, .xlsx)."}), 400
+
+    temp_dir = tempfile.mkdtemp()
+    try:
+        ext = os.path.splitext(filename)[1]
+        input_filepath = os.path.join(temp_dir, f"input_file{ext}")
+        uploaded_file.save(input_filepath)
+        
+        # Khởi tạo COM để dùng pywin32 trong thread của Flask
+        pythoncom.CoInitialize()
+        
+        excel = None
+        try:
+            excel = win32com.client.DispatchEx("Excel.Application")
+            excel.Visible = False
+            excel.DisplayAlerts = False
+            
+            wb = excel.Workbooks.Open(os.path.abspath(input_filepath))
+            
+            has_charts = False
+            charts_dir = os.path.join(temp_dir, "charts")
+            os.makedirs(charts_dir, exist_ok=True)
+            
+            for sheet in wb.Worksheets:
+                chart_objects = sheet.ChartObjects()
+                if chart_objects.Count > 0:
+                    has_charts = True
+                    sheet_name = sheet.Name
+                    sheet_dir = os.path.join(charts_dir, sheet_name)
+                    os.makedirs(sheet_dir, exist_ok=True)
+                    
+                    for idx, chart_obj in enumerate(chart_objects):
+                        chart = chart_obj.Chart
+                        # Lưu ảnh định dạng SVG (chỉ hỗ trợ trên các bản Excel mới)
+                        image_path = os.path.join(sheet_dir, f"chart_{idx + 1}.svg")
+                        chart.Export(os.path.abspath(image_path), "SVG")
+            
+            wb.Close(SaveChanges=False)
+            excel.Quit()
+        except Exception as e:
+            if excel:
+                excel.Quit()
+            raise e
+        finally:
+            pythoncom.CoUninitialize()
+
+        if not has_charts:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return jsonify({"error": "Không tìm thấy biểu đồ nào trong file Excel."}), 404
+
+        # Nén thành zip
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(charts_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, charts_dir)
+                    zipf.write(file_path, arcname)
+
+        zip_buffer.seek(0)
+        zip_filename = f"Charts_{os.path.splitext(filename)[0]}.zip"
+        
+        # Cleanup
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name=zip_filename,
+            mimetype="application/zip"
+        )
+    except Exception as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return jsonify({"error": f"Lỗi khi trích xuất biểu đồ: {str(e)}"}), 500
+

@@ -62,6 +62,7 @@ def handle_request_entity_too_large(_exc):
 @app.route('/excel')
 @app.route('/pdf')
 @app.route('/video')
+@app.route('/chart')
 def index():
     """Render the main dashboard UI application."""
     return render_template('dashboard.html')

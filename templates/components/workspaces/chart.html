@@ -1,0 +1,21 @@
+<!-- ══════════════════ TRÍCH XUẤT BIỂU ĐỒ WORKSPACE ══════════════════ -->
+<div id="workspace-chart" class="workspace" style="display:none;">
+  <div class="main-wrapper">
+
+    <div class="card excel-hero">
+      <h2 class="excel-heading">Trích xuất biểu đồ</h2>
+      <p class="excel-hero-sub">Tải lên file Excel để trích xuất tự động tất cả biểu đồ dưới dạng ảnh chất lượng cao. Ảnh sẽ được nhóm theo từng sheet.</p>
+    </div>
+
+    <!-- Tiện ích: Trích xuất biểu đồ -->
+    <div class="card">
+      <h3 class="excel-step-title">Tải lên file Excel</h3>
+      <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="chart_excel_file" accept=".xlsx,.xls" class="form-control" style="flex-grow: 1; max-width: 300px;">
+        <button onclick="extractCharts()" id="btn_extract_charts">Trích xuất biểu đồ (ZIP)</button>
+      </div>
+      <div id="chart_message" style="margin-top: 15px;"></div>
+    </div>
+
+  </div>
+</div>
