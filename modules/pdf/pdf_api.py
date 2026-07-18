@@ -30,7 +30,7 @@ def get_pdf_page_count(filepath):
     # 2. Thử dùng pdfinfo
     for cmd_path in ["pdfinfo", "/opt/homebrew/bin/pdfinfo", "/usr/local/bin/pdfinfo"]:
         try:
-            res = subprocess.run([cmd_path, filepath], capture_output=True, text=True, check=True)
+            res = subprocess.run([cmd_path, filepath.replace('\\', '/')], capture_output=True, text=True, check=True)
             match = re.search(r"Pages:\s+(\d+)", res.stdout)
             if match:
                 return int(match.group(1))
@@ -38,14 +38,15 @@ def get_pdf_page_count(filepath):
             pass
 
     # 3. Thử dùng gs
-    for gs_path in ["gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
+    for gs_path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
+            filepath_gs = filepath.replace('\\', '/')
             cmd = [
                 gs_path,
                 "-q",
                 "-dNODISPLAY",
                 "-c",
-                f"({filepath}) (r) file runpdfbegin pdfpagecount = quit"
+                f"({filepath_gs}) (r) file runpdfbegin pdfpagecount = quit"
             ]
             res = subprocess.run(cmd, capture_output=True, text=True, check=True)
             output = res.stdout.strip()
@@ -63,7 +64,7 @@ def check_pdf_pages_color(filepath):
     Chỉ số của danh sách khớp với trang (1-indexed).
     """
     gs_executable = "gs"
-    for path in ["gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
+    for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
             subprocess.run([path, "--version"], capture_output=True, check=True)
             gs_executable = path
@@ -76,7 +77,7 @@ def check_pdf_pages_color(filepath):
         "-q",
         "-o", "-",
         "-sDEVICE=inkcov",
-        filepath
+        filepath.replace('\\', '/')
     ]
     
     try:
@@ -107,7 +108,7 @@ def check_pdf_pages_color_visually(filepath, work_dir, split_mode='normal'):
     Returns a dictionary mapping page number (1-indexed) to boolean (True if page has color).
     """
     gs_executable = "gs"
-    for path in ["gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
+    for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
             subprocess.run([path, "--version"], capture_output=True, check=True)
             gs_executable = path
@@ -124,8 +125,8 @@ def check_pdf_pages_color_visually(filepath, work_dir, split_mode='normal'):
         "-dBATCH",
         "-sDEVICE=png16m",
         "-r72",  # Use 72 DPI for better small text color retention
-        f"-sOutputFile={render_dir}/page_%d.png",
-        filepath
+        f"-sOutputFile={render_dir.replace('\\', '/')}/page_%d.png",
+        filepath.replace('\\', '/')
     ]
     
     try:
@@ -190,7 +191,7 @@ def run_gs(input_path, output_path, first_page=None, last_page=None, to_gray=Fal
     Chạy lệnh Ghostscript để trích xuất trang và tùy chọn chuyển sang trắng đen (grayscale).
     """
     gs_executable = "gs"
-    for path in ["gs", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
+    for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
             subprocess.run([path, "--version"], capture_output=True, check=True)
             gs_executable = path
@@ -215,8 +216,8 @@ def run_gs(input_path, output_path, first_page=None, last_page=None, to_gray=Fal
         cmd.append(f"-dLastPage={last_page}")
         
     cmd.extend([
-        f"-sOutputFile={output_path}",
-        input_path
+        f"-sOutputFile={output_path.replace('\\', '/')}",
+        input_path.replace('\\', '/')
     ])
     
     try:
