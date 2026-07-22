@@ -298,3 +298,124 @@ def apply_timestamp():
         as_attachment=True,
         download_name=_build_bmp_name(getattr(file, 'filename', 'edited.bmp')),
     )
+
+
+def fix_ct_reversal_in_sd140_image(
+    bmp_path: str,
+    digits_dir: str | None = None,
+    digits_ocr_dir: str | None = None,
+    force_fix_all_power: bool = False
+) -> bool:
+    """
+    Tự động nhận diện và xóa dấu trừ (-) do đấu ngược CT trên ảnh BMP màn hình SD140.
+
+    Args:
+        bmp_path: Đường dẫn tới file ảnh BMP.
+        digits_dir: Thư mục chứa ảnh mẫu chữ số để vẽ lại.
+        digits_ocr_dir: Thư mục chứa ảnh mẫu chữ số cho OCR.
+        force_fix_all_power: Nếu True, sửa tất cả các chỉ số P, Q, PF âm bất kể OCR.
+
+    Returns:
+        bool: True nếu ảnh đã được chỉnh sửa và lưu thành công, ngược lại False.
+    """
+    import numpy as np
+    from modules.image.ocr_kew import extract_overlay_value, _DEFAULT_DIGITS_DIR
+
+    if not os.path.isfile(bmp_path):
+        return False
+
+    if digits_dir is None:
+        digits_dir = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'static', 'digits')
+        )
+    if digits_ocr_dir is None:
+        digits_ocr_dir = _DEFAULT_DIGITS_DIR
+
+    try:
+        pil_img = Image.open(bmp_path).convert("RGB")
+        img_arr = np.array(pil_img.convert("L"), dtype=np.float32)
+    except Exception:
+        return False
+
+    screen_sd140 = SCREENS.get("SD140", {})
+    overlays = screen_sd140.get("overlays", [])
+    if not overlays:
+        return False
+
+    power_overlay_ids = {
+        "P1", "P2", "P3", "P",
+        "Q1", "Q2", "Q3", "Q",
+        "PF1", "PF2", "PF3", "PF"
+    }
+
+    img_draw = ImageDraw.Draw(pil_img)
+    modified = False
+
+    for ov in overlays:
+        ov_id = ov.get("id")
+        if ov_id not in power_overlay_ids:
+            continue
+
+        val = extract_overlay_value(img_arr, ov, digits_ocr_dir)
+        if val is not None and (val < 0 or force_fix_all_power):
+            pos_val = abs(val)
+            if "PF" in ov_id:
+                val_str = f"{pos_val:.2f}"
+            else:
+                val_str_orig = f"{val}"
+                if "." in val_str_orig:
+                    decimals = len(val_str_orig.split(".")[1])
+                    val_str = f"{pos_val:.{decimals}f}"
+                else:
+                    val_str = f"{pos_val:.1f}"
+
+            apply_text_to_image(pil_img, img_draw, ov, val_str, digits_dir)
+            modified = True
+
+    if modified:
+        try:
+            pil_img.save(bmp_path, format="BMP")
+        except Exception as e:
+            print(f"[WARN] Không lưu được ảnh BMP sau khi sửa CT: {e}")
+            return False
+
+    return modified
+
+
+@image_bp.route('/fix-ct-reversal', methods=['POST'])
+def fix_ct_reversal_api():
+    """API nhận file ảnh BMP (form field 'file') và tự động xóa dấu trừ (-) do đấu ngược CT."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    filename = getattr(file, 'filename', 'edited.bmp')
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix='.bmp', delete=False) as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        digits_dir = os.path.join(current_app.static_folder, 'digits')
+        digits_ocr_dir = os.path.join(current_app.static_folder, 'digits-ocr')
+        modified = fix_ct_reversal_in_sd140_image(tmp_path, digits_dir=digits_dir, digits_ocr_dir=digits_ocr_dir)
+
+        with open(tmp_path, 'rb') as fh:
+            buf = io.BytesIO(fh.read())
+        buf.seek(0)
+
+        resp = send_file(
+            buf,
+            mimetype='image/bmp',
+            as_attachment=True,
+            download_name=_build_bmp_name(filename),
+        )
+        resp.headers["X-KEW-CT-Fixed"] = "true" if modified else "false"
+        return resp
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass

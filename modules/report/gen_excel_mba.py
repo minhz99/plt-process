@@ -203,6 +203,17 @@ def _mba_extract(df: "pd.DataFrame") -> "tuple[pd.DataFrame, list[str]]":
     warnings = []
     if missing:
         warnings.append(f"Dữ liệu gốc khuyết {len(missing)} cột: {missing}")
+
+    # Tự động xử lý khi đấu ngược dây CT (P < 0)
+    if "AVG_P[W]" in out.columns:
+        p_vals = pd.to_numeric(out["AVG_P[W]"], errors='coerce').dropna()
+        if not p_vals.empty and p_vals.mean() < 0:
+            out["AVG_P[W]"] = out["AVG_P[W]"].apply(lambda v: abs(v) if pd.notna(v) else v)
+            if "AVG_PF" in out.columns:
+                out["AVG_PF"] = out["AVG_PF"].apply(lambda v: abs(v) if pd.notna(v) else v)
+            if "AVG_Q[var]" in out.columns:
+                out["AVG_Q[var]"] = out["AVG_Q[var]"].apply(lambda v: -v if pd.notna(v) else v)
+            warnings.append("Phát hiện đấu ngược dây CT (P < 0), hệ thống đã tự động đảo chiều dữ liệu P và PF.")
         
     return out, warnings
 

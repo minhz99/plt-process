@@ -1115,9 +1115,33 @@ def process_field_zip_bytes(
         overwrite_existing=ocr_overwrite_forced,
         progress_callback=progress_callback,
         start_pct=95,
-        end_pct=97,
+        end_pct=96,
     )
     warnings.extend(inps_warns)
+
+    # ── Tự động kiểm tra và xóa dấu trừ trên ảnh đo khi bị ngược CT ────────
+    if progress_callback:
+        progress_callback(96, "Tự động kiểm tra và sửa ảnh màn hình bị ngược CT...")
+    from modules.image.image_api import fix_ct_reversal_in_sd140_image
+    from modules.kew.analyse_kew import find_file, parse_inps
+    for plan in plans:
+        folder_path = s_map.get(plan.s_key)
+        if not folder_path or not os.path.isdir(folder_path):
+            continue
+        inps_path = find_file(folder_path, "INPS")
+        if inps_path and os.path.isfile(inps_path):
+            try:
+                _, df_inps = parse_inps(inps_path)
+                if df_inps is not None and df_inps.attrs.get('ct_reversed'):
+                    sd140_bmp_path = bmp_map.get(plan.img_start)
+                    if sd140_bmp_path and os.path.isfile(sd140_bmp_path):
+                        fixed = fix_ct_reversal_in_sd140_image(sd140_bmp_path)
+                        if fixed:
+                            warnings.append(
+                                f"«{plan.device_raw}»: Đã tự động xóa dấu trừ (-) do đấu ngược CT trên ảnh PS-SD{plan.img_start:03d}.BMP."
+                            )
+            except Exception as e:
+                print(f"[WARN] Lỗi kiểm tra/sửa ảnh ngược CT cho {plan.device_raw}: {e}")
 
     if progress_callback:
         progress_callback(97, "Sắp xếp thư mục và copy ảnh...")

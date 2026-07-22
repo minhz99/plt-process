@@ -106,6 +106,9 @@ def parse_inps(filepath):
                     continue
                 df[col] = pd.to_numeric(df[col], errors='coerce')
             
+            # Tự động nhận diện và xử lý đấu ngược dây CT
+            df, _, _ = detect_and_correct_ct_reversal(df, auto_correct=True)
+
             return magic, df
     
     except FileNotFoundError:
@@ -114,6 +117,116 @@ def parse_inps(filepath):
     except Exception as e:
         print(f"[WARN] Could not parse INPS: {e}")
         return None, None
+
+def detect_and_correct_ct_reversal(df: pd.DataFrame, auto_correct: bool = True) -> tuple[pd.DataFrame, bool, list[str]]:
+    """
+    Tự động nhận diện và xử lý trường hợp đấu ngược dây CT (Biến dòng).
+
+    Dấu hiệu:
+    - Giá trị trung bình của các đại lượng công suất tác dụng (P, P1, P2, P3) bị âm (P < 0).
+    - Giá trị trung bình hệ số công suất (PF, PF1, PF2, PF3) bị âm.
+
+    Xử lý:
+    - Đảo chiều dấu cho công suất tác dụng P: P -> -P (hoặc |P| khi âm).
+    - Đảo chiều dấu cho hệ số công suất PF: PF -> |PF|.
+    - Đảo chiều dấu cho công suất phản kháng Q: Q -> -Q.
+    - Cập nhật lại các cột _min và _max nếu có để đảm bảo min <= max.
+
+    Args:
+        df: DataFrame chứa dữ liệu đo KEW.
+        auto_correct: Nếu True, tự động đảo chiều dữ liệu trong DataFrame khi phát hiện.
+
+    Returns:
+        tuple: (df_updated, was_reversed, list_of_details)
+    """
+    if df is None or df.empty:
+        return df, False, []
+
+    df = df.copy()
+
+    # Tìm các kênh công suất tác dụng chính (AVG_P, AVG_P1, AVG_P2, AVG_P3)
+    p_cols_to_check = []
+    for c in df.columns:
+        c_upper = c.upper()
+        if c_upper.startswith("AVG_P") and not c_upper.startswith("AVG_PF") and not c_upper.startswith("AVG_PH"):
+            if not c.endswith("_min") and not c.endswith("_max"):
+                p_cols_to_check.append(c)
+
+    reversed_channels = []
+
+    for col in p_cols_to_check:
+        vals = pd.to_numeric(df[col], errors='coerce').dropna()
+        if len(vals) > 0 and vals.mean() < -0.01:
+            col_upper = col.upper()
+            if "P1" in col_upper:
+                label = "Pha 1 (P1 < 0)"
+            elif "P2" in col_upper:
+                label = "Pha 2 (P2 < 0)"
+            elif "P3" in col_upper:
+                label = "Pha 3 (P3 < 0)"
+            else:
+                label = "Tổng (P < 0)"
+            reversed_channels.append((col, label))
+
+    if not reversed_channels:
+        df.attrs['ct_reversed'] = False
+        df.attrs['ct_reversed_details'] = []
+        df.attrs['ct_reversed_msg'] = ""
+        return df, False, []
+
+    was_reversed = True
+    details_labels = [label for _, label in reversed_channels]
+
+    if auto_correct:
+        # 1. Đảo chiều và hoán đổi min/max cho các cột P
+        for c in p_cols_to_check:
+            vals = pd.to_numeric(df[c], errors='coerce')
+            if vals.notna().any() and vals.dropna().mean() < 0:
+                df[c] = vals.apply(lambda v: -v if pd.notna(v) else v)
+                min_col = c + "_min"
+                max_col = c + "_max"
+                if min_col in df.columns and max_col in df.columns:
+                    v_min = pd.to_numeric(df[min_col], errors='coerce')
+                    v_max = pd.to_numeric(df[max_col], errors='coerce')
+                    df[min_col] = v_max.apply(lambda v: -v if pd.notna(v) else v)
+                    df[max_col] = v_min.apply(lambda v: -v if pd.notna(v) else v)
+
+        # 2. Đảo chiều và hoán đổi min/max cho các cột PF
+        for col in list(df.columns):
+            cu = col.upper()
+            if "AVG_PF" in cu and not col.endswith("_min") and not col.endswith("_max"):
+                vals = pd.to_numeric(df[col], errors='coerce')
+                if vals.notna().any() and (vals.dropna() < 0).mean() > 0.3:
+                    df[col] = vals.apply(lambda v: abs(v) if pd.notna(v) else v)
+                    min_col = col + "_min"
+                    max_col = col + "_max"
+                    if min_col in df.columns and max_col in df.columns:
+                        v_min = pd.to_numeric(df[min_col], errors='coerce')
+                        v_max = pd.to_numeric(df[max_col], errors='coerce')
+                        df[min_col] = v_max.apply(lambda v: abs(v) if pd.notna(v) else v)
+                        df[max_col] = v_min.apply(lambda v: abs(v) if pd.notna(v) else v)
+
+        # 3. Đảo chiều và hoán đổi min/max cho các cột Q
+        for col in list(df.columns):
+            cu = col.upper()
+            if cu.startswith("AVG_Q") and not col.endswith("_min") and not col.endswith("_max"):
+                vals = pd.to_numeric(df[col], errors='coerce')
+                if vals.notna().any():
+                    df[col] = vals.apply(lambda v: -v if pd.notna(v) else v)
+                    min_col = col + "_min"
+                    max_col = col + "_max"
+                    if min_col in df.columns and max_col in df.columns:
+                        v_min = pd.to_numeric(df[min_col], errors='coerce')
+                        v_max = pd.to_numeric(df[max_col], errors='coerce')
+                        df[min_col] = v_max.apply(lambda v: -v if pd.notna(v) else v)
+                        df[max_col] = v_min.apply(lambda v: -v if pd.notna(v) else v)
+
+    msg = f"Phát hiện đấu ngược dây CT ({', '.join(details_labels)}). Hệ thống đã tự động đảo chiều dữ liệu P và PF."
+    df.attrs['ct_reversed'] = was_reversed
+    df.attrs['ct_reversed_details'] = details_labels
+    df.attrs['ct_reversed_msg'] = msg
+
+    return df, was_reversed, details_labels
 
 def analyse_inps(df):
     """
@@ -130,6 +243,13 @@ def analyse_inps(df):
     
     result = {}
     skip_cols = {'DATE', 'TIME', 'DATETIME', 'ELAPSED TIME', 'ELAPSED TIME_min', 'ELAPSED TIME_max'}
+
+    # Giữ thông tin metadata về đấu ngược dây CT nếu có
+    if getattr(df, 'attrs', None):
+        if df.attrs.get('ct_reversed'):
+            result['_ct_reversed'] = True
+            result['_ct_reversed_details'] = df.attrs.get('ct_reversed_details', [])
+            result['_ct_reversed_msg'] = df.attrs.get('ct_reversed_msg', '')
     
     # Lấy các cột avg (không phải _min/_max)
     avg_cols = [c for c in df.columns 

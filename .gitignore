@@ -39,10 +39,4 @@ dist/
 
 # Project-specific
 /temp/
-test_mba.py
-test_vba.py
-test.zip
-/test-bmp
-*.pdf
-*.mp4
-*.txt
+/tests
