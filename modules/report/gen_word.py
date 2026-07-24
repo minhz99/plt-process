@@ -1234,6 +1234,26 @@ def _compose_remarks_from_excel_fields(
     pos_seed = int(hashlib.md5(f"{name}_pos_qual".encode('utf-8')).hexdigest(), 16)
     place_at_end = (pos_seed % 2 == 1)
 
+    # ── Phát hiện bất thường đặc biệt (Anomaly Highlights) ─────────────
+    anom_sents: list[str] = []
+
+    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
+        if cos_phi is not None and abs(cos_phi) > 0.01:
+            _pct_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0
+        else:
+            _pct_val = (p_kw / pdm_kva) * 100.0
+        if _pct_val > 115.0:
+            anom_sents.append(_get_random_choice(remark_templates.get_anomaly_overload_templates(pct_s, p_str, pdm_str), name, "anom_load"))
+
+    if di_num is not None and di_num > 20.0:
+        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_unbalance_templates(di_s), name, "anom_unb"))
+
+    if tdd_max is not None and tdd_max > 50.0:
+        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_harmonic_templates(td_s), name, "anom_harm"))
+
+    if du_lo is not None and du_hi is not None and (du_lo < -8.0 or du_hi > 8.0):
+        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), name, "anom_volt"))
+
     if quality == "chưa tốt":
         parts: list[str] = []
         if load_sent_dev:
@@ -1246,6 +1266,8 @@ def _compose_remarks_from_excel_fields(
             parts.append(unbalance_sent)
         if harm_sent:
             parts.append(harm_sent)
+        if anom_sents:
+            parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
         parts.append(f"Nhìn chung, chất lượng điện cấp cho {name_mid} chưa đạt yêu cầu tối ưu.")
@@ -1281,6 +1303,8 @@ def _compose_remarks_from_excel_fields(
             parts.append(unbalance_sent)
         if harm_sent:
             parts.append(harm_sent)
+        if anom_sents:
+            parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
 

@@ -512,6 +512,15 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Công suất tiêu thụ tức thời của các tầng/phân khu biến đổi linh hoạt tương ứng với mật độ thiết bị điện một pha vận hành trong ca.",
             "Hệ thống gồm nhiều thiết bị điện một pha phân bổ trên các pha khiến cho độ lệch pha thể hiện rõ nét.",
         ]
+    elif cat == "chiller_hvac":
+        return [
+            "Công suất tiêu thụ tức thời của hệ thống Chiller/HVAC biến đổi theo nhu cầu làm lạnh và nhiệt độ môi trường thực tế.",
+            "Biểu đồ dòng điện thể hiện đặc tính vận hành của hệ thống HVAC trung tâm: dòng điện biến đổi nhịp nhàng theo chu kỳ điều chỉnh công suất làm lạnh.",
+            "Đồ thị dòng điện phản ánh chế độ tải biến đổi theo ca của hệ thống Chiller, tăng cao vào các giờ cao điểm nhiệt độ và giảm về đêm.",
+            "Công suất tiêu thụ tức thời điều chỉnh linh hoạt theo số lượng máy nén Chiller và quạt AHU/bơm nước lạnh tham gia vận hành.",
+            "Đặc tính tải Chiller/HVAC biến đổi theo bước công suất làm lạnh, vận hành ổn định trong dải tải thiết kế.",
+            "Dòng điện tiêu thụ của hệ thống Chiller duy trì ở mức cao và biến đổi theo nhu cầu phụ tải làm mát của tòa nhà/nhà xưởng.",
+        ]
 
     _wave_dev_map: dict[str, list[str]] = {
         "ổn định": [
@@ -630,4 +639,41 @@ def get_closing_dev_templates() -> list[str]:
         "Đánh giá chung, chất lượng điện tại thiết bị đạt tiêu chuẩn, không ghi nhận vấn đề bất thường trong thời gian khảo sát.",
         "Các thông số đo kiểm đều nằm trong ngưỡng cho phép, chất lượng điện cấp cho thiết bị đạt yêu cầu.",
         "Nhìn chung, hệ thống điện cấp cho thiết bị đáp ứng tốt các tiêu chuẩn kỹ thuật hiện hành.",
+    ]
+
+
+# ── 6. PHÁT HIỆN BẤT THƯỜNG ĐẶC BIỆT (ANOMALY HIGHLIGHTS) ──────────────────────
+
+def get_anomaly_overload_templates(pct_s: str, p_str: str, pdm_str: str) -> list[str]:
+    """Mẫu câu nhấn mạnh tình trạng quá tải nghiêm trọng (>115% Pđm)."""
+    return [
+        f"Ghi nhận phụ tải vận hành ở tình trạng quá tải nghiêm trọng ({pct_s}% Pđm, P = {p_str} kW / Pđm = {pdm_str} kW).",
+        f"Mức mang tải thực tế vượt quá 15% so với công suất thiết kế ({pct_s}% Pđm = {p_str} kW / {pdm_str} kW).",
+        f"Hệ thống vận hành vượt đáng kể công suất định mức ({pct_s}% Pđm), với công suất tức thời đạt {p_str} kW so với Pđm = {pdm_str} kW.",
+    ]
+
+
+def get_anomaly_unbalance_templates(di_s: str) -> list[str]:
+    """Mẫu câu nhấn mạnh mất cân bằng dòng điện nghiêm trọng (>20%)."""
+    return [
+        f"Độ lệch pha dòng điện ở mức rất cao (ΔI = {di_s}% > 20,0%), làm xuất hiện dòng điện chạy trên dây trung tính lớn.",
+        f"Hệ thống ghi nhận sự mất cân bằng pha dòng điện nghiêm trọng (ΔI = {di_s}% > 20,0%), làm gia tăng dòng điện trung tính và tổn thất đồng trên đường dây.",
+        f"Đồ thị dòng điện thể hiện sự phân bổ phụ tải lệch pha rất lớn giữa các pha (ΔI = {di_s}% > 20,0%).",
+    ]
+
+
+def get_anomaly_harmonic_templates(td_s: str) -> list[str]:
+    """Mẫu câu nhấn mạnh sóng hài dòng điện cực cao (>50%)."""
+    return [
+        f"Hệ thống tích lũy mức biến dạng sóng hài dòng điện cực cao (TDDmax = {td_s}% > 50,0%), phản ánh sự hiện diện của các khối tải phi tuyến công suất lớn.",
+        f"Biến dạng sóng hài dòng điện phát sinh ở mức rất lớn (TDDmax = {td_s}% > 50,0%), đặc trưng khi sử dụng nhiều bộ biến đổi bán dẫn công suất cao.",
+        f"Tỷ lệ biến dạng sóng hài dòng điện cao vượt trội (TDDmax = {td_s}% > 50,0%), là nguồn phát sinh từ các bộ biến tần/nguồn công suất lớn.",
+    ]
+
+
+def get_anomaly_voltage_templates(dlo_s: str, dhi_s: str) -> list[str]:
+    """Mẫu câu nhấn mạnh sụt áp/quá áp nghiêm trọng (vượt ±8%)."""
+    return [
+        f"Điện áp cấp nguồn ghi nhận độ lệch vượt ngưỡng an toàn (δU = {dlo_s}% ÷ {dhi_s}%), vượt quá dải biến động tiêu chuẩn ±5,0%.",
+        f"Độ lệch điện áp đo được biến động ở mức lớn (δU = {dlo_s}% ÷ {dhi_s}%), nằm ngoài vùng vận hành an toàn khuyến cáo.",
     ]
