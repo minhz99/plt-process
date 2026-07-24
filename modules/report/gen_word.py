@@ -738,6 +738,25 @@ def _device_tdd_limit_from_name(name: str) -> float:
 # ──────────────────────────────────────────────────────────────────────────────
 
 _CURRENT_CHAR_MAP: dict[str, str] = {
+    # Đặc tính trend ổn định nhưng có biến đổi / dao động quanh ngưỡng
+    "ổn định nhưng có sự biến đổi trong quá trình đo": "ổn định nhưng có sự biến đổi trong quá trình đo",
+    "ổn định nhưng có biến đổi": "ổn định nhưng có sự biến đổi trong quá trình đo",
+    "ổn định có biến đổi": "ổn định nhưng có sự biến đổi trong quá trình đo",
+    "ổn định và có biến đổi": "ổn định nhưng có sự biến đổi trong quá trình đo",
+    "ổn định có điều chỉnh": "ổn định nhưng có sự điều chỉnh trong quá trình đo",
+    "ổn định nhưng dao động": "ổn định nhưng có sự biến đổi trong quá trình đo",
+    "dao động liên tục quanh ngưỡng nhất định": "dao động liên tục quanh ngưỡng nhất định",
+    "dao động liên tục quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
+    "dao động quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
+    "dao động quanh mức": "dao động liên tục quanh ngưỡng nhất định",
+    "dao động quanh giá trị": "dao động liên tục quanh ngưỡng nhất định",
+    "biến đổi quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
+    "biến thiên quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
+    "dao động biên độ lớn": "dao động liên tục với biên độ lớn",
+    "dao động mạnh": "dao động liên tục với biên độ lớn",
+    "tải nhấp nhô": "biến đổi nhấp nhô theo ca sản xuất",
+
+    # Các cụm từ tiêu chuẩn khác
     "biến đổi liên tục theo tải": "biến đổi liên tục theo tải",
     "biên độ nhỏ": "biến đổi liên tục với biên độ nhỏ",
     "biến đổi liên tục": "biến đổi liên tục",

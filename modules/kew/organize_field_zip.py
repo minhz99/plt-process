@@ -848,15 +848,18 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS.
 
     Phân tích chuỗi dòng điện đo được từ các cột AVG_A1[A], AVG_A2[A], AVG_A3[A]
-    trong file INPS để ước lượng 1 trong 8 đặc tính:
+    trong file INPS để ước lượng đặc tính dòng điện:
     1. ổn định
     2. tương đối ổn định
-    3. biên độ nhỏ
-    4. biến đổi nhẹ
-    5. dao động nhẹ
-    6. biến đổi liên tục
-    7. biến đổi liên tục theo tải
-    8. load/unload
+    3. ổn định nhưng có biến đổi
+    4. dao động quanh ngưỡng
+    5. dao động biên độ lớn
+    6. biên độ nhỏ
+    7. biến đổi nhẹ
+    8. dao động nhẹ
+    9. biến đổi liên tục
+    10. biến đổi liên tục theo tải
+    11. load/unload
     """
     import numpy as np
 
@@ -897,8 +900,8 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     p10 = mean_currents.quantile(0.10)
     p90 = mean_currents.quantile(0.90)
     
-    mid_low = p10 + (p90 - p10) * 0.35
-    mid_high = p10 + (p90 - p10) * 0.65
+    mid_low = p10 + (p90 - p10) * 0.25
+    mid_high = p10 + (p90 - p10) * 0.75
     in_middle = mean_currents[(mean_currents > mid_low) & (mean_currents < mid_high)].count()
     total = len(mean_currents)
     mid_ratio = in_middle / total if total > 0 else 0.0
@@ -908,13 +911,27 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     step_ratio = mean_diff / std_val if std_val > 0 else 0.0
 
     # 1. Kiểm tra load/unload (chạy bimodal)
-    if mid_ratio < 0.10 and p90 > 0 and (p10 / p90) < 0.65:
+    if mid_ratio < 0.15 and p90 > 0 and (p10 / p90) < 0.65:
         return "load/unload"
 
-    # 2. Phân loại theo hệ số biến thiên (CV)
+    # 2. Kiểm tra mức độ ổn định & các dạng trend
     if cv <= 0.02:
         return "ổn định"
-    elif cv <= 0.05:
+
+    # Nấc tải / ổn định có bước nhảy chuyển mức: CV 0.03-0.18 nhưng tỉ lệ bước chênh rất nhỏ (tải giữ phẳng ở các giai đoạn)
+    if 0.03 <= cv <= 0.18 and step_ratio < 0.25:
+        return "ổn định nhưng có biến đổi"
+
+    # Dao động liên tục quanh ngưỡng đặt: CV 0.04-0.20 và dữ liệu tập trung xung quanh ngưỡng trung bình với phản hồi liên tục
+    if 0.04 <= cv <= 0.20 and mid_ratio >= 0.40 and step_ratio >= 0.25:
+        return "dao động quanh ngưỡng"
+
+    # Dao động biên độ lớn: CV > 0.25
+    if cv > 0.25:
+        return "dao động biên độ lớn"
+
+    # Phân loại theo dải CV tiêu chuẩn
+    if cv <= 0.05:
         return "tương đối ổn định"
     elif cv <= 0.08:
         return "biên độ nhỏ"
@@ -923,7 +940,6 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     elif cv <= 0.15:
         return "dao động nhẹ"
     else:
-        # cv > 0.15: kiểm tra xu hướng thay đổi mượt mà theo tải vs nhiễu ngẫu nhiên
         if step_ratio < 0.40:
             return "biến đổi liên tục theo tải"
         else:

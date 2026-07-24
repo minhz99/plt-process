@@ -197,7 +197,7 @@ def get_load_mba_templates(load_pct_str: str) -> list[str]:
 
 def get_wave_mba_map(wave: str) -> dict[str, list[str]]:
     """Bản đồ các mẫu câu đặc tính đồ thị dòng điện cho MBA."""
-    return {
+    mba_map = {
         "ổn định": [
             "Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm ổn định.",
             "Biểu đồ dòng điện tiêu thụ tại máy biến áp tương đối ổn định trong thời gian đo kiểm.",
@@ -214,6 +214,17 @@ def get_wave_mba_map(wave: str) -> dict[str, list[str]]:
             "Đồ thị dòng điện vận hành tương đối ổn định, phản ánh chu kỳ sản xuất đều đặn của nhà máy.",
             "Đồ thị dòng điện tại máy biến áp dao động nhẹ theo nhu cầu phụ tải hạ nguồn.",
         ],
+        "ổn định nhưng có sự biến đổi trong quá trình đo": [
+            "Biểu đồ dòng điện tiêu thụ tại máy biến áp duy trì mức ổn định, tuy nhiên ghi nhận sự biến đổi nhẹ tại một số thời điểm trong quá trình đo kiểm.",
+            "Đồ thị dòng điện phía hạ áp máy biến áp thể hiện xu hướng ổn định làm chủ đạo, kèm theo các đợt điều chỉnh tải ngắn theo tiến trình sản xuất.",
+            "Dòng điện tải máy biến áp vận hành ổn định, nhưng có sự biến đổi theo nhu cầu phụ tải tại một số giai đoạn khảo sát.",
+            "Biểu đồ dòng điện của máy biến áp tương đối ổn định với các khoảng tăng/giảm nhẹ tùy theo chu kỳ vận hành của nhà máy.",
+        ],
+        "dao động liên tục quanh ngưỡng nhất định": [
+            "Biểu đồ dòng điện tiêu thụ phía hạ áp máy biến áp dao động liên tục quanh ngưỡng định vị trong suốt thời gian đo kiểm.",
+            "Đồ thị dòng điện đo được tại máy biến áp dao động đều đặn xung quanh mức tải trung bình cố định.",
+            "Dòng điện tải máy biến áp biến thiên liên tục quanh một ngưỡng xác định, phản ánh phản hồi tự động của hệ thống phụ tải.",
+        ],
         "biến đổi theo chu kỳ load/unload": [
             "Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm biến đổi theo chu kỳ Load/Unload.",
             "Đồ thị dòng điện đo được tại máy biến áp vận hành theo chế độ Load/Unload.",
@@ -222,6 +233,12 @@ def get_wave_mba_map(wave: str) -> dict[str, list[str]]:
             "Biểu đồ dòng điện thể hiện rõ chu kỳ đóng/ngắt tải phía hạ áp máy biến áp.",
         ],
     }
+    mba_map["ổn định nhưng có biến đổi"] = mba_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    mba_map["dao động quanh ngưỡng"] = mba_map["dao động liên tục quanh ngưỡng nhất định"]
+    w_key = wave.lower().strip()
+    if w_key in mba_map:
+        return mba_map
+    return mba_map
 
 
 def get_mba_openings(name_mid: str, quality: str) -> list[str]:
@@ -503,6 +520,31 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Đặc tính dao động nhỏ của dòng điện phản ánh sự điều chỉnh vi tế của hệ thống theo nhu cầu phụ tải.",
             "Dòng điện dao động nhẹ quanh giá trị trung bình trong suốt thời gian khảo sát.",
         ],
+        "ổn định nhưng có sự biến đổi trong quá trình đo": [
+            "Biểu đồ dòng điện tiêu thụ nhìn chung duy trì mức ổn định, tuy nhiên có sự biến đổi nhẹ tại một số thời điểm trong quá trình đo kiểm.",
+            "Đồ thị dòng điện thể hiện xu hướng tương đối ổn định, kèm theo các đợt thay đổi tải nhỏ theo tiến trình vận hành thực tế.",
+            "Biểu đồ dòng điện của thiết bị duy trì ổn định làm chủ đạo, nhưng ghi nhận những khoảng biến đổi tải ngắn trong suốt thời gian khảo sát.",
+            "Đồ thị dòng điện đo được duy trì ở trạng thái ổn định với một số đợt tăng/giảm tải nhẹ tùy theo chu kỳ hoạt động.",
+            "Dòng điện tiêu thụ tổng thể ổn định, chỉ xuất hiện sự biến đổi linh hoạt tại một số giai đoạn thay đổi chế độ làm việc.",
+        ],
+        "dao động liên tục quanh ngưỡng nhất định": [
+            "Biểu đồ dòng điện tiêu thụ dao động liên tục quanh một ngưỡng nhất định trong suốt thời gian đo kiểm.",
+            "Đồ thị dòng điện ghi nhận sự dao động đều đặn quanh dải giá trị cố định, phản ánh chế độ điều khiển tự động của thiết bị.",
+            "Biểu đồ dòng điện của thiết bị biến thiên liên tục xung quanh mức tải trung bình cố định.",
+            "Dòng điện tiêu thụ duy trì trạng thái dao động liên tục quanh điểm cài đặt vận hành của hệ thống.",
+            "Đồ thị dòng điện đo được dao động ổn định quanh một ngưỡng dòng điện xác định, thể hiện phản hồi của tải với bộ điều tiết.",
+        ],
+        "dao động liên tục với biên độ lớn": [
+            "Biểu đồ dòng điện tiêu thụ dao động liên tục với biên độ lớn trong suốt thời gian đo kiểm.",
+            "Đồ thị dòng điện biến động mạnh với biên độ dao động rộng, phản ánh đặc tính tải không ổn định của thiết bị.",
+            "Biểu đồ dòng điện ghi nhận các bước nhảy công suất lớn và liên tục theo từng chu kỳ vận hành sản xuất.",
+            "Dòng điện tiêu thụ dao động với biên độ lớn quanh mức trung bình, thể hiện sự thay đổi tải đột ngột thường xuyên.",
+        ],
+        "biến đổi nhấp nhô theo ca sản xuất": [
+            "Biểu đồ dòng điện tiêu thụ thể hiện đặc tính tải nhấp nhô liên tục theo nhịp vận hành sản xuất.",
+            "Đồ thị dòng điện biến động nhấp nhô theo từng công đoạn thao tác thực tế trên chuyền.",
+            "Dòng điện tiêu thụ duy trì trạng thái tải nhấp nhô với tần suất thay đổi cao trong ca làm việc.",
+        ],
         "biến đổi theo chu kỳ load/unload": [
             "Biểu đồ dòng điện tiêu thụ cho thấy thiết bị vận hành theo chế độ Load/Unload.",
             "Đồ thị dòng điện đo được biến đổi theo chu kỳ Load/Unload.",
@@ -512,6 +554,18 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện biến thiên theo từng chu kỳ tải/không tải đặc trưng của chế độ vận hành Load/Unload.",
         ],
     }
+
+    # Bổ sung các alias mapping linh hoạt
+    _wave_dev_map["ổn định nhưng có biến đổi"] = _wave_dev_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    _wave_dev_map["ổn định có biến đổi"] = _wave_dev_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    _wave_dev_map["ổn định có điều chỉnh"] = _wave_dev_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    _wave_dev_map["ổn định nhưng có sự điều chỉnh trong quá trình đo"] = _wave_dev_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    _wave_dev_map["dao động quanh ngưỡng"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
+    _wave_dev_map["dao động liên tục quanh ngưỡng"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
+    _wave_dev_map["dao động quanh mức"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
+    _wave_dev_map["biến đổi quanh ngưỡng"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
+    _wave_dev_map["dao động biên độ lớn"] = _wave_dev_map["dao động liên tục với biên độ lớn"]
+    _wave_dev_map["tải nhấp nhô"] = _wave_dev_map["biến đổi nhấp nhô theo ca sản xuất"]
 
     _wave_key_dev = wave.lower().strip()
     if _wave_key_dev in _wave_dev_map:
