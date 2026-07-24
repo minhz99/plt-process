@@ -37,6 +37,9 @@ from docx.shared import Mm
 from docxcompose.composer import Composer
 from docxtpl import DocxTemplate, InlineImage
 
+from modules.report import remark_templates
+
+
 __all__ = [
     "mba",
     "device",
@@ -659,6 +662,59 @@ def _merge_auto_and_excel_notes(auto: str, excel_bits: str) -> str:
         return auto
     return f"{auto}\n\n{bits}"
 
+def _detect_equipment_category(name: str, kind: str | None = None) -> str:
+    """Phân loại nhóm thiết bị để áp dụng logic sinh nhận xét đặc thù.
+
+    Categories:
+    - 'vfd_inverter': Biến tần, VFD, Inverter (bơm biến tần, quạt biến tần, chiller...)
+    - 'vsd_compressor': Máy nén khí VSD
+    - 'servo_sewing': Dây chuyền máy may servo, xưởng may, chuyền may
+    - 'lighting': Hệ thống chiếu sáng tòa nhà, bệnh viện, nhà xưởng (đèn LED, tủ CS)
+    - 'general_compressor': Máy nén khí thường (Load/Unload)
+    - 'mba': Máy biến áp
+    - 'general_device': Thiết bị/tủ điện khác
+    """
+    k_norm = _norm_kind(kind) if kind else None
+
+    # 1. Ưu tiên nhận diện theo nhãn type/kind tường minh nếu được truyền vào
+    if k_norm in ("vfd", "4vfd"):
+        return "vfd_inverter"
+    if k_norm in ("vsd", "4vsd"):
+        return "vsd_compressor"
+    if k_norm in ("servo", "4servo"):
+        return "servo_sewing"
+    if k_norm in ("lighting", "4lighting"):
+        return "lighting"
+    if k_norm == "mba":
+        return "mba"
+
+    # 2. Phân loại theo từ khóa tên thiết bị nếu nhãn là chung chung (device/device4)
+    if not name:
+        return "general_device"
+    n = unicodedata.normalize("NFKC", str(name)).lower()
+
+    if any(k in n for k in ("vsd", "biến tần", "bien tan", "inverter")) and any(k in n for k in ("nén", "nen", "compressor", "comp")):
+        return "vsd_compressor"
+
+    if any(k in n for k in ("máy may", "may may", "chuyền may", "chuyen may", "xưởng may", "xuong may", "sewing")) or ("servo" in n and any(k in n for k in ("may", "chuyền", "chuyen"))):
+        return "servo_sewing"
+
+    if any(k in n for k in ("chiếu sáng", "chieu sang", "tủ cs", "tu cs", "lighting", "đèn", "den")):
+        return "lighting"
+
+    if any(k in n for k in ("biến tần", "bien tan", "bến tần", "inverter", "vfd", "chiller")):
+        return "vfd_inverter"
+
+    if any(k in n for k in ("nén", "nen", "compressor", "comp")):
+        return "general_compressor"
+
+    if any(k in n for k in ("mba", "máy biến áp", "may bien ap", "tba", "tr", "mbt")):
+        return "mba"
+
+    return "general_device"
+
+
+
 def _device_tdd_limit_from_name(name: str) -> float:
     """Xác định ngưỡng giới hạn TDD dòng điện dựa trên tên/loại thiết bị.
 
@@ -668,10 +724,14 @@ def _device_tdd_limit_from_name(name: str) -> float:
     Returns:
         float: Ngưỡng giới hạn (%) theo tiêu chuẩn nội bộ (thường là 12.0 hoặc 20.0).
     """
+    cat = _detect_equipment_category(name)
+    if cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
+        return 12.0
     n = _norm(name)
     if any(k in n for k in ("nén", "nen", "nghiền", "nghien", "máy ép", "may ep", "băng tải", "bang tai")):
         return 12.0
     return 20.0
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Sinh nhận xét từ các trường Excel hiện trường
@@ -758,6 +818,14 @@ def _pf_phrase(cos_phi: float | None, kind: str = "device") -> str:
             return "trung bình (dưới 0,8)"
         return "thấp (dưới 0,8)"
 
+def _has_inverter_hint(n: str) -> bool:
+    """Kiểm tra tên thiết bị có chứa dấu hiệu biến tần hay không."""
+    _nm = unicodedata.normalize("NFKC", str(n)).lower()
+    return any(k in _nm for k in (
+        "biến tần", "bien tan", "inverter", "vfd", "vsd", "chiller", "bơm tuần hoàn",
+    ))
+
+
 def _compose_remarks_from_excel_fields(
     *,
     name: str,
@@ -773,29 +841,10 @@ def _compose_remarks_from_excel_fields(
     thd_max: float | None,
     tdd_max: float | None,
     pdm_kva: float | None = None,
-    nominal_voltage: float | None,
+    nominal_voltage: float | None = None,
+    raw_kind: str | None = None,
 ) -> str:
-    """Sinh nội dung nhận xét tự động dựa trên các thông số kỹ thuật đo được.
-
-    Thuật toán đánh giá (Loi_Dem):
-    - Độ lệch điện áp vi phạm: +2 điểm lỗi (lỗi nghiêm trọng).
-    - Các vi phạm khác (Cos phi, THD, TDD, lệch dòng): +1 điểm lỗi.
-    - Tổng điểm lỗi xác định mức độ đánh giá: tốt, tương đối tốt, hoặc chưa tốt.
-
-    Args:
-        name: Tên thiết bị/máy biến áp.
-        kind: Loại thiết bị (mba/device/device4).
-        current_char: Đặc tính tải (biến đổi/ổn định).
-        u_min, u_max, delta_u: Thông số điện áp và độ lệch.
-        delta_i: Độ lệch dòng điện.
-        p_kw, cos_phi: Công suất và hệ số công suất.
-        thd_max, tdd_max: Các chỉ số sóng hài.
-        pdm_kva: Công suất định mức (chỉ dùng cho MBA).
-        nominal_voltage: Điện áp danh định (V).
-
-    Returns:
-        str: Đoạn văn bản nhận xét hoàn chỉnh đã được format.
-    """
+    """Sinh nội dung nhận xét tự động dựa trên các thông số kỹ thuật đo được."""
     ct_reversed_in_fields = False
     if p_kw is not None and p_kw < 0:
         p_kw = abs(p_kw)
@@ -807,6 +856,7 @@ def _compose_remarks_from_excel_fields(
     vref = float(nominal_voltage) if nominal_voltage and nominal_voltage > 0 else _MBA_NOMINAL_VOLTAGE_V
     wave = _wave_phrase_from_char(current_char)
     name_mid = _format_name_mid(name)
+    cat = _detect_equipment_category(name, kind=raw_kind or kind)
 
     # ── Định dạng helper ─────────────────────────────────────────────────
     def _pct(v: float | None, d: int = 2) -> str:
@@ -831,10 +881,14 @@ def _compose_remarks_from_excel_fields(
         du_hi = (u_max - vref) / vref * 100.0
 
     # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) ───────────────────────────────
-    if p_kw is not None:
+    if kind == "mba" or cat == "mba":
+        tdd_lim = _TDD_LIMIT_PCT
+    elif p_kw is not None:
         tdd_lim = 12.0 if p_kw > 50.0 else 20.0
+    elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
+        tdd_lim = 12.0
     else:
-        tdd_lim = _TDD_LIMIT_PCT if kind == "mba" else _device_tdd_limit_from_name(name)
+        tdd_lim = _device_tdd_limit_from_name(name)
     loi_dem = 0
 
     if cos_phi is not None and abs(cos_phi) < _PF_LIMIT:
@@ -844,10 +898,11 @@ def _compose_remarks_from_excel_fields(
             loi_dem += 1
     if delta_i is not None and delta_i > 10.0:
         loi_dem += 1
-    if thd_max is not None and thd_max > _THDV_LIMIT_PCT:
-        loi_dem += 1
-    if tdd_max is None or tdd_max > tdd_lim:
-        loi_dem += 1
+    if kind != "mba" and cat != "mba":
+        if thd_max is not None and thd_max > _THDV_LIMIT_PCT:
+            loi_dem += 1
+        if tdd_max is None or tdd_max > tdd_lim:
+            loi_dem += 1
     if delta_u is not None and delta_u > _V_DEV_LIMIT_PCT:
         loi_dem += 2  # Mất cân bằng điện áp — lỗi nghiêm trọng, cộng 2
 
@@ -881,16 +936,8 @@ def _compose_remarks_from_excel_fields(
     di_pass = di_num is not None and di_num <= 10.0
     du_s, di_s = _pct(du_num), _pct(di_num)
 
-    # ── [Đề xuất B3] Pool câu ΔU/ΔI đạt chuẩn (cả hai thấp) ─────────────
     _unb_both_ok_vals = f"ΔU = {du_s}% {_LT} 5,0% {_AMP} ΔI = {di_s}% {_LT} 10,0%"
-    _unb_both_ok_templates = [
-        f"Độ lệch pha điện áp và dòng điện đều ở mức thấp ({_unb_both_ok_vals}).",
-        f"Độ lệch pha điện áp và dòng điện đều ở mức cho phép ({_unb_both_ok_vals}).",
-        f"Độ lệch pha điện áp và dòng điện đo được đều thấp hơn mức chuẩn khuyến cáo ({_unb_both_ok_vals}).",
-        f"Độ lệch pha điện áp và dòng điện đáp ứng chuẩn cho phép ({_unb_both_ok_vals}).",
-        f"Độ lệch pha điện áp và dòng điện đều đáp ứng ngưỡng khuyến cáo ({_unb_both_ok_vals}).",
-        f"Độ lệch pha điện áp, dòng điện đều ở mức thấp ({_unb_both_ok_vals}).",
-    ]
+    _unb_both_ok_templates = remark_templates.get_unb_both_ok_templates(_unb_both_ok_vals)
 
     if du_num is None and di_num is None:
         unbalance_sent = ""
@@ -933,23 +980,13 @@ def _compose_remarks_from_excel_fields(
     if tdd_max is None:
         tdd_ok = False
 
-    # ── [Đề xuất B2] Pool câu sóng hài đạt chuẩn ────────────────────────
     _harm_ok_vals = f"THDmax = {th_s}% {_LT} 8,0% {_AMP} TDDmax = {td_s}% {_LT} {lim_s}%"
-    _harm_both_ok_templates = [
-        f"Tổng biến dạng sóng hài điện áp và dòng điện đều ở mức cho phép ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện đáp ứng mức cho phép ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện nằm trong ngưỡng cho phép ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện đều đạt tiêu chuẩn quy định ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện hiện đáp ứng ngưỡng quy định ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện đều thấp hơn ngưỡng cho phép ({_harm_ok_vals}).",
-        f"Tổng biến dạng sóng hài điện áp và dòng điện đều ở mức thấp ({_harm_ok_vals}).",
-    ]
+    _harm_both_ok_templates = remark_templates.get_harm_both_ok_templates(_harm_ok_vals)
 
     if thd_max is None:
         if tdd_ok:
             harm_sent = f"Tổng biến dạng sóng hài dòng điện ở mức cho phép (TDDmax = {td_s}% {_LT} {lim_s}%)."
         else:
-            # tdd_max là None → không đo được, mặc định vượt mức
             harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax {_GT} 100%)."
     else:
         if thd_ok and tdd_ok:
@@ -973,7 +1010,6 @@ def _compose_remarks_from_excel_fields(
                 f"(THDmax = {th_s}% {_GT} 8,0%)."
             )
         else:
-            # cả THD lẫn TDD đều vượt mức
             if tdd_max is None:
                 harm_sent = (
                     f"Tổng biến dạng sóng hài điện áp và tổng biến dạng sóng hài dòng điện "
@@ -1031,66 +1067,72 @@ def _compose_remarks_from_excel_fields(
         unbalance_sent = combined_sent
         harm_sent = ""
 
-    # ── [Đề xuất D] Câu nguyên nhân khi TDD vượt mức ────────────────────
-    def _has_inverter_hint(n: str) -> bool:
-        _nm = unicodedata.normalize("NFKC", n).lower()
-        return any(k in _nm for k in (
-            "biến tần", "inverter", "vfd", "vsd", "chiller", "bơm tuần hoàn",
-        ))
-
+    # ── Câu nguyên nhân theo nhóm phụ tải đặc thù ─────────────
     cause_sent = ""
-    if not tdd_ok and tdd_max is not None:
-        if _has_inverter_hint(name):
-            _cause_inverter = [
-                "Nguyên nhân hình thành nên giá trị sóng hài cao xuất phát từ việc sử dụng biến tần.",
-                "Sóng hài dòng điện cao là đặc tính kỹ thuật của thiết bị điều khiển bằng biến tần.",
-                "Việc xuất hiện sóng hài cao xuất phát từ các hệ thống được điều khiển bằng biến tần.",
-            ]
-            cause_sent = _get_random_choice(_cause_inverter, name, "cause_inv")
-        elif di_num is not None and di_num > 10.0:
-            cause_sent = (
-                "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha "
-                "cũng như sự hoạt động không đồng đều của các thiết bị điện."
-            )
+
+    if cat == "vfd_inverter":
+        if not tdd_ok:
+            _causes = remark_templates.get_cause_vfd_templates(td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_vfd")
+        elif not di_pass:
+            cause_sent = f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%) có thể do sự phân bổ tải không đồng đều giữa các pha nguồn cấp."
+
+    elif cat == "vsd_compressor":
+        if not tdd_ok:
+            _causes = remark_templates.get_cause_vsd_templates(td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_vsd")
+
+    elif cat == "servo_sewing":
+        if not di_pass and not tdd_ok:
+            _causes = remark_templates.get_cause_servo_both_templates(di_s, td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_servo_both")
+        elif not di_pass:
+            _causes = remark_templates.get_cause_servo_unb_templates(di_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_servo_unb")
+        elif not tdd_ok:
+            _causes = remark_templates.get_cause_servo_harm_templates(td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_servo_harm")
+
+    elif cat == "lighting":
+        if not tdd_ok and not di_pass:
+            _causes = remark_templates.get_cause_lighting_both_templates(di_s, td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_lighting_both")
+        elif not tdd_ok:
+            _causes = remark_templates.get_cause_lighting_harm_templates(td_s, lim_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_lighting_harm")
+        elif not di_pass:
+            _causes = remark_templates.get_cause_lighting_unb_templates(di_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_lighting_unb")
+
+    elif kind == "mba" or cat == "mba":
+        if not di_pass:
+            _causes = remark_templates.get_cause_mba_unb_templates(di_s)
+            cause_sent = _get_random_choice(_causes, name, "cause_mba_unb")
+
+    else:
+        if not tdd_ok:
+            if _has_inverter_hint(name):
+                _causes = remark_templates.get_cause_inv_templates()
+                cause_sent = _get_random_choice(_causes, name, "cause_inv")
+            else:
+                _causes = remark_templates.get_cause_gen_harm_templates()
+                cause_sent = _get_random_choice(_causes, name, "cause_gen_harm")
+        elif not di_pass:
+            cause_sent = "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
 
     # ── MBA: format mới ──────────────────────────────────────────────────────
-    # Câu 1: % tải (nếu có đủ dữ liệu)
-    # Câu 2: Biểu đồ dòng điện
-    # Câu 3: Chất lượng điện + ΔU [+ ΔI nếu cùng mức] + cosφ (một câu)
-    # Câu 4: ΔI riêng (chỉ khi ΔI khác mức với ΔU)
-    # Câu 5: TDD trong mức (bỏ qua nếu vượt mức)
-    # Câu cuối: Dẫn bảng tổng hợp
     if kind == "mba":
         mba_parts: list[str] = []
 
-        # Câu 1 — % công suất tiêu thụ (Đề xuất E)
+        # Câu 1 — % công suất tiêu thụ
         if p_kw is not None and cos_phi is not None and abs(cos_phi) > 0.01 and pdm_kva is not None and pdm_kva > 0:
             s_kva = p_kw / abs(cos_phi)
             load_pct = s_kva / pdm_kva * 100.0
-            _load_mba_phrases = [
-                f"Công suất tiêu thụ của máy biến áp đạt {_pct(load_pct, 2)}% công suất thiết kế.",
-                f"Công suất tiêu thụ tại máy biến áp ở mức {_pct(load_pct, 2)}% so với công suất định mức.",
-                f"Tại thời điểm đo kiểm, máy biến áp vận hành ở mức {_pct(load_pct, 2)}% công suất thiết kế.",
-            ]
+            _load_mba_phrases = remark_templates.get_load_mba_templates(_pct(load_pct, 2))
             mba_parts.append(_get_random_choice(_load_mba_phrases, name, "load_mba"))
 
-        # Câu 2 — Biểu đồ dòng điện (Đề xuất B1)
-        _wave_mba_map = {
-            "ổn định": [
-                "Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm ổn định.",
-                "Biểu đồ dòng điện tiêu thụ tại máy biến áp tương đối ổn định trong thời gian đo kiểm.",
-                "Đồ thị dòng điện đo được tại máy biến áp tương đối ổn định.",
-            ],
-            "tương đối ổn định": [
-                "Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm tương đối ổn định.",
-                "Đồ thị dòng điện đo được tại máy biến áp có sự điều chỉnh nhẹ.",
-                "Biểu đồ dòng điện tiêu thụ tại máy biến áp tương đối ổn định và có sự điều chỉnh nhẹ.",
-            ],
-            "biến đổi theo chu kỳ load/unload": [
-                "Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm biến đổi theo chu kỳ Load/Unload.",
-                "Đồ thị dòng điện đo được tại máy biến áp vận hành theo chế độ Load/Unload.",
-            ],
-        }
+        # Câu 2 — Biểu đồ dòng điện
+        _wave_mba_map = remark_templates.get_wave_mba_map(wave)
         _wave_key_mba = wave.lower()
         if _wave_key_mba in _wave_mba_map:
             mba_wave_sent = _get_random_choice(_wave_mba_map[_wave_key_mba], name, "wave_mba")
@@ -1109,35 +1151,10 @@ def _compose_remarks_from_excel_fields(
             unbalance_part = f"độ lệch pha điện áp ở mức {du_level}"
             di_separate = di_level is not None
 
-        # ── Đề xuất A: mở rộng pool câu mở đầu MBA (3 → 6) ──────────────
-        mba_openings = [
-            f"Chất lượng điện đo tại {name_mid} ở mức {quality}",
-            f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}",
-            f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}",
-            f"Chất lượng dòng điện đo được tại {name_mid} ở mức {quality}",
-            f"Kết quả đo kiểm cho thấy nguồn điện cấp cho {name_mid} ở mức {quality}",
-            f"Qua đo kiểm, chất lượng điện tại {name_mid} ở mức {quality}",
-        ]
+        mba_openings = remark_templates.get_mba_openings(name_mid, quality)
         chosen_mba_opening = _get_random_choice(mba_openings, name, "opening_mba")
 
-        # ── Đề xuất F: đa dạng câu PF (MBA) ─────────────────────────────
-        if cos_phi is not None and abs(cos_phi) >= 0.9:
-            _pf_mba_tpl = [
-                f"hệ số công suất cosφ ở mức {pf_txt}",
-                f"hệ số công suất đo được ở mức {pf_txt}",
-                f"hệ số cosφ đo được ở mức {pf_txt}",
-            ]
-        elif cos_phi is not None and abs(cos_phi) >= 0.8:
-            _pf_mba_tpl = [
-                f"hệ số công suất cosφ ở mức {pf_txt}",
-                f"hệ số công suất của thiết bị ở mức {pf_txt}",
-                f"hệ số cosφ hiện ở mức {pf_txt}",
-            ]
-        else:
-            _pf_mba_tpl = [
-                f"hệ số công suất cosφ ở mức {pf_txt}",
-                f"hệ số công suất ở mức {pf_txt}",
-            ]
+        _pf_mba_tpl = remark_templates.get_pf_mba_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
         chosen_pf_mba = _get_random_choice(_pf_mba_tpl, name, "pf_mba")
 
         quality_sent = (
@@ -1147,152 +1164,59 @@ def _compose_remarks_from_excel_fields(
         )
         mba_parts.append(quality_sent)
 
-        # Câu 4 — ΔI riêng (chỉ khi khác mức ΔU)
-        if di_separate:
-            mba_parts.append(f"Độ lệch pha dòng điện ở mức {di_level} (ΔI = {di_s}%).")
+        if cause_sent:
+            mba_parts.append(cause_sent)
 
-        # Câu 5 — TDD trong mức (Đề xuất B2 nhỏ)
-        if tdd_ok:
-            _tdd_ok_mba = [
-                "Tổng biến dạng sóng hài dòng điện ở mức cho phép.",
-                "Tổng biến dạng sóng hài dòng điện nằm trong ngưỡng cho phép.",
-                "Tổng biến dạng sóng hài dòng điện đáp ứng mức tiêu chuẩn.",
-            ]
-            mba_parts.append(_get_random_choice(_tdd_ok_mba, name, "tdd_ok_mba"))
-
-        # Câu cuối — Dẫn bảng
-        _mba_closing = [
-            "Dưới đây là bảng tổng hợp thông số hoạt động của máy biến áp:",
-            "Chất lượng dòng điện đo được tại máy biến áp được thể hiện chi tiết tại bảng sau:",
-        ]
+        _mba_closing = remark_templates.get_mba_closing_templates()
         mba_parts.append(_get_random_choice(_mba_closing, name, "closing_mba"))
 
         return " ".join(mba_parts)
 
     # ── Device ────────────────────────────────────────────────────────────
-    # ── Đề xuất G: Pool câu điện áp đa dạng ────────────────────────────
     umin_s, umax_s = _volt(u_min), _volt(u_max)
     dlo_s, dhi_s = _pct(du_lo), _pct(du_hi)
     if du_lo is not None and du_hi is not None:
         both_in = abs(du_lo) <= _V_DEV_LIMIT_PCT and abs(du_hi) <= _V_DEV_LIMIT_PCT
-        _vdict_ok = [
-            "đạt tiêu chuẩn (-5,0% ≤ δ ≤ 5,0%)",
-            "thuộc ngưỡng tiêu chuẩn điện áp (-5% ≤ δ ≤ 5%)",
-            "nằm trong ngưỡng tiêu chuẩn dao động điện áp (-5% ≤ δ ≤ 5%)",
-            "hiện nằm trong ngưỡng tiêu chuẩn (-5,0% ≤ δ ≤ 5,0%)",
-        ]
-        _vdict_bad = [
-            "vượt giới hạn cho phép (-5,0% ≤ δ ≤ 5,0%)",
-            "chưa đáp ứng tiêu chuẩn điện áp (-5% ≤ δ ≤ 5%)",
-            "nằm ngoài ngưỡng tiêu chuẩn (-5,0% ≤ δ ≤ 5,0%)",
-        ]
+        _vdict_ok = remark_templates.get_volt_verdict_ok_templates()
+        _vdict_bad = remark_templates.get_volt_verdict_bad_templates()
         verdict = _get_random_choice(_vdict_ok if both_in else _vdict_bad, name, "volt_verdict")
-        _volt_tpl = [
-            f"Điện áp dao động từ {umin_s} ÷ {umax_s} V, độ lệch chuẩn của điện áp δU (= {dlo_s}% ÷ {dhi_s}%), {verdict}.",
-            f"Điện áp đo được nằm trong khoảng {umin_s} - {umax_s} V với độ lệch chuẩn của điện áp δU (= {dlo_s}% ÷ {dhi_s}%) {verdict}.",
-            f"Điện áp nguồn cấp dao động từ {umin_s} ÷ {umax_s} V, độ lệch chuẩn của điện áp δU (= {dlo_s}% ÷ {dhi_s}%), {verdict}.",
-            f"Điện áp cấp cho thiết bị dao động từ {umin_s} - {umax_s} V, độ lệch chuẩn của điện áp δU (= {dlo_s}% ÷ {dhi_s}%) {verdict}.",
-        ]
+        _volt_tpl = remark_templates.get_volt_templates(umin_s, umax_s, dlo_s, dhi_s, verdict)
         volt_sent = _get_random_choice(_volt_tpl, name, "volt_sent")
     elif u_min is not None and u_max is not None:
         volt_sent = f"Điện áp dao động từ {umin_s} ÷ {umax_s} V."
     else:
         volt_sent = ""
 
+    # ── Tỷ lệ tiêu thụ so với công suất định mức cho thiết bị ngoài MBA ─────
+    load_sent_dev = ""
+    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
+        if cos_phi is not None and abs(cos_phi) > 0.01:
+            load_pct_dev = (p_kw / abs(cos_phi)) / pdm_kva * 100.0
+        else:
+            load_pct_dev = (p_kw / pdm_kva) * 100.0
+
+        pct_s = _pct(load_pct_dev, 2)
+        p_str = _pct(p_kw, 1)
+        pdm_str = f"{pdm_kva:.0f}".replace(".", ",") if pdm_kva.is_integer() else _pct(pdm_kva, 1)
+
+        _load_dev_tpl = remark_templates.get_load_dev_templates(load_pct_dev, pct_s, p_str, pdm_str)
+        load_sent_dev = _get_random_choice(_load_dev_tpl, name, "load_dev")
+
     if quality == "chưa tốt":
-        parts: list[str] = [
-            f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm.",
-            f"Hệ số công suất cosφ ở mức {pf_txt}.",
-        ]
+        parts: list[str] = []
+        if load_sent_dev:
+            parts.append(load_sent_dev)
+        parts.append(f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm.")
+        parts.append(f"Hệ số công suất cosφ ở mức {pf_txt}.")
     else:
-        # ── Đề xuất A: pool câu mở đầu device (3 → 10) ──────────────────
-        openings = [
-            f"Chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-            f"Dữ liệu đo kiểm cho thấy {name_mid} có chất lượng điện ở mức {quality}.",
-            f"Nhìn chung, nguồn điện cấp cho {name_mid} có chất lượng {quality}.",
-            f"Chất lượng dòng điện đo được tại nguồn cấp cho {name_mid} ở mức {quality}.",
-            f"Kết quả đo kiểm cho thấy chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-            f"Qua biểu đồ dòng điện đo được tại nguồn cấp, {name_mid} đang hoạt động với chất lượng điện {quality}.",
-            f"Qua đo kiểm, chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-            f"Tại thời điểm khảo sát, {name_mid} vận hành với chất lượng điện ở mức {quality}.",
-            f"Chất lượng điện đo tại {name_mid} ở mức {quality}.",
-            f"Chất lượng điện cấp cho {name_mid} ở mức {quality}.",
-        ]
+        openings = remark_templates.get_device_openings(name_mid, quality)
         chosen_opening = _get_random_choice(openings, name, "opening_dev")
 
-        # ── Đề xuất F: đa dạng câu PF theo mức ─────────────────────────
-        if cos_phi is not None and abs(cos_phi) >= 0.9:
-            _pf_dev_tpl = [
-                f"Hệ số công suất cosφ ở mức {pf_txt}.",
-                f"Hệ số công suất của thiết bị ở mức {pf_txt}.",
-                f"Hệ số công suất đo được ở mức {pf_txt}.",
-                f"Giá trị hệ số công suất đo được tại thời điểm khảo sát ở mức {pf_txt}.",
-            ]
-        elif cos_phi is not None and abs(cos_phi) >= 0.8:
-            _pf_dev_tpl = [
-                f"Hệ số công suất cosφ ở mức {pf_txt}.",
-                f"Hệ số công suất của thiết bị ở mức {pf_txt}.",
-                f"Hệ số cosφ đo được có giá trị {pf_txt}.",
-                f"Giá trị hệ số công suất đo được tại thời điểm khảo sát ở mức {pf_txt}.",
-            ]
-        else:
-            _pf_dev_tpl = [
-                f"Hệ số công suất cosφ ở mức {pf_txt}.",
-                f"Hệ số công suất ở mức {pf_txt}.",
-            ]
+        _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
         pf_sent = _get_random_choice(_pf_dev_tpl, name, "pf_dev")
 
-        # ── Đề xuất B1: pool câu biểu đồ dòng điện theo đặc tính ────────
-        _wave_dev_map: dict[str, list[str]] = {
-            "ổn định": [
-                "Biểu đồ dòng điện tiêu thụ tại thiết bị ổn định trong thời gian đo kiểm.",
-                "Đồ thị dòng điện đo được tại nguồn cấp tương đối ổn định.",
-                "Biểu đồ dòng điện cấp cho thiết bị duy trì ổn định trong suốt quá trình khảo sát.",
-                "Biểu đồ dòng điện của thiết bị thể hiện tính ổn định trong vận hành.",
-            ],
-            "tương đối ổn định": [
-                "Biểu đồ dòng điện tiêu thụ tại thiết bị tương đối ổn định trong thời gian đo kiểm.",
-                "Đồ thị dòng điện đo được tại thiết bị ít có sự biến động.",
-                "Biểu đồ dòng điện cấp cho thiết bị tương đối ổn định với sự điều chỉnh nhẹ.",
-            ],
-            "biến đổi liên tục theo tải": [
-                f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm.",
-                "Đồ thị dòng điện có sự điều chỉnh theo hoạt động sản xuất.",
-                "Biểu đồ dòng điện cấp cho thiết bị có sự biến động theo tình hình vận hành.",
-            ],
-            "biến đổi liên tục": [
-                "Biểu đồ dòng điện tiêu thụ tại thiết bị biến đổi liên tục trong thời gian đo kiểm.",
-                "Đồ thị dòng điện đo được tại thiết bị có sự biến đổi liên tục.",
-                f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm.",
-            ],
-            "biến đổi liên tục với biên độ nhỏ": [
-                "Biểu đồ dòng điện tiêu thụ của thiết bị biến đổi liên tục với biên độ nhỏ.",
-                "Đồ thị dòng điện đo được tại thiết bị biến đổi liên tục với biên độ không lớn.",
-                f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm.",
-            ],
-            "biến đổi theo chu kỳ load/unload": [
-                "Biểu đồ dòng điện tiêu thụ cho thấy thiết bị vận hành theo chế độ Load/Unload.",
-                "Đồ thị dòng điện đo được biến đổi theo chu kỳ Load/Unload.",
-                "Thiết bị hoạt động theo chế độ Load/Unload, đồ thị dòng điện thể hiện rõ chu kỳ đóng/ngắt tải.",
-            ],
-        }
-        _wave_key_dev = wave.lower().strip()
-        if _wave_key_dev in _wave_dev_map:
-            wave_sent = _get_random_choice(_wave_dev_map[_wave_key_dev], name, "wave_dev")
-        else:
-            wave_sent = f"Biểu đồ dòng điện tiêu thụ {wave} trong thời gian đo kiểm."
-
-        # ── Đề xuất E: câu công suất % so định mức ──────────────────────
-        load_sent_dev = ""
-        if p_kw is not None and cos_phi is not None and abs(cos_phi) > 0.01 and pdm_kva is not None and pdm_kva > 0:
-            s_kva_dev = p_kw / abs(cos_phi)
-            load_pct_dev = s_kva_dev / pdm_kva * 100.0
-            _load_dev_tpl = [
-                f"Công suất tiêu thụ của thiết bị đo được ở mức {_pct(load_pct_dev, 2)}% so với công suất định mức.",
-                f"Tại thời điểm khảo sát, thiết bị vận hành với công suất bằng {_pct(load_pct_dev, 2)}% công suất thiết kế.",
-                f"Công suất tức thời của thiết bị đạt {_pct(load_pct_dev, 2)}% công suất định mức.",
-            ]
-            load_sent_dev = _get_random_choice(_load_dev_tpl, name, "load_dev")
+        _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
+        wave_sent = _get_random_choice(_wave_dev_candidates, name, f"wave_{cat}")
 
         parts: list[str] = []
         if load_sent_dev:
@@ -1307,20 +1231,14 @@ def _compose_remarks_from_excel_fields(
         parts.append(unbalance_sent)
     if harm_sent:
         parts.append(harm_sent)
-    # ── Đề xuất D: câu nguyên nhân vi phạm ─────────────────────────────
     if cause_sent:
         parts.append(cause_sent)
-    # ── Đề xuất C: câu kết luận tổng quan cho device ────────────────────
     if quality == "tốt" and loi_dem == 0 and kind != "mba":
-        _closing_dev = [
-            "Tổng quan, chất lượng điện cấp cho thiết bị ở mức tốt.",
-            "Tổng quan, chất lượng dòng điện cấp cho thiết bị ở mức tốt.",
-            "Nhìn chung, thiết bị vận hành ổn định với chất lượng điện cấp ở mức tốt.",
-            "Tổng quan, hệ thống hoạt động ổn định và chất lượng điện ở mức tốt.",
-            "Kết quả đo kiểm cho thấy chất lượng điện cấp cho thiết bị ở mức tốt.",
-        ]
+        _closing_dev = remark_templates.get_closing_dev_templates()
         parts.append(_get_random_choice(_closing_dev, name, "closing_dev"))
     return " ".join(parts)
+
+
 
 def _estimate_current_char_from_df(df) -> str | None:
     """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS.
@@ -1416,20 +1334,9 @@ def _resolve_remarks_field(
     user_remarks: str,
     nominal_voltage: float | None,
     excel_params: dict | None = None,
+    raw_kind: str | None = None,
 ) -> str:
-    """Quyết định nội dung nhận xét dựa trên dữ liệu Excel hiện trường hoặc tự động.
-
-    Args:
-        kind: Loại thiết bị (mba/device/device4).
-        folder: Thư mục chứa dữ liệu thiết bị.
-        name: Tên thiết bị.
-        user_remarks: Ghi chú thủ công từ người dùng (nếu có).
-        nominal_voltage: Điện áp danh định (V).
-        excel_params: Các thông số đo kiểm từ Excel (P, Q, S, Cosphi, Harmonic...).
-
-    Returns:
-        str: Chuỗi văn bản nhận xét hoàn chỉnh đã được format.
-    """
+    """Quyết định nội dung nhận xét dựa trên dữ liệu Excel hiện trường hoặc tự động."""
     raw = (user_remarks or "").strip()
 
     params = excel_params or {}
@@ -1482,8 +1389,10 @@ def _resolve_remarks_field(
         tdd_max=tdd_max_v,
         pdm_kva=pdm_kva,
         nominal_voltage=nominal_voltage,
+        raw_kind=raw_kind,
     )
     return _merge_auto_and_excel_notes(auto, raw)
+
 
 # ════════════════════════════════════════════════════════════════════
 #                       Image discovery helpers
@@ -1793,25 +1702,9 @@ def mba_kwargs_from_folder(
     remarks_mba: str = "",
     cap_tab_mba: str | None = None,
     excel_params: dict | None = None,
+    raw_kind: str | None = None,
 ) -> dict:
-    """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template MBA.
-
-    Quy trình:
-    1. Tìm file dữ liệu gốc (INPSxxxx.KEW) trong thư mục bằng tiền tố "INPS".
-    2. Tự động chọn các file ảnh đo kiểm (biểu đồ dòng, sóng hài...).
-    3. Sinh nội dung nhận xét dựa trên dữ liệu Excel hiện trường.
-
-    Args:
-        folder: Thư mục chứa dữ liệu của máy biến áp.
-        name: Tên hiển thị của MBA.
-        cap_fig_mba: Chú thích hình ảnh.
-        remarks_mba: Nhận xét bổ sung.
-        cap_tab_mba: Chú thích bảng.
-        excel_params: Các tham số đo lường bổ sung từ Excel (nếu có).
-
-    Returns:
-        dict: Context dữ liệu sẵn sàng để truyền vào hàm mba().
-    """
+    """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template MBA."""
     folder = Path(folder)
     from modules.kew.analyse_kew import find_file  # type: ignore
 
@@ -1833,6 +1726,7 @@ def mba_kwargs_from_folder(
         user_remarks=remarks_mba,
         nominal_voltage=None,
         excel_params=excel_params,
+        raw_kind=raw_kind,
     )
     return kw
 
@@ -1844,20 +1738,9 @@ def device_kwargs_from_folder(
     remarks_device: str = "",
     nominal_voltage: float | None = None,
     excel_params: dict | None = None,
+    raw_kind: str | None = None,
 ) -> dict:
-    """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template thiết bị đo kiểm.
-
-    Args:
-        folder: Đường dẫn thư mục chứa dữ liệu thiết bị.
-        name: Tên hiển thị của thiết bị.
-        cap_device: Chú thích cho hình ảnh và bảng dữ liệu (tuỳ chọn).
-        remarks_device: Ghi chú bổ sung từ người dùng (tuỳ chọn).
-        nominal_voltage: Điện áp danh định để tính toán độ lệch (V).
-        excel_params: Các tham số đo kiểm trích xuất từ Excel.
-
-    Returns:
-        dict: Tập hợp các tham số (kwargs) sẵn sàng để truyền vào hàm :func:`device`.
-    """
+    """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template thiết bị đo kiểm."""
     images = auto_pick_device_images(folder)
     nm = _format_name_mid(name)
     return {
@@ -1870,9 +1753,11 @@ def device_kwargs_from_folder(
             user_remarks=remarks_device,
             nominal_voltage=nominal_voltage,
             excel_params=excel_params,
+            raw_kind=raw_kind,
         ),
         **images,
     }
+
 
 # ════════════════════════════════════════════════════════════════════
 #                         Render & merge
@@ -1996,14 +1881,14 @@ def _resolve_word_section_kind(
             nk = _norm_kind(raw)
             if nk == "mba":
                 return "mba"
-            if nk == "device4":
+            if nk and (nk == "device4" or nk in _DEVICE4_KIND_LABELS or nk.startswith("4") or (isinstance(raw, str) and str(raw).strip().startswith("4"))):
                 return "device4"
-            if nk == "device":
-                return "device"
+            return "device"
         return "device"
     if default_kind in ("mba", "device", "device4"):
         return default_kind
     return _guess_kind(name)
+
 
 def build_field_word_report(
     project_root: str | Path,
@@ -2129,11 +2014,12 @@ def build_field_word_report(
             if st_check.get("_ct_reversed"):
                 warnings.append(f"«{name}»: {st_check.get('_ct_reversed_msg')}")
 
+        raw_k = str(spec.get("kind") or "")
         try:
             if kind == "mba":
                 kwargs = mba_kwargs_from_folder(
                     folder, name=name, remarks_mba=remarks,
-                    excel_params=excel_params,
+                    excel_params=excel_params, raw_kind=raw_k,
                 )
                 kwargs["ds_mba"] = ds_mba
             else:  # "device" or "device4"
@@ -2143,8 +2029,10 @@ def build_field_word_report(
                     remarks_device=remarks,
                     nominal_voltage=nom_v,
                     excel_params=excel_params,
+                    raw_kind=raw_k,
                 )
             sections.append((kind, kwargs))
+
         except FileNotFoundError as e:
             warnings.append(f"«{name}»: {e}.")
         except Exception as e:
@@ -2189,22 +2077,77 @@ def _nfc(s: object) -> str:
         return ""
     return unicodedata.normalize("NFC", str(s).strip())
 
-_DEVICE4_KIND_LABELS = frozenset({"4", "device4"})
+_DEVICE4_KIND_LABELS = frozenset({
+    "4", "device4", "dev4",
+    "4vfd", "vfd4",
+    "4vsd", "vsd4",
+    "4servo", "servo4",
+    "4lighting", "lighting4",
+    "4cs", "cs4",
+    "4compressor", "compressor4",
+})
 
-def _norm_kind(value: object) -> SectionKind | None:
+_KIND_LABEL_MAP: dict[str, str] = {
+    "mba": "mba",
+    "5mba": "mba",
+    "mba5": "mba",
+
+    "device": "device",
+    "thiết bị": "device",
+    "thiet bi": "device",
+    "thietbi": "device",
+    "tủ": "device",
+    "tu": "device",
+    "khac": "device",
+    "khác": "device",
+
+    "4": "device4",
+    "device4": "device4",
+    "dev4": "device4",
+
+    "vfd": "vfd",
+    "4vfd": "4vfd",
+    "vfd4": "4vfd",
+
+    "vsd": "vsd",
+    "4vsd": "4vsd",
+    "vsd4": "4vsd",
+
+    "servo": "servo",
+    "4servo": "4servo",
+    "servo4": "4servo",
+
+    "lighting": "lighting",
+    "cs": "lighting",
+    "chiếu sáng": "lighting",
+    "chieu sang": "lighting",
+    "chieusang": "lighting",
+    "4lighting": "4lighting",
+    "lighting4": "4lighting",
+    "4cs": "4lighting",
+    "cs4": "4lighting",
+}
+
+def _norm_kind(value: object) -> str | None:
     raw = value
     if raw is None or (isinstance(raw, float) and raw != raw):
         return None
-    k = _norm(raw)
-    if not k:
+    s = unicodedata.normalize("NFC", str(raw)).lower().strip()
+    if not s:
         return None
-    if k == "mba":
-        return "mba"
-    if k in _DEVICE4_KIND_LABELS:
+    clean_s = re.sub(r"[\s\-_]+", "", s)
+    if clean_s in _KIND_LABEL_MAP:
+        return _KIND_LABEL_MAP[clean_s]
+    if s in _KIND_LABEL_MAP:
+        return _KIND_LABEL_MAP[s]
+    if clean_s.startswith("4") or clean_s.endswith("4"):
         return "device4"
-    if k in _DEVICE_KIND_LABELS:
+    if clean_s == "mba":
+        return "mba"
+    if clean_s in _DEVICE_KIND_LABELS:
         return "device"
-    return None
+    return "device"
+
 
 def _metadata_first_hit(metadata: dict[str, dict], folder_name: str) -> dict | None:
     for v in (

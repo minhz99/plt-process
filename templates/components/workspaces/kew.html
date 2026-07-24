@@ -47,14 +47,19 @@
                   style="background:rgba(16,185,129,0.1);color:#34d399;padding:2px 8px;border-radius:6px;border:1px solid rgba(16,185,129,0.2);font-family:monospace">current_char</span>
               </div>
               <div style="margin-top:8px;color:var(--text-muted);font-size:0.7rem;line-height:1.6">
-                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (danh sách ảnh bỏ qua), <code>imglu</code> (ảnh load/unload cho máy nén khí).<br>
+                * <strong>Các nhãn hợp lệ cột <code>type</code>:</strong><br>
+                &nbsp;&nbsp;• <strong>Xuất Chương 5:</strong> <code>mba</code> (Máy biến áp), <code>vfd</code> (Biến tần), <code>vsd</code> (Máy nén VSD), <code>servo</code> (Máy may Servo), <code>cs</code>/<code>lighting</code> (Chiếu sáng), <code>device</code> (Thiết bị thường).<br>
+                &nbsp;&nbsp;• <strong>Xuất Chương 4:</strong> <code>4</code>/<code>device4</code> (Chương 4 thường), <code>4vfd</code> (Biến tần Ch.4), <code>4vsd</code> (Máy nén VSD Ch.4), <code>4servo</code> (Máy may Ch.4), <code>4cs</code>/<code>4lighting</code> (Chiếu sáng Ch.4).<br>
+                * <strong>Cột <code>pdm</code> (Công suất định mức kW/kVA):</strong> Sử dụng cho MBA và các thiết bị đo kiểm. Khi thiết bị ngoài MBA có khai báo <code>pdm</code> và công suất tiêu thụ <code>p</code>, hệ thống sẽ <strong>tự động tính toán & sinh nhận xét đánh giá % tiêu thụ so với công suất định mức (P/Pđm)</strong>.<br>
                 * <strong>Các giá trị hợp lệ của <code>current_char</code>:</strong> 
                 <code>ổn định</code>, <code>tương đối ổn định</code>, <code>dao động nhẹ</code>, <code>biến đổi nhẹ</code>, 
                 <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code>, 
                 <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>.<br>
+                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (ảnh bỏ qua), <code>imglu</code> (ảnh load/unload cho máy nén).<br>
                 * <strong>Tự động điền:</strong> Nếu cột <code>current_char</code> trong Excel trống, hệ thống sẽ tự động phân tích file INPS để điền giá trị ước lượng ở bước sơ bộ này. Bạn có thể mở Excel trong file ZIP kết quả để xem và chỉnh sửa lại trước khi xuất Word.
               </div>
             </div>
+
             <div class="zip-tree-container"
               style="margin-top: 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 12px 16px; font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 0.78rem; line-height: 1.5; color: var(--text-muted); max-width: 52rem; box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);">
               <div
