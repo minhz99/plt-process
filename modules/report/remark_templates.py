@@ -607,6 +607,44 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện biến thiên theo từng chu kỳ tải/không tải đặc trưng của chế độ vận hành Load/Unload.",
             "Công suất tiêu thụ tức thời chuyển đổi rõ rệt giữa hai mức: công suất tải đầy (Load) khi bơm nén và công suất không tải (Unload) khi xả khí.",
         ],
+        "cao đột biến và có tính chu kỳ": [
+            "Tại thời điểm khảo sát, đồ thị dòng điện đo được có những thời điểm cao đột biến và có tính chu kỳ.",
+            "Biểu đồ dòng điện ghi nhận các đỉnh nhọn tăng cao đột biến với tần suất lặp lại có tính chu kỳ trong suốt thời gian khảo sát.",
+            "Đồ thị dòng điện xuất hiện các bước nhảy công suất cao đột biến theo chu kỳ vận hành của phụ tải.",
+            "Dòng điện tiêu thụ duy trì ở mức trung bình và xuất hiện các xung dòng cao đột biến lặp lại định kỳ theo thời gian.",
+            "Biểu đồ dòng điện đo được ghi nhận các đỉnh tải tăng cao đột biến có tính chu kỳ, thể hiện sự khởi động/vận hành tuần hoàn của thiết bị công suất lớn.",
+            "Đặc tính dòng điện tiêu thụ biến động với các đỉnh nhọn xuất hiện có tính chu kỳ, tương ứng với chu kỳ thao tác/khởi động máy.",
+        ],
+        "xuất hiện các đỉnh nhọn cao đột biến": [
+            "Biểu đồ dòng điện ghi nhận sự xuất hiện của các đỉnh nhọn công suất cao đột biến tại một số thời điểm đo kiểm.",
+            "Đồ thị dòng điện tiêu thụ xuất hiện các bước nhảy tăng cao đột biến so với mức trung bình.",
+            "Dòng điện tiêu thụ tổng thể duy trì ổn định, tuy nhiên ghi nhận các đỉnh nhọn dòng điện tăng đột biến rải rác.",
+        ],
+        "biến đổi theo bậc tải": [
+            "Biểu đồ dòng điện tiêu thụ biến đổi theo từng bậc tải, phản ánh quá trình tự động bật/tắt các cụm thiết bị phụ thuộc theo nhu cầu vận hành thực tế.",
+            "Đồ thị dòng điện thể hiện đặc tính biến đổi theo bậc tải, chuyển nấc rõ rệt giữa các cấp công suất vận hành.",
+            "Dòng điện tiêu thụ biến đổi theo từng nấc tải công suất, phản ánh chế độ đóng/ngắt các khối phụ tải trong hệ thống.",
+        ],
+        "dòng đỉnh nhọn khi khởi động": [
+            "Biểu đồ dòng điện ghi nhận các đỉnh nhọn vọt cao ngắn hạn tại thời điểm khởi động thiết bị, sau đó duy trì ổn định ở mức tải vận hành bình thường.",
+            "Đồ thị dòng điện tiêu thụ xuất hiện xung dòng đỉnh nhọn ngắn hạn lúc khởi động, sau đó giảm nhanh về dải tải vận hành ổn định.",
+            "Dòng điện tiêu thụ tổng thể duy trì ổn định, ngoại trừ sự xuất hiện của dòng đỉnh nhọn tại thời điểm khởi động phụ tải nặng.",
+        ],
+        "biến đổi mượt mà theo tần số": [
+            "Dòng điện tiêu thụ biến đổi mượt mà và tỷ lệ thuận với tần số điều khiển biến tần, bám sát nhu cầu phụ tải thực tế mà không gây bước nhảy đột ngột.",
+            "Biểu đồ dòng điện phản ánh đặc tính điều tốc mượt mà theo tần số, dòng điện tăng/giảm tuyến tính theo nhu cầu vận hành.",
+            "Đồ thị dòng điện biến đổi mượt mà bám sát phụ tải, thể hiện hiệu quả của hệ thống điều khiển biến tần linh hoạt.",
+        ],
+        "biến đổi theo ca sản xuất": [
+            "Biểu đồ dòng điện thể hiện rõ nhịp độ ca làm việc: duy trì mức tải cao trong giờ sản xuất và giảm về mức tải chờ vào các khoảng nghỉ chuyển ca.",
+            "Đồ thị dòng điện phản ánh chế độ tải biến đổi theo ca sản xuất, tăng cao trong giờ hành chính và hạ thấp ngoài ca làm việc.",
+            "Dòng điện tiêu thụ biến đổi tương ứng với tiến trình các ca làm việc trong ngày của nhà máy.",
+        ],
+        "biến đổi tuần hoàn theo chu kỳ công nghệ": [
+            "Đồ thị dòng điện biến đổi tuần hoàn theo đúng chu kỳ công nghệ của thiết bị (kẹp khuôn, nén ép và xả tải), với khoảng thời gian lặp lại đều đặn.",
+            "Biểu đồ dòng điện lặp lại đều đặn theo các chu kỳ công nghệ thao tác thực tế của máy.",
+            "Dòng điện tiêu thụ biến động tuần hoàn có tính chu kỳ, thể hiện các giai đoạn vận hành nối tiếp trong một chu kỳ sản xuất.",
+        ],
     }
 
     # Bổ sung các alias mapping linh hoạt
@@ -620,6 +658,10 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
     _wave_dev_map["biến đổi quanh ngưỡng"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
     _wave_dev_map["dao động biên độ lớn"] = _wave_dev_map["dao động liên tục với biên độ lớn"]
     _wave_dev_map["tải nhấp nhô"] = _wave_dev_map["biến đổi nhấp nhô theo ca sản xuất"]
+    _wave_dev_map["đột biến có tính chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
+    _wave_dev_map["đột biến theo chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
+    _wave_dev_map["đỉnh nhọn chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
+    _wave_dev_map["tải xung chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
 
     _wave_key_dev = wave.lower().strip()
     if _wave_key_dev in _wave_dev_map:

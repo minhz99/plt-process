@@ -910,6 +910,14 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     mean_diff = np.mean(diffs) if len(diffs) > 0 else 0.0
     step_ratio = mean_diff / std_val if std_val > 0 else 0.0
 
+    # 0. Kiểm tra đỉnh cao đột biến có tính chu kỳ (max / median > 1.8)
+    med_val = float(mean_currents.median()) if total > 0 else 0.0
+    max_val = float(mean_currents.max()) if total > 0 else 0.0
+    if med_val > 0 and (max_val / med_val) > 1.8:
+        spike_ratio = float((mean_currents > (med_val * 1.4)).sum()) / float(total)
+        if 0.01 <= spike_ratio <= 0.25:
+            return "cao đột biến và có tính chu kỳ"
+
     # 1. Kiểm tra load/unload (chạy bimodal)
     if mid_ratio < 0.15 and p90 > 0 and (p10 / p90) < 0.65:
         return "load/unload"

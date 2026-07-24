@@ -56,9 +56,9 @@ Tên cột được so khớp không phân biệt hoa thường và bỏ khoản
 | `file` | Mã thư mục record trên máy đo; chấp nhận `1`, `0001`, `S0001` | `S0001` |
 | `img` | Số ảnh BMP đầu tiên trong dải ảnh của thiết bị | `641` |
 | `imgend` | Số ảnh BMP cuối cùng trong dải ảnh của thiết bị | `646` |
-| `type` | Loại section và phân loại thiết bị: <br>- **Chương 5:** `mba`, `vfd`, `vsd`, `servo`, `cs`/`lighting`, `device`.<br>- **Chương 4:** `4`/`device4`, `4vfd`, `4vsd`, `4servo`, `4cs`/`4lighting`. | `4vfd`, `MBA` |
+| `type` | Loại section và phân loại thiết bị: <br>- **Chương 5:** `mba`, `vfd`, `vsd`, `servo`, `cs`/`lighting`, `building`/`1pha`, `chiller`/`hvac`/`ahu`, `device`.<br>- **Chương 4:** `4`/`device4`, `4vfd`, `4vsd`, `4servo`, `4cs`/`4lighting`, `4building`, `4chiller`. | `4vfd`, `MBA` |
 | `pdm` | Công suất định mức (kW/kVA). Dùng cho MBA và thiết bị đo kiểm. Nếu thiết bị ngoài MBA có `pdm` và `p`, hệ thống tự động sinh nhận xét % tiêu thụ so với công suất định mức. | `1600`, `75` |
-| `current_char` | Đặc tính dòng điện để sinh nhận xét | `ổn định`, `tương đối ổn định`, `ổn định nhưng có biến đổi`, `dao động quanh ngưỡng`, `dao động biên độ lớn`, `dao động nhẹ`, `biến đổi nhẹ`, `biến đổi liên tục`, `biên độ nhỏ`, `biến đổi liên tục theo tải`, `load/unload` |
+| `current_char` | Đặc tính dòng điện để sinh nhận xét | `ổn định`, `tương đối ổn định`, `ổn định nhưng có biến đổi`, `dao động quanh ngưỡng`, `dao động biên độ lớn`, `dao động nhẹ`, `biến đổi nhẹ`, `biến đổi liên tục`, `biên độ nhỏ`, `biến đổi liên tục theo tải`, `load/unload`, `cao đột biến và có tính chu kỳ`, `biến đổi theo bậc tải`, `dòng đỉnh nhọn khi khởi động`, `biến đổi mượt mà theo tần số`, `biến đổi theo ca sản xuất`, `biến đổi tuần hoàn theo chu kỳ công nghệ` |
 
 
 ### Cột tùy chọn

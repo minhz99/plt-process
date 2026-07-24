@@ -757,9 +757,36 @@ _CURRENT_CHAR_MAP: dict[str, str] = {
     "dao động quanh giá trị": "dao động liên tục quanh ngưỡng nhất định",
     "biến đổi quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
     "biến thiên quanh ngưỡng": "dao động liên tục quanh ngưỡng nhất định",
-    "dao động biên độ lớn": "dao động liên tục với biên độ lớn",
-    "dao động mạnh": "dao động liên tục với biên độ lớn",
-    "tải nhấp nhô": "biến đổi nhấp nhô theo ca sản xuất",
+    # Đặc tính cao đột biến và có tính chu kỳ / tải xung nhọn
+    "cao đột biến và có tính chu kỳ": "cao đột biến và có tính chu kỳ",
+    "đột biến và có tính chu kỳ": "cao đột biến và có tính chu kỳ",
+    "đột biến có tính chu kỳ": "cao đột biến và có tính chu kỳ",
+    "đột biến theo chu kỳ": "cao đột biến và có tính chu kỳ",
+    "đỉnh nhọn chu kỳ": "cao đột biến và có tính chu kỳ",
+    "tải xung chu kỳ": "cao đột biến và có tính chu kỳ",
+    "cao đột biến": "xuất hiện các đỉnh nhọn cao đột biến",
+
+    # Các đặc tính công nghiệp & tòa nhà chuyên sâu
+    "biến đổi theo bậc tải": "biến đổi theo bậc tải",
+    "theo bậc tải": "biến đổi theo bậc tải",
+    "bậc tải": "biến đổi theo bậc tải",
+    "chuyển nấc tải": "biến đổi theo bậc tải",
+    "dòng đỉnh nhọn khi khởi động": "dòng đỉnh nhọn khi khởi động",
+    "đỉnh nhọn khi khởi động": "dòng đỉnh nhọn khi khởi động",
+    "đỉnh dòng khởi động": "dòng đỉnh nhọn khi khởi động",
+    "vọt dòng khởi động": "dòng đỉnh nhọn khi khởi động",
+    "biến đổi mượt mà theo tần số": "biến đổi mượt mà theo tần số",
+    "mượt mà theo tần số": "biến đổi mượt mà theo tần số",
+    "tuyến tính theo biến tần": "biến đổi mượt mà theo tần số",
+    "bám sát phụ tải": "biến đổi mượt mà theo tần số",
+    "biến đổi theo ca sản xuất": "biến đổi theo ca sản xuất",
+    "theo ca sản xuất": "biến đổi theo ca sản xuất",
+    "theo ca làm việc": "biến đổi theo ca sản xuất",
+    "theo kíp làm việc": "biến đổi theo ca sản xuất",
+    "biến đổi tuần hoàn theo chu kỳ công nghệ": "biến đổi tuần hoàn theo chu kỳ công nghệ",
+    "tuần hoàn theo chu kỳ công nghệ": "biến đổi tuần hoàn theo chu kỳ công nghệ",
+    "chu kỳ công nghệ": "biến đổi tuần hoàn theo chu kỳ công nghệ",
+    "theo chu kỳ máy": "biến đổi tuần hoàn theo chu kỳ công nghệ",
 
     # Các cụm từ tiêu chuẩn khác
     "biến đổi liên tục theo tải": "biến đổi liên tục theo tải",
@@ -841,6 +868,72 @@ def _pf_phrase(cos_phi: float | None, kind: str = "device") -> str:
         if p >= 0.5:
             return "trung bình (dưới 0,8)"
         return "thấp (dưới 0,8)"
+
+def _compose_short_remark_for_table(
+    *,
+    name: str,
+    kind: str = "device",
+    cos_phi: float | None = None,
+    u_min: float | None = None,
+    u_max: float | None = None,
+    delta_u: float | None = None,
+    delta_i: float | None = None,
+    p_kw: float | None = None,
+    pdm_kva: float | None = None,
+    thd_max: float | None = None,
+    tdd_max: float | None = None,
+) -> str:
+    """Sinh nhận xét ngắn gọn, định tính (KHÔNG kèm số liệu chi tiết) dành riêng cho Bảng 6.3 / Bảng tổng hợp."""
+    pf_limit = 0.9 if kind == "mba" else 0.8
+    pf_bad = (cos_phi is not None and abs(cos_phi) < pf_limit)
+
+    cat = _detect_equipment_category(name, kind=kind)
+    if kind == "mba" or cat == "mba":
+        tdd_lim = _TDD_LIMIT_PCT
+    elif p_kw is not None:
+        tdd_lim = 12.0 if p_kw > 50.0 else 20.0
+    elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
+        tdd_lim = 12.0
+    else:
+        tdd_lim = _device_tdd_limit_from_name(name)
+
+    di_bad = (delta_i is not None and delta_i > 10.0)
+    du_bad = (delta_u is not None and delta_u > 5.0)
+    tdd_bad = (tdd_max is not None and tdd_max > tdd_lim)
+    thd_bad = (thd_max is not None and thd_max > 8.0)
+
+    overload_bad = False
+    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
+        if cos_phi is not None and abs(cos_phi) > 0.01:
+            _pct_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0
+        else:
+            _pct_val = (p_kw / pdm_kva) * 100.0
+        if _pct_val > 100.0:
+            overload_bad = True
+
+    bad_reasons: list[str] = []
+    if overload_bad:
+        bad_reasons.append("vận hành quá tải")
+    if pf_bad:
+        bad_reasons.append("hệ số cosφ thấp")
+    if di_bad:
+        bad_reasons.append("độ lệch pha dòng điện cao")
+    if du_bad:
+        bad_reasons.append("độ lệch pha điện áp vượt chuẩn")
+    if tdd_bad:
+        bad_reasons.append("sóng hài dòng điện ở mức cao")
+    if thd_bad:
+        bad_reasons.append("sóng hài điện áp ở mức cao")
+
+    if not bad_reasons:
+        return "Đạt tiêu chuẩn, vận hành ổn định."
+
+    if len(bad_reasons) == 1:
+        return f"Chất lượng điện tương đối tốt; ghi nhận {bad_reasons[0]}."
+
+    reasons_str = "; ".join(bad_reasons)
+    return f"Chất lượng điện chưa đạt tối ưu: {reasons_str}."
+
 
 def _has_inverter_hint(n: str) -> bool:
     """Kiểm tra tên thiết bị có chứa dấu hiệu biến tần hay không."""
@@ -2047,12 +2140,30 @@ def build_field_word_report(
                 except Exception:
                     return str(v).strip() if str(v).strip() else "—"
 
+            cos_phi_val = _parse_pf_field(ep.get("cos_phi"))
+            short_nx = _compose_short_remark_for_table(
+                name=name,
+                kind=kind,
+                cos_phi=cos_phi_val,
+                u_min=ep.get("u_min"),
+                u_max=ep.get("u_max"),
+                delta_u=ep.get("delta_u"),
+                delta_i=ep.get("delta_i"),
+                p_kw=ep.get("p"),
+                pdm_kva=ep.get("pdm"),
+                thd_max=ep.get("thd"),
+                tdd_max=ep.get("tdd"),
+            )
+
             ds_mba.append({
                 "tt": mba_count,
                 "ten": name,
                 "pdm": _fmt(ep.get("pdm"), 0),
                 "p": _fmt(ep.get("p"), 0),
-                "pf": _fmt(_parse_pf_field(ep.get("cos_phi")), 3),
+                "pf": _fmt(cos_phi_val, 3),
+                "nhan_xet": short_nx,
+                "nx": short_nx,
+                "remarks": short_nx,
             })
 
     sections: list[tuple[SectionKind, dict]] = []
