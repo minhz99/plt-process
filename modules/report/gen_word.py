@@ -677,6 +677,8 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     k_norm = _norm_kind(kind) if kind else None
 
     # 1. Ưu tiên nhận diện theo nhãn type/kind tường minh nếu được truyền vào
+    if k_norm in ("building", "4building", "office", "4office", "commercial", "4commercial", "building_1phase", "1pha", "one_phase"):
+        return "building_commercial"
     if k_norm in ("vfd", "4vfd"):
         return "vfd_inverter"
     if k_norm in ("vsd", "4vsd"):
@@ -692,6 +694,9 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     if not name:
         return "general_device"
     n = unicodedata.normalize("NFKC", str(name)).lower()
+
+    if any(k in n for k in ("tòa nhà", "toa nha", "văn phòng", "van phong", "office", "bệnh viện", "benh vien", "trung tâm thương mại", "tttm", "tầng", "tang", "ổ cắm", "o cam", "tủ tầng", "tu tang", "tủ chiếu sáng & ổ cắm", "tu chieu sang & o cam")):
+        return "building_commercial"
 
     if any(k in n for k in ("vsd", "biến tần", "bien tan", "inverter")) and any(k in n for k in ("nén", "nen", "compressor", "comp")):
         return "vsd_compressor"
@@ -1220,6 +1225,14 @@ def _compose_remarks_from_excel_fields(
 
         _load_dev_tpl = remark_templates.get_load_dev_templates(load_pct_dev, pct_s, p_str, pdm_str)
         load_sent_dev = _get_random_choice(_load_dev_tpl, name, "load_dev")
+    elif p_kw is not None and p_kw > 0:
+        p_str = _pct(p_kw, 1)
+        _inst_p_tpl = remark_templates.get_inst_power_val_templates(p_str)
+        load_sent_dev = _get_random_choice(_inst_p_tpl, name, "inst_p_val")
+
+    import hashlib
+    pos_seed = int(hashlib.md5(f"{name}_pos_qual".encode('utf-8')).hexdigest(), 16)
+    place_at_end = (pos_seed % 2 == 1)
 
     if quality == "chưa tốt":
         parts: list[str] = []
@@ -1227,9 +1240,22 @@ def _compose_remarks_from_excel_fields(
             parts.append(load_sent_dev)
         parts.append(f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm.")
         parts.append(f"Hệ số công suất cosφ ở mức {pf_txt}.")
+        if volt_sent:
+            parts.append(volt_sent)
+        if unbalance_sent:
+            parts.append(unbalance_sent)
+        if harm_sent:
+            parts.append(harm_sent)
+        if cause_sent:
+            parts.append(cause_sent)
+        parts.append(f"Nhìn chung, chất lượng điện cấp cho {name_mid} chưa đạt yêu cầu tối ưu.")
+        return " ".join(parts)
     else:
         openings = remark_templates.get_device_openings(name_mid, quality)
         chosen_opening = _get_random_choice(openings, name, "opening_dev")
+
+        closings_eval = remark_templates.get_device_closings_eval(name, quality)
+        chosen_closing_eval = _get_random_choice(closings_eval, name, "closing_eval_dev")
 
         _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
         pf_sent = _get_random_choice(_pf_dev_tpl, name, "pf_dev")
@@ -1240,22 +1266,31 @@ def _compose_remarks_from_excel_fields(
         parts: list[str] = []
         if load_sent_dev:
             parts.append(load_sent_dev)
-        parts.append(chosen_opening)
-        parts.append(wave_sent)
-        parts.append(pf_sent)
 
-    if volt_sent:
-        parts.append(volt_sent)
-    if unbalance_sent:
-        parts.append(unbalance_sent)
-    if harm_sent:
-        parts.append(harm_sent)
-    if cause_sent:
-        parts.append(cause_sent)
-    if quality == "tốt" and loi_dem == 0 and kind != "mba":
-        _closing_dev = remark_templates.get_closing_dev_templates()
-        parts.append(_get_random_choice(_closing_dev, name, "closing_dev"))
-    return " ".join(parts)
+        if not place_at_end:
+            parts.append(chosen_opening)
+            parts.append(wave_sent)
+            parts.append(pf_sent)
+        else:
+            parts.append(wave_sent)
+            parts.append(pf_sent)
+
+        if volt_sent:
+            parts.append(volt_sent)
+        if unbalance_sent:
+            parts.append(unbalance_sent)
+        if harm_sent:
+            parts.append(harm_sent)
+        if cause_sent:
+            parts.append(cause_sent)
+
+        if place_at_end:
+            parts.append(chosen_closing_eval)
+        elif quality == "tốt" and loi_dem == 0 and kind != "mba":
+            _closing_dev = remark_templates.get_closing_dev_templates()
+            parts.append(_get_random_choice(_closing_dev, name, "closing_dev"))
+
+        return " ".join(parts)
 
 
 

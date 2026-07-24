@@ -265,8 +265,8 @@ def get_pf_mba_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"hệ số công suất cosφ ở mức {pf_txt}",
             f"hệ số công suất đo được ở mức {pf_txt}",
             f"hệ số cosφ đo được ở mức {pf_txt}",
-            f"hệ số công suất cosφ ghi nhận ở mức tốt {pf_txt}",
-            f"hệ số công suất đáp ứng yêu cầu với cosφ = {pf_txt}",
+            f"hệ số công suất cosφ ghi nhận ở mức {pf_txt}",
+            f"hệ số công suất đáp ứng yêu cầu ({pf_txt})",
             f"giá trị hệ số công suất tại thời điểm khảo sát ở mức {pf_txt}",
         ]
     elif abs_pf >= 0.8:
@@ -274,17 +274,16 @@ def get_pf_mba_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"hệ số công suất cosφ ở mức {pf_txt}",
             f"hệ số công suất của thiết bị ở mức {pf_txt}",
             f"hệ số cosφ hiện ở mức {pf_txt}",
-            f"hệ số công suất cosφ = {pf_txt}, cần cải thiện để đạt ngưỡng 0,9",
-            f"hệ số công suất ở mức chấp nhận được nhưng chưa tối ưu (cosφ = {pf_txt})",
-            f"hệ số công suất đo được ở mức khá, đạt {pf_txt}",
+            f"hệ số công suất cosφ ở mức {pf_txt}",
+            f"hệ số công suất đo được ở mức {pf_txt}",
         ]
     else:
         return [
             f"hệ số công suất cosφ ở mức {pf_txt}",
             f"hệ số công suất ở mức {pf_txt}",
-            f"hệ số công suất cosφ = {pf_txt}, ở mức thấp, cần có giải pháp bù công suất phản kháng",
-            f"hệ số công suất thấp (cosφ = {pf_txt}), ảnh hưởng đến hiệu quả truyền tải và có thể phát sinh phí công suất phản kháng",
-            f"hệ số công suất đo được thấp, ở mức {pf_txt}",
+            f"hệ số công suất cosφ ở mức {pf_txt}",
+            f"hệ số công suất ở mức {pf_txt}, ảnh hưởng đến hiệu quả truyền tải và có thể phát sinh phí công suất phản kháng",
+            f"hệ số công suất đo được ở mức {pf_txt}",
         ]
 
 
@@ -343,44 +342,50 @@ def get_volt_templates(umin_s: str, umax_s: str, dlo_s: str, dhi_s: str, verdict
     ]
 
 
+def get_inst_power_val_templates(p_str: str) -> list[str]:
+    """Mẫu câu thông báo công suất tức thời khi ghi nhận giá trị P (kW)."""
+    return [
+        f"Công suất tức thời đạt mức {p_str} kW.",
+        f"Công suất tiêu thụ của hệ thống lên tới {p_str} kW.",
+        f"Tại thời điểm khảo sát, công suất tiêu thụ tức thời của thiết bị ở mức {p_str} kW.",
+        f"Kết quả đo kiểm ghi nhận công suất tức thời đạt mức {p_str} kW.",
+        f"Công suất tiêu thụ thực tế của hệ thống đạt mức {p_str} kW tại thời điểm khảo sát.",
+    ]
+
+
 def get_load_dev_templates(load_pct_dev: float, pct_s: str, p_str: str, pdm_str: str) -> list[str]:
     """Mẫu câu công suất tiêu thụ & % mang tải cho thiết bị ngoài MBA."""
     if load_pct_dev < 50.0:
         return [
-            f"Công suất tiêu thụ đo được ở mức {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW), phụ tải vận hành ở mức tải nhẹ.",
-            f"Tại thời điểm khảo sát, phụ tải vận hành với công suất bằng {pct_s}% công suất thiết kế (P = {p_str} kW so với Pđm = {pdm_str} kW).",
-            f"Công suất tiêu thụ thực tế đạt khoảng {pct_s}% công suất định mức, tải vận hành tương đối nhẹ.",
-            f"Phụ tải mang tải khoảng {pct_s}% so với công suất định mức.",
-            f"Thiết bị vận hành với mức tải nhẹ, công suất tiêu thụ thực tế chỉ đạt {pct_s}% công suất thiết kế (P = {p_str} kW / Pđm = {pdm_str} kW), còn dư địa công suất để mở rộng tải trong tương lai.",
-            f"Hệ thống đang hoạt động dưới mức tải thiết kế đáng kể ({pct_s}% Pđm), phản ánh điều kiện vận hành thực tế tại thời điểm khảo sát.",
-            f"Mức tải hiện tại của thiết bị khá thấp, chỉ đạt {pct_s}% công suất định mức, còn nhiều dư địa vận hành.",
+            f"Công suất tức thời đạt mức {p_str} kW (bằng {pct_s}% công suất định mức Pđm = {pdm_str} kW), phụ tải vận hành ở mức tải nhẹ.",
+            f"Công suất tiêu thụ của hệ thống lên tới {p_str} kW, tương đương {pct_s}% công suất thiết kế (Pđm = {pdm_str} kW).",
+            f"Tại thời điểm khảo sát, công suất tức thời ghi nhận ở mức {p_str} kW, đạt khoảng {pct_s}% công suất định mức.",
+            f"Phụ tải mang tải khoảng {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW).",
+            f"Thiết bị vận hành với mức tải nhẹ, công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% Pđm = {pdm_str} kW).",
+            f"Công suất tiêu thụ đo được ở mức {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW).",
         ]
     elif load_pct_dev <= 90.0:
         return [
+            f"Công suất tức thời đạt mức {p_str} kW (tương đương {pct_s}% công suất định mức Pđm = {pdm_str} kW).",
+            f"Công suất tiêu thụ của hệ thống lên tới {p_str} kW, đạt {pct_s}% công suất thiết kế.",
+            f"Tại thời điểm khảo sát, công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% Pđm = {pdm_str} kW).",
+            f"Phụ tải vận hành ở mức tải hợp lý, công suất tức thời đạt {p_str} kW ({pct_s}% Pđm).",
             f"Công suất tiêu thụ đo được ở mức {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW).",
-            f"Tại thời điểm khảo sát, hệ thống vận hành với công suất bằng {pct_s}% công suất thiết kế, đáp ứng phù hợp nhu cầu phụ tải.",
-            f"Công suất tiêu thụ thực tế đạt {pct_s}% công suất định mức (P = {p_str} kW so với Pđm = {pdm_str} kW).",
-            f"Phụ tải vận hành ở mức tải hợp lý, đạt {pct_s}% công suất thiết kế.",
-            f"Thiết bị hoạt động trong vùng tải hiệu quả ({pct_s}% Pđm), cân bằng tốt giữa hiệu suất vận hành và dự trữ công suất.",
-            f"Công suất tiêu thụ đạt {pct_s}% Pđm (P = {p_str} kW / Pđm = {pdm_str} kW), thiết bị vận hành ổn định trong vùng tải tối ưu.",
-            f"Mức mang tải hiện tại ({pct_s}% Pđm) nằm trong vùng vận hành an toàn và hiệu quả của thiết bị.",
+            f"Công suất tiêu thụ đạt {p_str} kW (tương đương {pct_s}% Pđm = {pdm_str} kW), thiết bị vận hành ổn định.",
         ]
     elif load_pct_dev <= 100.0:
         return [
-            f"Công suất tiêu thụ đạt {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW), phụ tải vận hành gần như đầy tải.",
-            f"Tại thời điểm khảo sát, phụ tải mang tải ở mức cao, đạt {pct_s}% công suất thiết kế.",
-            f"Công suất tiêu thụ thực tế đạt {pct_s}% công suất danh định, cần chú ý chế độ phát nóng khi vận hành liên tục.",
-            f"Thiết bị đang vận hành gần mức đầy tải ({pct_s}% Pđm), cần theo dõi nhiệt độ vận hành và đảm bảo hệ thống tản nhiệt hoạt động hiệu quả.",
-            f"Mức tải cao ({pct_s}% Pđm = {p_str} / {pdm_str} kW) cần được giám sát thường xuyên để tránh tình trạng quá tải dẫn đến hư hỏng thiết bị.",
-            f"Phụ tải vận hành gần đầy tải ({pct_s}% Pđm), nên theo dõi thêm để tránh nguy cơ quá tải trong giờ cao điểm.",
+            f"Công suất tức thời đạt mức {p_str} kW, tương đương {pct_s}% công suất định mức (Pđm = {pdm_str} kW), phụ tải vận hành gần đầy tải.",
+            f"Công suất tiêu thụ của hệ thống lên tới {p_str} kW (đạt {pct_s}% công suất thiết kế Pđm = {pdm_str} kW).",
+            f"Tại thời điểm khảo sát, công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% công suất danh định).",
+            f"Mức tải cao ghi nhận công suất tức thời đạt {p_str} kW / Pđm = {pdm_str} kW ({pct_s}% Pđm).",
         ]
     else:
         return [
-            f"Công suất tiêu thụ đạt {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW), phụ tải đang ở tình trạng quá tải.",
-            f"Tại thời điểm khảo sát, hệ thống vận hành vượt công suất thiết kế ({pct_s}% Pđm), cần có giải pháp tiết giảm tải hoặc nâng công suất cấp nguồn.",
-            f"Thiết bị đang trong tình trạng quá tải (P = {p_str} kW vượt Pđm = {pdm_str} kW, tương đương {pct_s}%), tiềm ẩn nguy cơ hư hỏng và giảm tuổi thọ thiết bị nếu kéo dài.",
-            f"Mức tải thực tế ({pct_s}% Pđm) vượt quá công suất danh định, cần khẩn trương đánh giá lại phân bổ tải và có biện pháp xử lý kịp thời.",
-            f"Phụ tải vận hành vượt ngưỡng công suất định mức ({pct_s}% Pđm), tiềm ẩn nguy cơ quá nhiệt và giảm tuổi thọ thiết bị nếu kéo dài.",
+            f"Công suất tức thời đạt mức {p_str} kW, vượt quá công suất định mức (Pđm = {pdm_str} kW, tương đương {pct_s}% Pđm).",
+            f"Công suất tiêu thụ của hệ thống lên tới {p_str} kW, làm phụ tải rơi vào tình trạng quá tải ({pct_s}% Pđm).",
+            f"Thiết bị đang trong tình trạng quá tải với công suất tức thời đạt {p_str} kW (vượt Pđm = {pdm_str} kW, tương đương {pct_s}%).",
+            f"Mức tải thực tế đạt {p_str} kW ({pct_s}% Pđm), vượt quá công suất danh định của thiết bị.",
         ]
 
 
@@ -403,6 +408,20 @@ def get_device_openings(name_mid: str, quality: str) -> list[str]:
     ]
 
 
+def get_device_closings_eval(name: str, quality: str) -> list[str]:
+    """Mẫu câu chốt tổng kết đánh giá chất lượng điện ở cuối đoạn cho thiết bị (viết lại tên thiết bị)."""
+    name_mid = name[0].lower() + name[1:] if name and len(name) > 1 and not name.isupper() else name
+    return [
+        f"Đánh giá tổng thể dựa trên các thông số đo kiểm, chất lượng điện cấp cho {name_mid} đạt mức {quality}.",
+        f"Tổng hợp các kết quả phân tích cho thấy chất lượng điện năng cấp cho {name_mid} vận hành ở mức {quality}.",
+        f"Tóm lại, nguồn điện cung cấp cho {name_mid} duy trì chất lượng ở mức {quality}.",
+        f"Nhìn chung, hệ thống điện cấp cho {name_mid} đảm bảo chất lượng ở mức {quality}.",
+        f"Số liệu khảo sát xác nhận chất lượng điện năng cung cấp cho {name_mid} ở mức {quality}.",
+        f"Kết quả đo kiểm tổng hợp đánh giá nguồn điện cấp cho {name_mid} đạt chất lượng ở mức {quality}.",
+        f"Đánh giá chung, nguồn điện cấp cho {name_mid} có chất lượng ở mức {quality}.",
+    ]
+
+
 def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
     """Mẫu câu hệ số công suất cosφ cho thiết bị."""
     if abs_pf >= 0.9:
@@ -411,9 +430,9 @@ def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"Hệ số công suất của thiết bị ở mức {pf_txt}.",
             f"Hệ số công suất đo được ở mức {pf_txt}.",
             f"Giá trị hệ số công suất đo được tại thời điểm khảo sát ở mức {pf_txt}.",
-            f"Hệ số công suất cosφ = {pf_txt}, đáp ứng tốt yêu cầu vận hành.",
-            f"Hệ số cosφ ghi nhận ở mức tốt ({pf_txt}), thiết bị sử dụng hiệu quả công suất điện năng.",
-            f"Hệ số công suất đo được đạt mức tốt, {pf_txt}.",
+            f"Hệ số công suất cosφ ở mức {pf_txt}, đáp ứng tốt yêu cầu vận hành.",
+            f"Hệ số cosφ ghi nhận ở mức {pf_txt}, thiết bị sử dụng hiệu quả công suất điện năng.",
+            f"Hệ số công suất đo được ở mức {pf_txt}, đảm bảo hiệu quả vận hành.",
         ]
     elif abs_pf >= 0.8:
         return [
@@ -421,22 +440,21 @@ def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"Hệ số công suất của thiết bị ở mức {pf_txt}.",
             f"Hệ số cosφ đo được có giá trị {pf_txt}.",
             f"Giá trị hệ số công suất đo được tại thời điểm khảo sát ở mức {pf_txt}.",
-            f"Hệ số công suất cosφ = {pf_txt}, ở mức chấp nhận được nhưng có thể cải thiện thêm.",
-            f"Hệ số cosφ đo được là {pf_txt}, cần xem xét giải pháp bù tụ để nâng lên mức ≥ 0,9.",
-            f"Hệ số công suất đạt mức khá, {pf_txt}.",
+            f"Hệ số công suất cosφ ở mức {pf_txt}.",
+            f"Hệ số công suất đo được ở mức {pf_txt}.",
         ]
     else:
         return [
             f"Hệ số công suất cosφ ở mức {pf_txt}.",
             f"Hệ số công suất ở mức {pf_txt}.",
-            f"Hệ số công suất cosφ = {pf_txt}, ở mức thấp, cần xem xét giải pháp bù công suất phản kháng.",
-            f"Hệ số cosφ đo được thấp ({pf_txt}), ảnh hưởng đến hiệu quả sử dụng điện và có thể phát sinh phí công suất phản kháng từ đơn vị cung cấp điện.",
-            f"Hệ số công suất đo được ở mức thấp, {pf_txt}, cần xem xét giải pháp bù công suất phản kháng.",
+            f"Hệ số cosφ đo được ở mức {pf_txt}, ảnh hưởng đến hiệu quả sử dụng điện và có thể phát sinh phí công suất phản kháng từ đơn vị cung cấp điện.",
+            f"Hệ số cosφ đo được {pf_txt}, ảnh hưởng đến hiệu quả sử dụng điện và có thể phát sinh phí công suất phản kháng từ đơn vị cung cấp điện.",
+            f"Hệ số công suất đo được ở mức {pf_txt}.",
         ]
 
 
 def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
-    """Mẫu câu đặc tính đồ thị dòng điện theo nhóm thiết bị (VSD, Servo, Lighting, VFD, Thường)."""
+    """Mẫu câu đặc tính đồ thị dòng điện và công suất tức thời theo nhóm thiết bị (VSD, Servo, Lighting, VFD, Thường)."""
     if cat == "vsd_compressor":
         return [
             "Biểu đồ dòng điện tiêu thụ biến đổi mượt mà theo áp suất khí nén nhờ bộ biến tần VSD điều chỉnh tốc độ động cơ.",
@@ -446,6 +464,8 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ biến đổi linh hoạt theo nhu cầu khí nén thực tế, nhờ bộ VSD tự động tăng/giảm tốc độ motor, không gây sụt áp đột ngột.",
             "Biểu đồ dòng điện phản ánh đặc tính điều tốc tuyến tính của VSD, dòng điện tăng/giảm mượt mà theo áp suất yêu cầu.",
             "Dòng điện tiêu thụ dao động linh hoạt theo nhu cầu khí nén thực tế nhờ khả năng điều tốc của biến tần VSD.",
+            "Công suất tiêu thụ tức thời tự động điều chỉnh linh hoạt bám sát nhu cầu sử dụng khí nén thực tế nhờ bộ biến tần VSD.",
+            "Biến động công suất tức thời phản ánh đúng chế độ điều tốc tuyến tính của VSD, giúp tối ưu điện năng khi phụ tải thay đổi.",
         ]
     elif cat == "servo_sewing":
         return [
@@ -456,6 +476,8 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Đồ thị dòng điện đặc trưng của chuyền may: biến thiên liên tục với biên độ cao, phản ánh tần suất đóng/ngắt nhanh của hàng loạt động cơ servo vận hành đồng thời.",
             "Sự dao động liên tục của dòng điện là đặc tính tải điển hình của xưởng may servo, phụ thuộc trực tiếp vào tốc độ và cường độ thao tác của công nhân.",
             "Dòng điện dao động với tần suất cao và biên độ ngắn, đặc trưng cho hoạt động của nhiều động cơ servo trên chuyền may.",
+            "Công suất tiêu thụ tức thời dao động nhấp nhô với tần suất cao, thay đổi theo từng nhịp thao tác may trên chuyền.",
+            "Biểu đồ công suất tức thời phản ánh đúng đặc tính vận hành theo thời gian thực của hàng loạt động cơ servo.",
         ]
     elif cat == "lighting":
         return [
@@ -466,6 +488,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Đặc tính ổn định của đồ thị dòng điện hệ thống chiếu sáng phản ánh chế độ vận hành liên tục, đèn bật/tắt theo giờ hành chính cố định.",
             "Dòng điện hệ thống chiếu sáng gần như không thay đổi trong giờ vận hành, chỉ có bước nhảy nhỏ khi bật/tắt từng khu vực theo ca.",
             "Dòng điện tiêu thụ gần như không đổi trong suốt khung giờ chiếu sáng, phản ánh đặc tính tải tuyến tính, ổn định.",
+            "Công suất tiêu thụ tức thời của hệ thống duy trì mức rất ổn định, chỉ thay đổi nhỏ khi chuyển đổi ca chiếu sáng.",
         ]
     elif cat == "vfd_inverter":
         return [
@@ -476,6 +499,18 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ phản ánh rõ nét quá trình điều tốc của biến tần: tăng/giảm mượt mà theo nhu cầu vận hành thực tế.",
             "Biểu đồ dòng điện thể hiện khả năng điều tiết linh hoạt của biến tần, tránh được các sụt áp đột ngột khi khởi động và dừng động cơ.",
             "Dòng điện thay đổi linh hoạt tương ứng với tốc độ vận hành của động cơ do biến tần điều khiển.",
+            "Công suất tiêu thụ tức thời biến đổi linh hoạt tương ứng với tần số điều khiển động cơ qua bộ biến tần.",
+            "Đồ thị công suất tức thời phản ánh quá trình tăng/giảm tải mượt mà của biến tần theo nhu cầu vận hành thực tế.",
+        ]
+    elif cat == "building_commercial":
+        return [
+            "Hệ thống gồm nhiều thiết bị điện một pha khiến cho độ lệch giữa các pha trên đồ thị thể hiện rõ.",
+            "Phụ tải tòa nhà/văn phòng chủ yếu gồm các thiết bị điện một pha (chiếu sáng, điều hòa cục bộ, máy tính) phân bổ trên các pha, khiến độ lệch dòng điện giữa các pha hiển thị rõ nét trên đồ thị.",
+            "Biểu đồ dòng điện thể hiện rõ đặc tính phụ tải tòa nhà với nhiều thiết bị điện 1 pha tiêu thụ rải rác và không đồng đều giữa các pha.",
+            "Do đặc thù phụ tải tòa nhà sử dụng nhiều thiết bị điện một pha, đồ thị dòng điện giữa các pha có sự lệch pha thể hiện rõ.",
+            "Dòng điện giữa các pha có sự chênh lệch rõ nét trên đồ thị, phản ánh đúng thực tế vận hành rải rác của các nhóm phụ tải điện một pha trong tòa nhà.",
+            "Công suất tiêu thụ tức thời của các tầng/phân khu biến đổi linh hoạt tương ứng với mật độ thiết bị điện một pha vận hành trong ca.",
+            "Hệ thống gồm nhiều thiết bị điện một pha phân bổ trên các pha khiến cho độ lệch pha thể hiện rõ nét.",
         ]
 
     _wave_dev_map: dict[str, list[str]] = {
@@ -487,6 +522,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ duy trì ổn định, không ghi nhận sự kiện quá tải hay sụt áp bất thường trong thời gian khảo sát.",
             "Đặc tính tải ổn định của thiết bị phản ánh chế độ vận hành đều đặn, thuận lợi cho công tác bảo trì và quản lý điện năng.",
             "Dòng điện tiêu thụ không có biến động đáng kể trong suốt thời gian khảo sát.",
+            "Công suất tiêu thụ tức thời tại thiết bị duy trì ở mức ổn định, không xuất hiện biến động đột biến trong thời gian khảo sát.",
         ],
         "tương đối ổn định": [
             "Biểu đồ dòng điện tiêu thụ tại thiết bị tương đối ổn định trong thời gian đo kiểm.",
@@ -495,6 +531,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ tương đối ổn định với dao động biên độ nhỏ, phản ánh điều kiện vận hành bình thường của thiết bị.",
             "Đồ thị dòng điện ít biến động, chỉ ghi nhận sự điều chỉnh nhẹ phù hợp với nhu cầu phụ tải thực tế.",
             "Dòng điện tiêu thụ dao động không đáng kể, phản ánh chế độ vận hành tương đối đều đặn.",
+            "Công suất tiêu thụ tức thời tương đối ổn định, chỉ dao động nhẹ theo sự điều chỉnh tải của hệ thống.",
         ],
         "biến đổi liên tục theo tải": [
             "Biểu đồ dòng điện tiêu thụ biến đổi liên tục theo tải trong thời gian đo kiểm.",
@@ -503,14 +540,16 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ biến đổi linh hoạt theo cường độ vận hành sản xuất thực tế.",
             "Đặc tính tải thay đổi liên tục phản ánh đúng nhu cầu phụ tải biến động trong ca sản xuất.",
             "Dòng điện tiêu thụ thay đổi tương ứng với cường độ hoạt động thực tế của thiết bị.",
+            "Công suất tiêu thụ tức thời biến đổi linh hoạt, bám sát theo cường độ vận hành sản xuất thực tế.",
         ],
         "biến đổi liên tục": [
             "Biểu đồ dòng điện tiêu thụ tại thiết bị biến đổi liên tục trong thời gian đo kiểm.",
             "Đồ thị dòng điện đo được tại thiết bị có sự biến đổi liên tục.",
             "Biểu đồ dòng điện tiêu thụ biến đổi liên tục trong thời gian đo kiểm.",
             "Dòng điện tiêu thụ biến đổi liên tục, đặc trưng cho nhóm phụ tải động với nhu cầu công suất thay đổi theo thời gian thực.",
-            "Đồ thị dòng điện cho thấy thiết bị hoạt động với tải biến đổi liên tục, cần theo dõi thường xuyên để đảm bảo vận hành an toàn.",
+            "Đồ thị dòng điện cho thấy thiết bị hoạt động với đặc tính tải biến đổi liên tục trong thời gian đo kiểm.",
             "Dòng điện tiêu thụ dao động thường xuyên trong suốt quá trình khảo sát.",
+            "Công suất tiêu thụ tức thời biến đổi liên tục theo thời gian thực, đặc trưng cho nhóm phụ tải động.",
         ],
         "biến đổi liên tục với biên độ nhỏ": [
             "Biểu đồ dòng điện tiêu thụ của thiết bị biến đổi liên tục với biên độ nhỏ.",
@@ -519,6 +558,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ có sự dao động nhẹ liên tục với biên độ nhỏ, không ảnh hưởng đến chất lượng điện lưới.",
             "Đặc tính dao động nhỏ của dòng điện phản ánh sự điều chỉnh vi tế của hệ thống theo nhu cầu phụ tải.",
             "Dòng điện dao động nhẹ quanh giá trị trung bình trong suốt thời gian khảo sát.",
+            "Công suất tiêu thụ tức thời dao động với biên độ nhỏ xung quanh giá trị trung bình.",
         ],
         "ổn định nhưng có sự biến đổi trong quá trình đo": [
             "Biểu đồ dòng điện tiêu thụ nhìn chung duy trì mức ổn định, tuy nhiên có sự biến đổi nhẹ tại một số thời điểm trong quá trình đo kiểm.",
@@ -526,6 +566,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Biểu đồ dòng điện của thiết bị duy trì ổn định làm chủ đạo, nhưng ghi nhận những khoảng biến đổi tải ngắn trong suốt thời gian khảo sát.",
             "Đồ thị dòng điện đo được duy trì ở trạng thái ổn định với một số đợt tăng/giảm tải nhẹ tùy theo chu kỳ hoạt động.",
             "Dòng điện tiêu thụ tổng thể ổn định, chỉ xuất hiện sự biến đổi linh hoạt tại một số giai đoạn thay đổi chế độ làm việc.",
+            "Công suất tiêu thụ tức thời duy trì mức ổn định ở từng khoảng thời gian, có sự điều chỉnh khi thay đổi chế độ làm việc.",
         ],
         "dao động liên tục quanh ngưỡng nhất định": [
             "Biểu đồ dòng điện tiêu thụ dao động liên tục quanh một ngưỡng nhất định trong suốt thời gian đo kiểm.",
@@ -533,17 +574,20 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Biểu đồ dòng điện của thiết bị biến thiên liên tục xung quanh mức tải trung bình cố định.",
             "Dòng điện tiêu thụ duy trì trạng thái dao động liên tục quanh điểm cài đặt vận hành của hệ thống.",
             "Đồ thị dòng điện đo được dao động ổn định quanh một ngưỡng dòng điện xác định, thể hiện phản hồi của tải với bộ điều tiết.",
+            "Công suất tiêu thụ tức thời dao động đều đặn xung quanh một ngưỡng giá trị định vị cố định.",
         ],
         "dao động liên tục với biên độ lớn": [
             "Biểu đồ dòng điện tiêu thụ dao động liên tục với biên độ lớn trong suốt thời gian đo kiểm.",
             "Đồ thị dòng điện biến động mạnh với biên độ dao động rộng, phản ánh đặc tính tải không ổn định của thiết bị.",
             "Biểu đồ dòng điện ghi nhận các bước nhảy công suất lớn và liên tục theo từng chu kỳ vận hành sản xuất.",
             "Dòng điện tiêu thụ dao động với biên độ lớn quanh mức trung bình, thể hiện sự thay đổi tải đột ngột thường xuyên.",
+            "Công suất tiêu thụ tức thời dao động mạnh với biên độ lớn, thể hiện sự thay đổi tải đột ngột thường xuyên.",
         ],
         "biến đổi nhấp nhô theo ca sản xuất": [
             "Biểu đồ dòng điện tiêu thụ thể hiện đặc tính tải nhấp nhô liên tục theo nhịp vận hành sản xuất.",
             "Đồ thị dòng điện biến động nhấp nhô theo từng công đoạn thao tác thực tế trên chuyền.",
             "Dòng điện tiêu thụ duy trì trạng thái tải nhấp nhô với tần suất thay đổi cao trong ca làm việc.",
+            "Công suất tiêu thụ tức thời biến đổi nhấp nhô liên tục theo nhịp vận hành sản xuất trên chuyền.",
         ],
         "biến đổi theo chu kỳ load/unload": [
             "Biểu đồ dòng điện tiêu thụ cho thấy thiết bị vận hành theo chế độ Load/Unload.",
@@ -552,6 +596,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ dao động tuần hoàn theo chu kỳ Load/Unload của máy nén, với biên độ bước nhảy lớn và thời gian lặp đều đặn.",
             "Biểu đồ dòng điện thể hiện rõ đặc tính vận hành hai chế độ: tải đầy (Load) khi bơm nén và không tải (Unload) khi xả khí, tạo nên chu kỳ dao động đặc trưng.",
             "Dòng điện biến thiên theo từng chu kỳ tải/không tải đặc trưng của chế độ vận hành Load/Unload.",
+            "Công suất tiêu thụ tức thời chuyển đổi rõ rệt giữa hai mức: công suất tải đầy (Load) khi bơm nén và công suất không tải (Unload) khi xả khí.",
         ],
     }
 
