@@ -180,6 +180,58 @@ def get_cause_gen_harm_templates() -> list[str]:
     ]
 
 
+def get_cause_chiller_templates(td_s: str, lim_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân sóng hài cho hệ thống Chiller/HVAC."""
+    return [
+        f"Nguyên nhân tổng biến dạng sóng hài dòng điện ở mức cao (TDDmax = {td_s}% > {lim_s}%) xuất phát từ các bộ biến tần điều tốc tích hợp trong cụm máy nén Chiller và các bơm nước lạnh.",
+        f"Mức độ sóng hài dòng điện cao (TDDmax = {td_s}%) do đặc tính biến đổi tần số liên tục của biến tần Chiller nhằm duy trì nhiệt độ nước lạnh ổn định.",
+        f"Khối chỉnh lưu bán dẫn trong biến tần điều khiển cụm Chiller/HVAC là nguồn phát sinh chính gây ra hàm lượng sóng hài dòng điện TDDmax = {td_s}% > {lim_s}%.",
+    ]
+
+
+def get_cause_ups_templates(td_s: str, lim_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân sóng hài cho hệ thống UPS / Phòng Server / Data Center."""
+    return [
+        f"Tổng biến dạng sóng hài dòng điện ở mức cao (TDDmax = {td_s}% > {lim_s}%) xuất phát từ bộ chỉnh lưu đầu vào của hệ thống UPS và mật độ cao các bộ nguồn chuyển mạch SMPS trong máy chủ.",
+        f"Sóng hài dòng điện vượt ngưỡng (TDDmax = {td_s}%) là đặc tính kỹ thuật phổ biến ở các hạ tầng trung tâm dữ liệu, tạo ra bởi khối bộ đổi điện của hệ thống lưu điện UPS.",
+        f"Các bộ chỉnh lưu IGBT/thyristor trong hệ thống UPS công suất lớn tích tụ lượng sóng hài dòng điện đáng kể (TDDmax = {td_s}% > {lim_s}%) trên tuyến cấp nguồn.",
+    ]
+
+
+def get_cause_solar_templates(td_s: str, lim_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân sóng hài cho hệ thống Điện mặt trời (Solar PV Inverter)."""
+    return [
+        f"Sóng hài dòng điện ghi nhận ở mức cao (TDDmax = {td_s}% > {lim_s}%) do đặc tính đóng ngắt tần số cao của bộ Inverter hòa lưới (PV Inverter), đặc biệt khi hệ thống vận hành ở dải công suất phát nhẹ.",
+        f"Việc xuất hiện sóng hài dòng điện lớn (TDDmax = {td_s}%) xuất phát từ quá trình biến đổi điện một chiều (DC) từ pin mặt trời sang điện xoay chiều (AC) của Inverter hòa lưới.",
+        f"Đặc tính phi tuyến của mạch cầu biến tần hòa lưới Điện mặt trời là nguyên nhân chính gây ra mức sóng hài dòng điện TDDmax = {td_s}% > {lim_s}%.",
+    ]
+
+
+def get_cause_welding_both_templates(di_s: str, td_s: str, lim_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân vừa lệch pha vừa sóng hài cao cho nhóm Máy hàn / Lò công nghiệp."""
+    return [
+        f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%) do phân bổ phụ tải máy hàn/lò đơn pha không đều giữa các pha, kết hợp với mạch chỉnh lưu phi tuyến phát sinh sóng hài dòng điện lớn (TDDmax = {td_s}% > {lim_s}%).",
+        f"Sự kết hợp giữa phụ tải xung kích đơn pha (máy hàn/lò) đấu nối lệch pha (ΔI = {di_s}%) và đặc tính đóng ngắt bán dẫn của bộ nguồn hàn (TDDmax = {td_s}% > {lim_s}%) gây ra đồng thời hai vấn đề chất lượng điện.",
+    ]
+
+
+def get_cause_welding_unb_templates(di_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân lệch pha cho nhóm Máy hàn / Lò công nghiệp."""
+    return [
+        f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%), nguyên nhân do phụ tải máy hàn/lò điện đơn pha phân bổ chưa thật sự cân bằng giữa các pha cấp nguồn.",
+        f"Hiện tượng mất cân bằng dòng điện nghiêm trọng (ΔI = {di_s}%) xuất phát từ đặc tính vận hành ngắn hạn, đóng ngắt gián đoạn không đồng bộ của các máy hàn trên lưới 3 pha.",
+    ]
+
+
+def get_cause_welding_harm_templates(td_s: str, lim_s: str) -> list[str]:
+    """Mẫu câu nguyên nhân sóng hài cho nhóm Máy hàn / Lò công nghiệp."""
+    return [
+        f"Bộ nguồn chỉnh lưu inverter trong máy hàn/lò phát sinh sóng hài dòng điện ở mức cao (TDDmax = {td_s}% > {lim_s}%).",
+        f"Đặc tính đóng ngắt dòng điện lớn với chu kỳ ngắn của máy hàn inverter là nguồn gốc chính tích tụ sóng hài dòng điện cao (TDDmax = {td_s}% > {lim_s}%).",
+    ]
+
+
+
 # ── 4. MẪU CÂU CHO MÁY BIẾN ÁP (MBA) ────────────────────────────────────────
 
 def get_load_mba_templates(load_pct_str: str) -> list[str]:
@@ -521,6 +573,25 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Đặc tính tải Chiller/HVAC biến đổi theo bước công suất làm lạnh, vận hành ổn định trong dải tải thiết kế.",
             "Dòng điện tiêu thụ của hệ thống Chiller duy trì ở mức cao và biến đổi theo nhu cầu phụ tải làm mát của tòa nhà/nhà xưởng.",
         ]
+    elif cat == "ups_datacenter":
+        return [
+            "Công suất tiêu thụ tức thời duy trì mức rất ổn định, phản ánh đặc tính tải vận hành liên tục 24/7 của hệ thống trung tâm dữ liệu/UPS.",
+            "Biểu đồ dòng điện cấp cho hệ thống UPS/Data Center thể hiện đặc tính tải ổn định phẳng, với hệ số công suất cosφ cao do bộ chỉnh lưu hiện đại.",
+            "Dòng điện tiêu thụ duy trì ổn định cao, biến động không đáng kể trong suốt khung giờ khảo sát của phòng máy chủ.",
+        ]
+    elif cat == "solar_inverter":
+        return [
+            "Đồ thị công suất phát của hệ thống Inverter Điện mặt trời biến thiên mượt mà theo cường độ bức xạ ánh sáng mặt trời thực tế.",
+            "Biểu đồ dòng điện phản ánh chế độ phát công suất hòa lưới của Inverter: tăng cao vào thời điểm giữa trưa và giảm dần về chiều tối.",
+            "Công suất tức thời biến đổi linh hoạt bám sát cường độ bức xạ mặt trời, thể hiện khả năng dò điểm công suất cực đại (MPPT) của bộ hòa lưới.",
+        ]
+    elif cat == "welding_furnace":
+        return [
+            "Biểu đồ dòng điện ghi nhận các xung dòng nhọn tăng cao đột biến với tần suất liên tục, thể hiện rõ đặc tính vận hành đóng/ngắt tải xung của máy hàn/lò điện.",
+            "Đồ thị dòng điện biến động rất mạnh với biên độ rộng, phản ánh các chu kỳ hàn ngắn hạn và thời gian chờ không tải ngắt quãng.",
+            "Công suất tiêu thụ tức thời thay đổi đột ngột giữa mức tải đỉnh khi đóng cọc hàn/nạp lò và mức tải chờ ngắn hạn.",
+        ]
+
 
     _wave_dev_map: dict[str, list[str]] = {
         "ổn định": [

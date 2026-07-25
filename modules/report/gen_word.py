@@ -666,10 +666,14 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     """Phân loại nhóm thiết bị để áp dụng logic sinh nhận xét đặc thù.
 
     Categories:
-    - 'vfd_inverter': Biến tần, VFD, Inverter (bơm biến tần, quạt biến tần, chiller...)
+    - 'vfd_inverter': Biến tần, VFD, Inverter (bơm biến tần, quạt biến tần...)
     - 'vsd_compressor': Máy nén khí VSD
     - 'servo_sewing': Dây chuyền máy may servo, xưởng may, chuyền may
     - 'lighting': Hệ thống chiếu sáng tòa nhà, bệnh viện, nhà xưởng (đèn LED, tủ CS)
+    - 'chiller_hvac': Hệ thống Chiller / HVAC trung tâm (AHU, FCU, tháp giải nhiệt)
+    - 'ups_datacenter': Bộ lưu điện UPS / Phòng Server / Trung tâm dữ liệu
+    - 'solar_inverter': Inverter Điện mặt trời / Năng lượng tái tạo
+    - 'welding_furnace': Máy hàn công nghiệp / Lò hồ quang / Lò tần số
     - 'general_compressor': Máy nén khí thường (Load/Unload)
     - 'mba': Máy biến áp
     - 'general_device': Thiết bị/tủ điện khác
@@ -687,6 +691,14 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
         return "servo_sewing"
     if k_norm in ("lighting", "4lighting"):
         return "lighting"
+    if k_norm in ("chiller", "4chiller", "hvac", "4hvac"):
+        return "chiller_hvac"
+    if k_norm in ("ups", "4ups", "datacenter", "4datacenter"):
+        return "ups_datacenter"
+    if k_norm in ("solar", "4solar", "pv", "4pv"):
+        return "solar_inverter"
+    if k_norm in ("welding", "4welding", "furnace", "4furnace"):
+        return "welding_furnace"
     if k_norm == "mba":
         return "mba"
 
@@ -707,7 +719,19 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     if any(k in n for k in ("chiếu sáng", "chieu sang", "tủ cs", "tu cs", "lighting", "đèn", "den")):
         return "lighting"
 
-    if any(k in n for k in ("biến tần", "bien tan", "bến tần", "inverter", "vfd", "chiller")):
+    if any(k in n for k in ("chiller", "hvac", "ahu", "fcu", "tháp giải nhiệt", "thap giai nhiet", "làm lạnh", "lam lanh")):
+        return "chiller_hvac"
+
+    if any(k in n for k in ("ups", "data center", "datacenter", "phòng server", "phong server", "máy chủ", "may chu", "lưu điện", "luu dien")):
+        return "ups_datacenter"
+
+    if any(k in n for k in ("solar", "điện mặt trời", "dien mat troi", "quang điện", "quang dien", "pv inverter")):
+        return "solar_inverter"
+
+    if any(k in n for k in ("máy hàn", "may han", "lò hàn", "lo han", "lò hồ quang", "lo ho quang", "lò tần số", "lo tan so", "lò cảm ứng", "lo cam ung", "welding", "welder")):
+        return "welding_furnace"
+
+    if any(k in n for k in ("biến tần", "bien tan", "bến tần", "inverter", "vfd")):
         return "vfd_inverter"
 
     if any(k in n for k in ("nén", "nen", "compressor", "comp")):
@@ -730,12 +754,13 @@ def _device_tdd_limit_from_name(name: str) -> float:
         float: Ngưỡng giới hạn (%) theo tiêu chuẩn nội bộ (thường là 12.0 hoặc 20.0).
     """
     cat = _detect_equipment_category(name)
-    if cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
+    if cat in ("vsd_compressor", "vfd_inverter", "general_compressor", "chiller_hvac", "ups_datacenter", "solar_inverter", "welding_furnace"):
         return 12.0
     n = _norm(name)
     if any(k in n for k in ("nén", "nen", "nghiền", "nghien", "máy ép", "may ep", "băng tải", "bang tai")):
         return 12.0
     return 20.0
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -799,10 +824,22 @@ _CURRENT_CHAR_MAP: dict[str, str] = {
     "ổn định": "ổn định",
 }
 
+def _get_random_choice(choices: list[str], seed_text: str, suffix: str = "", extra_seed: object = "") -> str:
+    """Lấy phần tử ngẫu nhiên có hạt giống ổn định (deterministic), hỗ trợ hạt giống bổ sung để tránh trùng văn phong."""
+    if not choices:
+        return ""
+    import hashlib
+    import random
+    key = f"{seed_text}_{extra_seed}_{suffix}" if (suffix or extra_seed) else seed_text
+    seed_int = int(hashlib.md5(key.encode('utf-8')).hexdigest(), 16)
+    r = random.Random(seed_int)
+    return r.choice(choices)
+
+
 def _parse_float_field(v: object) -> float | None:
     """Trích xuất giá trị float từ một đối tượng dữ liệu (ô Excel, chuỗi...).
 
-    Hỗ trợ xử lý định dạng dấu phẩy (kiểu Việt Nam) và kiểm tra NaN từ Pandas.
+    Hỗ trợ xử lý định dạng dấu phẩy (kiểu Việt Nam) và kiểm tra NaN.
 
     Args:
         v: Giá trị đầu vào cần chuyển đổi.
@@ -812,19 +849,19 @@ def _parse_float_field(v: object) -> float | None:
     """
     if v is None:
         return None
-    try:
-        import pandas as pd
-        if isinstance(v, float) and pd.isna(v):
+    if isinstance(v, (int, float)):
+        if isinstance(v, float) and (v != v):  # NaN check
             return None
-    except Exception:
-        pass
+        return float(v)
+    s = str(v).strip().replace(",", ".")
+    if not s or s.lower() in ("nan", "none", "null", "—", "-"):
+        return None
     try:
-        s = str(v).strip().replace(",", ".")
-        if not s:
-            return None
-        return float(s)
+        x = float(s)
+        return None if x != x else x
     except (ValueError, TypeError):
         return None
+
 
 def _parse_pf_field(v: object) -> float | None:
     """Đọc hệ số cos phi, hỗ trợ cả 0.987 và 987 (chia 1000)."""
@@ -960,6 +997,7 @@ def _compose_remarks_from_excel_fields(
     pdm_kva: float | None = None,
     nominal_voltage: float | None = None,
     raw_kind: str | None = None,
+    extra_seed: object = "",
 ) -> str:
     """Sinh nội dung nhận xét tự động dựa trên các thông số kỹ thuật đo được."""
     ct_reversed_in_fields = False
@@ -979,13 +1017,8 @@ def _compose_remarks_from_excel_fields(
     def _pct(v: float | None, d: int = 2) -> str:
         return "—" if v is None else f"{v:.{d}f}".replace(".", ",")
 
-    def _get_random_choice(choices: list[str], seed_text: str, suffix: str = "") -> str:
-        import hashlib
-        import random
-        key = f"{seed_text}_{suffix}" if suffix else seed_text
-        seed_int = int(hashlib.md5(key.encode('utf-8')).hexdigest(), 16)
-        r = random.Random(seed_int)
-        return r.choice(choices)
+    def _pick_tpl(choices: list[str], suffix: str = "") -> str:
+        return _get_random_choice(choices, seed_text=name, suffix=suffix, extra_seed=extra_seed)
 
     def _volt(v: float | None, d: int = 1) -> str:
         return "—" if v is None else f"{v:.{d}f}".replace(".", ",")
@@ -1002,7 +1035,7 @@ def _compose_remarks_from_excel_fields(
         tdd_lim = _TDD_LIMIT_PCT
     elif p_kw is not None:
         tdd_lim = 12.0 if p_kw > 50.0 else 20.0
-    elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
+    elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor", "chiller_hvac", "ups_datacenter", "solar_inverter", "welding_furnace"):
         tdd_lim = 12.0
     else:
         tdd_lim = _device_tdd_limit_from_name(name)
@@ -1069,7 +1102,7 @@ def _compose_remarks_from_excel_fields(
             f"(ΔU = {du_s}% {_LT if du_pass else _GT} 5,0%)."
         )
     elif du_pass and di_pass:
-        unbalance_sent = _get_random_choice(_unb_both_ok_templates, name, "unb_ok")
+        unbalance_sent = _pick_tpl(_unb_both_ok_templates, "unb_ok")
     elif du_pass and not di_pass:
         unbalance_sent = (
             f"Độ lệch pha điện áp ở mức thấp (ΔU = {du_s}% {_LT} 5,0%); "
@@ -1107,7 +1140,7 @@ def _compose_remarks_from_excel_fields(
             harm_sent = f"Tổng biến dạng sóng hài dòng điện vượt mức cho phép (TDDmax {_GT} 100%)."
     else:
         if thd_ok and tdd_ok:
-            harm_sent = _get_random_choice(_harm_both_ok_templates, name, "harm_ok")
+            harm_sent = _pick_tpl(_harm_both_ok_templates, "harm_ok")
         elif thd_ok and not tdd_ok:
             if tdd_max is None:
                 harm_sent = (
@@ -1190,52 +1223,83 @@ def _compose_remarks_from_excel_fields(
     if cat == "vfd_inverter":
         if not tdd_ok:
             _causes = remark_templates.get_cause_vfd_templates(td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_vfd")
+            cause_sent = _pick_tpl(_causes, "cause_vfd")
         elif not di_pass:
             cause_sent = f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%) có thể do sự phân bổ tải không đồng đều giữa các pha nguồn cấp."
 
     elif cat == "vsd_compressor":
         if not tdd_ok:
             _causes = remark_templates.get_cause_vsd_templates(td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_vsd")
+            cause_sent = _pick_tpl(_causes, "cause_vsd")
 
     elif cat == "servo_sewing":
         if not di_pass and not tdd_ok:
             _causes = remark_templates.get_cause_servo_both_templates(di_s, td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_servo_both")
+            cause_sent = _pick_tpl(_causes, "cause_servo_both")
         elif not di_pass:
             _causes = remark_templates.get_cause_servo_unb_templates(di_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_servo_unb")
+            cause_sent = _pick_tpl(_causes, "cause_servo_unb")
         elif not tdd_ok:
             _causes = remark_templates.get_cause_servo_harm_templates(td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_servo_harm")
+            cause_sent = _pick_tpl(_causes, "cause_servo_harm")
 
     elif cat == "lighting":
         if not tdd_ok and not di_pass:
             _causes = remark_templates.get_cause_lighting_both_templates(di_s, td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_lighting_both")
+            cause_sent = _pick_tpl(_causes, "cause_lighting_both")
         elif not tdd_ok:
             _causes = remark_templates.get_cause_lighting_harm_templates(td_s, lim_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_lighting_harm")
+            cause_sent = _pick_tpl(_causes, "cause_lighting_harm")
         elif not di_pass:
             _causes = remark_templates.get_cause_lighting_unb_templates(di_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_lighting_unb")
+            cause_sent = _pick_tpl(_causes, "cause_lighting_unb")
+
+    elif cat == "chiller_hvac":
+        if not tdd_ok:
+            _causes = remark_templates.get_cause_chiller_templates(td_s, lim_s)
+            cause_sent = _pick_tpl(_causes, "cause_chiller")
+        elif not di_pass:
+            cause_sent = f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%) có thể do sự phân bổ tải không đồng đều giữa các cụm máy nén Chiller và quạt AHU."
+
+    elif cat == "ups_datacenter":
+        if not tdd_ok:
+            _causes = remark_templates.get_cause_ups_templates(td_s, lim_s)
+            cause_sent = _pick_tpl(_causes, "cause_ups")
+        elif not di_pass:
+            cause_sent = f"Độ lệch pha dòng điện ở mức cao (ΔI = {di_s}% > 10,0%) xuất phát từ việc đấu nối phụ tải 1 pha của phòng máy chủ chưa thật sự cân đối."
+
+    elif cat == "solar_inverter":
+        if not tdd_ok:
+            _causes = remark_templates.get_cause_solar_templates(td_s, lim_s)
+            cause_sent = _pick_tpl(_causes, "cause_solar")
+
+    elif cat == "welding_furnace":
+        if not di_pass and not tdd_ok:
+            _causes = remark_templates.get_cause_welding_both_templates(di_s, td_s, lim_s)
+            cause_sent = _pick_tpl(_causes, "cause_welding_both")
+        elif not di_pass:
+            _causes = remark_templates.get_cause_welding_unb_templates(di_s)
+            cause_sent = _pick_tpl(_causes, "cause_welding_unb")
+        elif not tdd_ok:
+            _causes = remark_templates.get_cause_welding_harm_templates(td_s, lim_s)
+            cause_sent = _pick_tpl(_causes, "cause_welding_harm")
 
     elif kind == "mba" or cat == "mba":
         if not di_pass:
             _causes = remark_templates.get_cause_mba_unb_templates(di_s)
-            cause_sent = _get_random_choice(_causes, name, "cause_mba_unb")
+            cause_sent = _pick_tpl(_causes, "cause_mba_unb")
 
     else:
         if not tdd_ok:
             if _has_inverter_hint(name):
                 _causes = remark_templates.get_cause_inv_templates()
-                cause_sent = _get_random_choice(_causes, name, "cause_inv")
+                cause_sent = _pick_tpl(_causes, "cause_inv")
             else:
                 _causes = remark_templates.get_cause_gen_harm_templates()
-                cause_sent = _get_random_choice(_causes, name, "cause_gen_harm")
+                cause_sent = _pick_tpl(_causes, "cause_gen_harm")
         elif not di_pass:
             cause_sent = "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
+
 
     # ── MBA: format mới ──────────────────────────────────────────────────────
     if kind == "mba":
@@ -1246,13 +1310,13 @@ def _compose_remarks_from_excel_fields(
             s_kva = p_kw / abs(cos_phi)
             load_pct = s_kva / pdm_kva * 100.0
             _load_mba_phrases = remark_templates.get_load_mba_templates(_pct(load_pct, 2))
-            mba_parts.append(_get_random_choice(_load_mba_phrases, name, "load_mba"))
+            mba_parts.append(_pick_tpl(_load_mba_phrases, "load_mba"))
 
         # Câu 2 — Biểu đồ dòng điện
         _wave_mba_map = remark_templates.get_wave_mba_map(wave)
         _wave_key_mba = wave.lower()
         if _wave_key_mba in _wave_mba_map:
-            mba_wave_sent = _get_random_choice(_wave_mba_map[_wave_key_mba], name, "wave_mba")
+            mba_wave_sent = _pick_tpl(_wave_mba_map[_wave_key_mba], "wave_mba")
         else:
             mba_wave_sent = f"Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm {wave}."
         mba_parts.append(mba_wave_sent)
@@ -1269,10 +1333,10 @@ def _compose_remarks_from_excel_fields(
             di_separate = di_level is not None
 
         mba_openings = remark_templates.get_mba_openings(name_mid, quality)
-        chosen_mba_opening = _get_random_choice(mba_openings, name, "opening_mba")
+        chosen_mba_opening = _pick_tpl(mba_openings, "opening_mba")
 
         _pf_mba_tpl = remark_templates.get_pf_mba_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
-        chosen_pf_mba = _get_random_choice(_pf_mba_tpl, name, "pf_mba")
+        chosen_pf_mba = _pick_tpl(_pf_mba_tpl, "pf_mba")
 
         quality_sent = (
             f"{chosen_mba_opening}, "
@@ -1285,7 +1349,7 @@ def _compose_remarks_from_excel_fields(
             mba_parts.append(cause_sent)
 
         _mba_closing = remark_templates.get_mba_closing_templates()
-        mba_parts.append(_get_random_choice(_mba_closing, name, "closing_mba"))
+        mba_parts.append(_pick_tpl(_mba_closing, "closing_mba"))
 
         return " ".join(mba_parts)
 
@@ -1296,9 +1360,9 @@ def _compose_remarks_from_excel_fields(
         both_in = abs(du_lo) <= _V_DEV_LIMIT_PCT and abs(du_hi) <= _V_DEV_LIMIT_PCT
         _vdict_ok = remark_templates.get_volt_verdict_ok_templates()
         _vdict_bad = remark_templates.get_volt_verdict_bad_templates()
-        verdict = _get_random_choice(_vdict_ok if both_in else _vdict_bad, name, "volt_verdict")
+        verdict = _pick_tpl(_vdict_ok if both_in else _vdict_bad, "volt_verdict")
         _volt_tpl = remark_templates.get_volt_templates(umin_s, umax_s, dlo_s, dhi_s, verdict)
-        volt_sent = _get_random_choice(_volt_tpl, name, "volt_sent")
+        volt_sent = _pick_tpl(_volt_tpl, "volt_sent")
     elif u_min is not None and u_max is not None:
         volt_sent = f"Điện áp dao động từ {umin_s} ÷ {umax_s} V."
     else:
@@ -1317,14 +1381,14 @@ def _compose_remarks_from_excel_fields(
         pdm_str = f"{pdm_kva:.0f}".replace(".", ",") if pdm_kva.is_integer() else _pct(pdm_kva, 1)
 
         _load_dev_tpl = remark_templates.get_load_dev_templates(load_pct_dev, pct_s, p_str, pdm_str)
-        load_sent_dev = _get_random_choice(_load_dev_tpl, name, "load_dev")
+        load_sent_dev = _pick_tpl(_load_dev_tpl, "load_dev")
     elif p_kw is not None and p_kw > 0:
         p_str = _pct(p_kw, 1)
         _inst_p_tpl = remark_templates.get_inst_power_val_templates(p_str)
-        load_sent_dev = _get_random_choice(_inst_p_tpl, name, "inst_p_val")
+        load_sent_dev = _pick_tpl(_inst_p_tpl, "inst_p_val")
 
     import hashlib
-    pos_seed = int(hashlib.md5(f"{name}_pos_qual".encode('utf-8')).hexdigest(), 16)
+    pos_seed = int(hashlib.md5(f"{name}_{extra_seed}_pos_qual".encode('utf-8')).hexdigest(), 16)
     place_at_end = (pos_seed % 2 == 1)
 
     # ── Phát hiện bất thường đặc biệt (Anomaly Highlights) ─────────────
@@ -1336,16 +1400,16 @@ def _compose_remarks_from_excel_fields(
         else:
             _pct_val = (p_kw / pdm_kva) * 100.0
         if _pct_val > 115.0:
-            anom_sents.append(_get_random_choice(remark_templates.get_anomaly_overload_templates(pct_s, p_str, pdm_str), name, "anom_load"))
+            anom_sents.append(_pick_tpl(remark_templates.get_anomaly_overload_templates(pct_s, p_str, pdm_str), "anom_load"))
 
     if di_num is not None and di_num > 20.0:
-        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_unbalance_templates(di_s), name, "anom_unb"))
+        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_unbalance_templates(di_s), "anom_unb"))
 
     if tdd_max is not None and tdd_max > 50.0:
-        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_harmonic_templates(td_s), name, "anom_harm"))
+        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_harmonic_templates(td_s), "anom_harm"))
 
     if du_lo is not None and du_hi is not None and (du_lo < -8.0 or du_hi > 8.0):
-        anom_sents.append(_get_random_choice(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), name, "anom_volt"))
+        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), "anom_volt"))
 
     if quality == "chưa tốt":
         parts: list[str] = []
@@ -1367,16 +1431,16 @@ def _compose_remarks_from_excel_fields(
         return " ".join(parts)
     else:
         openings = remark_templates.get_device_openings(name_mid, quality)
-        chosen_opening = _get_random_choice(openings, name, "opening_dev")
+        chosen_opening = _pick_tpl(openings, "opening_dev")
 
         closings_eval = remark_templates.get_device_closings_eval(name, quality)
-        chosen_closing_eval = _get_random_choice(closings_eval, name, "closing_eval_dev")
+        chosen_closing_eval = _pick_tpl(closings_eval, "closing_eval_dev")
 
         _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
-        pf_sent = _get_random_choice(_pf_dev_tpl, name, "pf_dev")
+        pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
 
         _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
-        wave_sent = _get_random_choice(_wave_dev_candidates, name, f"wave_{cat}")
+        wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
 
         parts: list[str] = []
         if load_sent_dev:
@@ -1405,9 +1469,10 @@ def _compose_remarks_from_excel_fields(
             parts.append(chosen_closing_eval)
         elif quality == "tốt" and loi_dem == 0 and kind != "mba":
             _closing_dev = remark_templates.get_closing_dev_templates()
-            parts.append(_get_random_choice(_closing_dev, name, "closing_dev"))
+            parts.append(_pick_tpl(_closing_dev, "closing_dev"))
 
         return " ".join(parts)
+
 
 
 
@@ -1545,6 +1610,10 @@ def _resolve_remarks_field(
     if not has_data:
         return raw
 
+    folder_seed = folder.name if folder else ""
+    stt_seed = str(params.get("stt") or "")
+    extra_seed = f"{folder_seed}_{stt_seed}".strip("_")
+
     auto = _compose_remarks_from_excel_fields(
         name=name,
         kind=kind,
@@ -1561,8 +1630,10 @@ def _resolve_remarks_field(
         pdm_kva=pdm_kva,
         nominal_voltage=nominal_voltage,
         raw_kind=raw_kind,
+        extra_seed=extra_seed,
     )
     return _merge_auto_and_excel_notes(auto, raw)
+
 
 
 # ════════════════════════════════════════════════════════════════════

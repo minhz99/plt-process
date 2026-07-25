@@ -21,7 +21,8 @@
             <p style="font-size:0.76rem;color:var(--text-muted);margin:6px 0 8px;max-width:52rem;line-height:1.5">
               Upload file <strong>.zip</strong> chứa file <strong>Excel hiện trường</strong> (.xlsx), các thư mục record
               <code>Sxxxx</code> và ảnh gốc <code>PS-SDxxx.BMP</code>. Hệ thống sẽ tự động đồng bộ dải ảnh vào đúng
-              thiết bị, chạy OCR để trích xuất số liệu đo đạc, và <strong>tự động phân tích file INPS để nhận diện & điền cột đặc tính dòng điện (<code>current_char</code>)</strong>.
+              thiết bị, chạy OCR để trích xuất số liệu đo đạc, và <strong>tự động phân tích file INPS để nhận diện &
+                điền cột đặc tính dòng điện (<code>current_char</code>)</strong>.
             </p>
             <div
               style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;max-width:52rem;font-size:0.73rem;line-height:1.55">
@@ -48,18 +49,33 @@
               </div>
               <div style="margin-top:8px;color:var(--text-muted);font-size:0.7rem;line-height:1.6">
                 * <strong>Các nhãn hợp lệ cột <code>type</code>:</strong><br>
-                &nbsp;&nbsp;• <strong>Xuất Chương 5:</strong> <code>mba</code> (Máy biến áp), <code>vfd</code> (Biến tần), <code>vsd</code> (Máy nén VSD), <code>servo</code> (Máy may Servo), <code>cs</code>/<code>lighting</code> (Chiếu sáng), <code>building</code>/<code>1pha</code> (Tòa nhà/Văn phòng 1 pha), <code>chiller</code>/<code>hvac</code>/<code>ahu</code> (Hệ thống Chiller/HVAC trung tâm), <code>device</code> (Thiết bị thường).<br>
-                &nbsp;&nbsp;• <strong>Xuất Chương 4:</strong> <code>4</code>/<code>device4</code> (Chương 4 thường), <code>4vfd</code> (Biến tần Ch.4), <code>4vsd</code> (Máy nén VSD Ch.4), <code>4servo</code> (Máy may Ch.4), <code>4cs</code>/<code>4lighting</code> (Chiếu sáng Ch.4), <code>4building</code> (Tòa nhà Ch.4), <code>4chiller</code> (HVAC Ch.4).<br>
-                * <strong>Cột <code>pdm</code> (Công suất định mức kW/kVA):</strong> Sử dụng cho MBA và các thiết bị đo kiểm. Khi thiết bị ngoài MBA có khai báo <code>pdm</code> và công suất tiêu thụ <code>p</code>, hệ thống sẽ <strong>tự động tính toán & sinh nhận xét đánh giá % tiêu thụ so với công suất định mức (P/Pđm)</strong>.<br>
-                * <strong>Các giá trị hợp lệ của <code>current_char</code>:</strong> 
-                <code>ổn định</code>, <code>tương đối ổn định</code>, <code>ổn định nhưng có biến đổi</code>, <code>dao động quanh ngưỡng</code>, <code>dao động biên độ lớn</code>, <code>dao động nhẹ</code>, <code>biến đổi nhẹ</code>, 
-                <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code>, 
-                <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>, 
-                <code>cao đột biến và có tính chu kỳ</code>, <code>biến đổi theo bậc tải</code>, <code>dòng đỉnh nhọn khi khởi động</code>, <code>biến đổi mượt mà theo tần số</code>, <code>biến đổi theo ca sản xuất</code>, <code>biến đổi tuần hoàn theo chu kỳ công nghệ</code>.<br>
-                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (ảnh bỏ qua), <code>imglu</code> (ảnh load/unload cho máy nén).<br>
-                * <strong>Nhận xét & Bảng 6.3:</strong> 
-                Tự động phát hiện sự cố đặc biệt (quá tải >115%, lệch pha dòng >20%, sóng hài dòng >50%, lệch áp >±8%). Cột Nhận xét ở Bảng 6.3 tự động được tạo dưới dạng <strong>định tính ngắn gọn, cô đọng, không lặp lại số liệu</strong>.<br>
-                * <strong>Tự động điền:</strong> Nếu cột <code>current_char</code> trong Excel trống, hệ thống sẽ tự động phân tích file INPS để điền giá trị ước lượng ở bước sơ bộ này. Bạn có thể mở Excel trong file ZIP kết quả để xem và chỉnh sửa lại trước khi xuất Word.
+                &nbsp;&nbsp;• <strong>Xuất Chương 5:</strong> <code>mba</code> (Máy biến áp), <code>vfd</code> (Biến
+                tần), <code>vsd</code> (Máy nén VSD), <code>servo</code> (Máy may Servo),
+                <code>cs</code>/<code>lighting</code> (Chiếu sáng), <code>building</code>/<code>1pha</code> (Tòa nhà/Văn
+                phòng 1 pha), <code>chiller</code>/<code>hvac</code>/<code>ahu</code> (Hệ thống Chiller/HVAC trung tâm),
+                <code>device</code> (Thiết bị thường).<br>
+                &nbsp;&nbsp;• <strong>Xuất Chương 4:</strong> <code>4</code>/<code>device4</code> (Chương 4 thường),
+                <code>4vfd</code> (Biến tần Ch.4), <code>4vsd</code> (Máy nén VSD Ch.4), <code>4servo</code> (Máy may
+                Ch.4), <code>4cs</code>/<code>4lighting</code> (Chiếu sáng Ch.4), <code>4building</code> (Tòa nhà Ch.4),
+                <code>4chiller</code> (HVAC Ch.4).<br>
+                * <strong>Cột <code>pdm</code> (Công suất định mức kW/kVA):</strong> Sử dụng cho MBA và các thiết bị đo
+                kiểm. Khi thiết bị ngoài MBA có khai báo <code>pdm</code> và công suất tiêu thụ <code>p</code>, hệ thống
+                sẽ <strong>tự động tính toán & sinh nhận xét đánh giá % tiêu thụ so với công suất định mức
+                  (P/Pđm)</strong>.<br>
+                * <strong>Các giá trị hợp lệ của <code>current_char</code>:</strong>
+                <code>ổn định</code>, <code>tương đối ổn định</code>, <code>ổn định nhưng có biến đổi</code>,
+                <code>dao động quanh ngưỡng</code>, <code>dao động biên độ lớn</code>, <code>dao động nhẹ</code>,
+                <code>biến đổi nhẹ</code>,
+                <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code>,
+                <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>,
+                <code>cao đột biến và có tính chu kỳ</code>, <code>biến đổi theo bậc tải</code>,
+                <code>dòng đỉnh nhọn khi khởi động</code>, <code>biến đổi mượt mà theo tần số</code>,
+                <code>biến đổi theo ca sản xuất</code>, <code>biến đổi tuần hoàn theo chu kỳ công nghệ</code>.<br>
+                * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (ảnh bỏ qua), <code>imglu</code> (ảnh load/unload
+                cho máy nén).<br>
+                * <strong>Nhận xét & Bảng 6.3:</strong>
+                Tự động phát hiện sự cố đặc biệt (quá tải >115%, lệch pha dòng >20%, sóng hài dòng >50%, lệch áp
+                >±8%).<br>
               </div>
             </div>
 
@@ -114,13 +130,16 @@
         </div>
 
         <!-- Thanh tiến trình xử lý sơ bộ -->
-        <div id="kew-field-progress-container" style="display:none; margin-top: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; background: var(--surface2)">
+        <div id="kew-field-progress-container"
+          style="display:none; margin-top: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; background: var(--surface2)">
           <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:6px;">
             <span id="kew-field-progress-step" style="color:var(--text-muted)">Đang chuẩn bị...</span>
             <span id="kew-field-progress-percent" style="font-weight:600; color:var(--accent2, #10b981)">0%</span>
           </div>
-          <div style="width:100%; height:8px; background:var(--surface3, #e5e7eb); border-radius:4px; overflow:hidden; border:1px solid var(--border)">
-            <div id="kew-field-progress-bar" style="width:0%; height:100%; background:var(--accent2, #10b981); transition: width 0.3s ease;"></div>
+          <div
+            style="width:100%; height:8px; background:var(--surface3, #e5e7eb); border-radius:4px; overflow:hidden; border:1px solid var(--border)">
+            <div id="kew-field-progress-bar"
+              style="width:0%; height:100%; background:var(--accent2, #10b981); transition: width 0.3s ease;"></div>
           </div>
         </div>
       </div>
@@ -144,7 +163,8 @@
                 <strong style="color:#f59e0b">Quy trình tạo Báo cáo Word / Excel MBA:</strong><br>
                 <span style="color:var(--text-muted)">[1] Chạy <strong>Xử lý file sơ bộ</strong> ở tab bên cạnh & tải
                   file ZIP về → [2] Tải trực tiếp file ZIP đó lên đây (mặc định dùng ảnh tổng quan template).
-                  Nếu muốn đổi ảnh tổng quan khác, giải nén ZIP → thêm file <code>a.png</code> vào thư mục thiết bị → nén lại rồi tải lên.</span>
+                  Nếu muốn đổi ảnh tổng quan khác, giải nén ZIP → thêm file <code>a.png</code> vào thư mục thiết bị →
+                  nén lại rồi tải lên.</span>
               </div>
             </div>
             <div class="zip-tree-container"
@@ -329,7 +349,7 @@
       var btn = document.getElementById('btn-kew-field-process');
       var spin = document.getElementById('kew-field-spinner');
       var st = document.getElementById('kew-field-status');
-      
+
       var progressContainer = document.getElementById('kew-field-progress-container');
       var progressBar = document.getElementById('kew-field-progress-bar');
       var progressPercent = document.getElementById('kew-field-progress-percent');
@@ -338,7 +358,7 @@
       if (btn) btn.disabled = true;
       if (spin) spin.style.display = 'inline-block';
       if (st) st.textContent = 'Đang khởi tạo…';
-      
+
       if (progressContainer) progressContainer.style.display = 'block';
       if (progressBar) progressBar.style.width = '0%';
       if (progressPercent) progressPercent.textContent = '0%';
@@ -377,13 +397,13 @@
               if (progressPercent) progressPercent.textContent = data.progress + '%';
               if (progressStep) progressStep.textContent = data.step;
               if (st) st.textContent = 'Đang xử lý (' + data.progress + '%)…';
-              
+
               setTimeout(function () { pollProgress(taskId); }, 800);
             } else if (data.status === 'completed') {
               if (progressBar) progressBar.style.width = '100%';
               if (progressPercent) progressPercent.textContent = '100%';
               if (progressStep) progressStep.textContent = 'Hoàn tất!';
-              
+
               downloadResult(taskId);
             } else if (data.status === 'failed') {
               var errMsg = (data.errors && data.errors.length) ? data.errors.join('\n') : 'Lỗi không xác định.';
@@ -400,7 +420,7 @@
 
       function downloadResult(taskId) {
         if (st) st.textContent = 'Đang tải file ZIP kết quả…';
-        
+
         fetch('/api/kew/download-task/' + taskId)
           .then(function (r) {
             if (!r.ok) throw new Error('Không thể tải file kết quả.');
@@ -421,15 +441,15 @@
             document.body.appendChild(a);
             a.click();
             setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
-            
+
             if (st) st.textContent = '✅ Đã hoàn thành!';
-            
+
             if (res.warnings) {
               var decoded = decodeURIComponent(res.warnings);
               alert('Cảnh báo trong quá trình xử lý:\n' + decoded.split('; ').join('\n'));
             }
-            
-            setTimeout(function() {
+
+            setTimeout(function () {
               if (progressContainer) progressContainer.style.display = 'none';
             }, 3000);
           })
