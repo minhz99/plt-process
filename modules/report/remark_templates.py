@@ -790,3 +790,32 @@ def get_anomaly_voltage_templates(dlo_s: str, dhi_s: str) -> list[str]:
         f"Điện áp cấp nguồn ghi nhận độ lệch vượt ngưỡng an toàn (δU = {dlo_s}% ÷ {dhi_s}%), vượt quá dải biến động tiêu chuẩn ±5,0%.",
         f"Độ lệch điện áp đo được biến động ở mức lớn (δU = {dlo_s}% ÷ {dhi_s}%), nằm ngoài vùng vận hành an toàn khuyến cáo.",
     ]
+
+
+def get_cause_pf_motor_light_load_templates(pf_txt: str, load_pct_str: str | None = None) -> list[str]:
+    """Mẫu câu giải thích nguyên nhân hệ số công suất cosφ thấp do động cơ vận hành non tải."""
+    if load_pct_str:
+        return [
+            f"Hệ số công suất cosφ ở mức thấp ({pf_txt}) chủ yếu xuất phát từ việc động cơ vận hành ở chế độ non tải (~{load_pct_str}% Pđm), làm gia tăng tỷ trọng công suất phản kháng tiêu thụ.",
+            f"Nguyên nhân hệ số công suất cosφ duy trì ở mức {pf_txt} là do động cơ kéo tải nhẹ (mức mang tải khoảng {load_pct_str}% Pđm) trong thời gian khảo sát, làm suy giảm hiệu suất cosφ.",
+            f"Do động cơ vận hành không hết công suất định mức (chỉ đạt ~{load_pct_str}% Pđm), dòng từ hóa cuộn dây chiếm tỷ trọng lớn khiến hệ số công suất cosφ giảm xuống mức {pf_txt}.",
+        ]
+    return [
+        f"Hệ số công suất cosφ ở mức thấp ({pf_txt}) chủ yếu xuất phát từ việc động cơ vận hành ở chế độ non tải (tải thấp so với công suất định mức), làm gia tăng công suất phản kháng tiêu thụ.",
+        f"Nguyên nhân hệ số công suất cosφ duy trì ở mức {pf_txt} là do động cơ kéo tải nhẹ (vận hành non tải) trong thời gian khảo sát, khiến hệ số công suất bị suy giảm.",
+        f"Do động cơ vận hành chưa đạt công suất định mức (chạy non tải), dòng từ hóa cuộn dây chiếm tỷ trọng lớn dẫn đến hệ số công suất cosφ giảm xuống mức {pf_txt}.",
+    ]
+
+
+def get_anomaly_pf_light_load_templates(pf_txt: str, pct_s: str | None = None) -> list[str]:
+    """Mẫu câu cảnh báo hệ số công suất cosφ thấp do động cơ/phụ tải chạy non tải."""
+    if pct_s:
+        return [
+            f"Cảnh báo hệ số công suất: cosφ duy trì ở mức thấp ({pf_txt}) do động cơ vận hành non tải (chỉ đạt ~{pct_s}% công suất định mức). Khuyến nghị tối ưu hóa tải vận hành hoặc bổ sung tụ bù hạ thế để tránh phí công suất phản kháng.",
+            f"Ghi nhận hệ số công suất cosφ ở mức thấp ({pf_txt}) do phụ tải hoạt động dưới công suất thiết kế ({pct_s}% Pđm), phát sinh nhiều công suất phản kháng lên hệ thống.",
+        ]
+    return [
+        f"Cảnh báo hệ số công suất: cosφ ở mức thấp ({pf_txt}) do động cơ vận hành ở chế độ non tải. Khuyến nghị điều chỉnh tải vận hành gần công suất định mức hoặc lắp bổ sung bộ tụ bù tự động APFC.",
+        f"Ghi nhận hệ số cosφ duy trì ở mức thấp ({pf_txt}) do thiết bị chạy non tải trong thời gian khảo sát, cần xem xét giải pháp nâng cao hệ số công suất.",
+    ]
+

@@ -680,7 +680,8 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     """
     k_norm = _norm_kind(kind) if kind else None
 
-    # 1. Ưu tiên nhận diện theo nhãn type/kind tường minh nếu được truyền vào
+    if k_norm in ("nontai", "4nontai", "lightload", "4lightload", "motor_nontai", "4motor_nontai"):
+        return "motor_nontai"
     if k_norm in ("building", "4building", "office", "4office", "commercial", "4commercial", "building_1phase", "1pha", "one_phase"):
         return "building_commercial"
     if k_norm in ("vfd", "4vfd"):
@@ -741,6 +742,20 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
         return "mba"
 
     return "general_device"
+
+
+def _is_motor_device(name: str, cat: str) -> bool:
+    """Kiểm tra thiết bị có phải là động cơ điện / phụ tải cuộn dây (bơm, quạt, máy nén, chuyền may, v.v.)."""
+    motor_cats = {"vfd_inverter", "vsd_compressor", "servo_sewing", "chiller_hvac", "general_compressor", "motor_nontai"}
+    if cat in motor_cats:
+        return True
+    name_l = name.lower()
+    keywords = (
+        "động cơ", "motor", "bơm", "pump", "quạt", "fan", "máy nén", "compressor",
+        "xát", "nghiền", "vắt", "khuấy", "băng tải", "chuyền", "may", "chế biến",
+        "quạt gió", "hút", "nâng", "cẩu", "cuộn", "dệt", "nhào", "trộn"
+    )
+    return any(k in name_l for k in keywords)
 
 
 
@@ -1030,7 +1045,7 @@ def _compose_remarks_from_excel_fields(
         du_lo = (u_min - vref) / vref * 100.0
         du_hi = (u_max - vref) / vref * 100.0
 
-    # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) ───────────────────────────────
+    # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) đã nâng cấp (Weighted Severity Scoring) ──
     if kind == "mba" or cat == "mba":
         tdd_lim = _TDD_LIMIT_PCT
     elif p_kw is not None:
@@ -1041,20 +1056,56 @@ def _compose_remarks_from_excel_fields(
         tdd_lim = _device_tdd_limit_from_name(name)
     loi_dem = 0
 
-    if cos_phi is not None and abs(cos_phi) < _PF_LIMIT:
-        loi_dem += 1
+    # 1. Hệ số công suất cosφ (Trọng số 1 cho mức vừa < 0.90, 2 cho mức thấp nghiêm trọng < 0.80)
+    if cos_phi is not None:
+        abs_p = abs(cos_phi)
+        if abs_p < 0.80:
+            loi_dem += 2
+        elif abs_p < _PF_LIMIT:  # 0.90
+            loi_dem += 1
+
+    # 2. Độ lệch điện áp δU (Trọng số 1 cho vượt ±5%, 2 cho vượt ±10%)
     if du_lo is not None and du_hi is not None:
-        if du_lo < -_V_DEV_LIMIT_PCT or du_hi > _V_DEV_LIMIT_PCT:
+        if du_lo < -10.0 or du_hi > 10.0:
+            loi_dem += 2
+        elif du_lo < -_V_DEV_LIMIT_PCT or du_hi > _V_DEV_LIMIT_PCT:  # ±5%
             loi_dem += 1
-    if delta_i is not None and delta_i > 10.0:
-        loi_dem += 1
+
+    # 3. Mất cân bằng dòng điện ΔI (Trọng số 1 cho >10%, 2 cho >20%)
+    if delta_i is not None:
+        if delta_i > 20.0:
+            loi_dem += 2
+        elif delta_i > 10.0:
+            loi_dem += 1
+
+    # 4. Sóng hài điện áp & dòng điện (Chỉ tính cho thiết bị ngoài MBA)
     if kind != "mba" and cat != "mba":
-        if thd_max is not None and thd_max > _THDV_LIMIT_PCT:
+        if thd_max is not None:
+            if thd_max > 12.0:
+                loi_dem += 2
+            elif thd_max > _THDV_LIMIT_PCT:  # 8.0%
+                loi_dem += 1
+        # Sửa lỗi: tdd_max is None KHÔNG bị cộng lỗi (tránh phạt sai khi thiếu dữ liệu)
+        if tdd_max is not None:
+            if tdd_max > 2.0 * tdd_lim:
+                loi_dem += 2
+            elif tdd_max > tdd_lim:
+                loi_dem += 1
+
+    # 5. Mất cân bằng điện áp ΔU (Lỗi nghiêm trọng)
+    if delta_u is not None:
+        if delta_u > _V_DEV_LIMIT_PCT:  # > 5.0%
+            loi_dem += 2
+        elif delta_u > 3.0:
             loi_dem += 1
-        if tdd_max is None or tdd_max > tdd_lim:
+
+    # 6. Mức mang tải quá tải % Pđm
+    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
+        _calc_load_pct = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if (cos_phi is not None and abs(cos_phi) > 0.01) else (p_kw / pdm_kva) * 100.0
+        if _calc_load_pct > 115.0:
+            loi_dem += 2
+        elif _calc_load_pct > 100.0:
             loi_dem += 1
-    if delta_u is not None and delta_u > _V_DEV_LIMIT_PCT:
-        loi_dem += 2  # Mất cân bằng điện áp — lỗi nghiêm trọng, cộng 2
 
     # ── Đánh giá chất lượng tổng quan ────────────────────────────────────
     if kind == "mba":
@@ -1300,6 +1351,17 @@ def _compose_remarks_from_excel_fields(
         elif not di_pass:
             cause_sent = "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
 
+    if not cause_sent and cos_phi is not None and abs(cos_phi) < _PF_LIMIT:
+        is_motor = _is_motor_device(name, cat)
+        load_pct_val = None
+        if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
+            load_pct_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if abs(cos_phi) > 0.01 else (p_kw / pdm_kva) * 100.0
+        is_light_load = (cat == "motor_nontai") or (load_pct_val is not None and load_pct_val < 50.0)
+        if is_motor or is_light_load:
+            load_pct_str = _pct(load_pct_val, 2) if load_pct_val is not None else None
+            _causes = remark_templates.get_cause_pf_motor_light_load_templates(pf_txt, load_pct_str)
+            cause_sent = _pick_tpl(_causes, "cause_pf_light_load")
+
 
     # ── MBA: format mới ──────────────────────────────────────────────────────
     if kind == "mba":
@@ -1411,6 +1473,14 @@ def _compose_remarks_from_excel_fields(
     if du_lo is not None and du_hi is not None and (du_lo < -8.0 or du_hi > 8.0):
         anom_sents.append(_pick_tpl(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), "anom_volt"))
 
+    if cos_phi is not None and abs(cos_phi) < 0.85:
+        is_motor = _is_motor_device(name, cat)
+        _load_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if (pdm_kva is not None and pdm_kva > 0 and p_kw is not None and abs(cos_phi) > 0.01) else None
+        is_light_load = (cat == "motor_nontai") or (_load_val is not None and _load_val < 50.0)
+        if is_motor or is_light_load:
+            _pct_s_str = _pct(_load_val, 2) if _load_val is not None else None
+            anom_sents.append(_pick_tpl(remark_templates.get_anomaly_pf_light_load_templates(pf_txt, _pct_s_str), "anom_pf_light_load"))
+
     if quality == "chưa tốt":
         parts: list[str] = []
         if load_sent_dev:
@@ -1427,7 +1497,7 @@ def _compose_remarks_from_excel_fields(
             parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
-        parts.append(f"Nhìn chung, chất lượng điện cấp cho {name_mid} chưa đạt yêu cầu tối ưu.")
+        parts.append("Nhìn chung, chất lượng điện năng chưa đạt yêu cầu tối ưu.")
         return " ".join(parts)
     else:
         openings = remark_templates.get_device_openings(name_mid, quality)
@@ -2345,6 +2415,7 @@ _DEVICE4_KIND_LABELS = frozenset({
     "4lighting", "lighting4",
     "4cs", "cs4",
     "4compressor", "compressor4",
+    "4nontai", "nontai4", "4lightload", "lightload4",
 })
 
 _KIND_LABEL_MAP: dict[str, str] = {
@@ -2386,6 +2457,22 @@ _KIND_LABEL_MAP: dict[str, str] = {
     "lighting4": "4lighting",
     "4cs": "4lighting",
     "cs4": "4lighting",
+
+    "nontai": "nontai",
+    "non_tai": "nontai",
+    "nontải": "nontai",
+    "non tải": "nontai",
+    "lightload": "nontai",
+    "light_load": "nontai",
+    "motor_nontai": "nontai",
+
+    "4nontai": "4nontai",
+    "4non_tai": "4nontai",
+    "4nontải": "4nontai",
+    "4non tải": "4nontai",
+    "4lightload": "4nontai",
+    "4_nontai": "4nontai",
+    "nontai4": "4nontai",
 }
 
 def _norm_kind(value: object) -> str | None:
