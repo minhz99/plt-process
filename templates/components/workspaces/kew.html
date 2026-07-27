@@ -75,7 +75,7 @@
                   </div>
                 </details>
 
-                • <strong>Cột <code>pdm</code> (Công suất định mức kW / kVA):</strong> Khai báo công suất danh định. Khi thiết bị có khai báo <code>pdm</code> và công suất đo được <code>p</code>, hệ thống sẽ **tự động tính toán % mang tải thực tế ($P/P_{đm}$ hoặc $S/S_{đm}$)** và tự động cảnh báo nếu vận hành quá tải ($>115\%$).<br>
+                • <strong>Cột <code>pdm</code> (Công suất định mức kW / kVA):</strong> Khai báo công suất danh định. Khi thiết bị có khai báo <code>pdm</code> và công suất đo được <code>p</code>, hệ thống sẽ <strong>tự động tính toán % mang tải thực tế (P/P<sub>đm</sub> hoặc S/S<sub>đm</sub>)</strong> và tự động cảnh báo nếu vận hành quá tải (&gt; 115%).<br>
 
                 • <strong>Cột <code>current_char</code> (Đặc tính dòng điện):</strong> Phân loại dạng đồ thị dòng điện. Tự động phân tích từ file <code>INPS</code> (nếu để trống) hoặc nhận nhập tay.
                 <details style="margin: 6px 0 8px 8px; background: rgba(16,185,129,0.06); padding: 9px 13px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.25);">
@@ -100,29 +100,29 @@
                       <code>cao đột biến và có tính chu kỳ</code>, <code>dòng đỉnh nhọn khi khởi động</code>
                     </div>
                     <div style="margin-top:6px; color: var(--text-muted); font-style: italic;">
-                      💡 <em>Lưu ý: Thuật toán DSP tiên tiến sẽ phân tích độ lệch chuẩn & biên độ dòng điện 3 pha trong file `INPS` để tự động ước tính đặc tính nếu ô này bị bỏ trống.</em>
+                      💡 <em>Lưu ý: Thuật toán DSP tiên tiến sẽ phân tích độ lệch chuẩn & biên độ dòng điện 3 pha trong file <code>INPS</code> để tự động ước tính đặc tính nếu ô này bị bỏ trống.</em>
                     </div>
                   </div>
                 </details>
 
-                • <strong>Thuật toán Đánh giá Chất lượng & Cờ báo lỗi (`LoiDem` nâng cấp):</strong>
+                • <strong>Thuật toán Đánh giá Chất lượng & Cờ báo lỗi (<code>LoiDem</code> nâng cấp):</strong>
                 <details style="margin: 6px 0 4px 8px; background: rgba(59,130,246,0.06); padding: 9px 13px; border-radius: 6px; border: 1px solid rgba(59,130,246,0.25);">
                   <summary style="cursor: pointer; font-weight: 600; color: #3b82f6;">🔍 Quy tắc tính điểm trọng số cờ báo lỗi & Xếp loại chất lượng điện năng</summary>
                   <div style="margin-top: 8px; font-size: 0.71rem; line-height: 1.65;">
                     <div>• <strong>Thang điểm trọng số lỗi (Weighted Severity Scoring):</strong><br>
-                      - <strong>Hệ số cosφ:</strong> $< 0.80$ (+2 điểm - nguy cơ phạt tiền công suất phản kháng); $0.80 \le \cos\phi < 0.90$ (+1 điểm).<br>
-                      - <strong>Đánh giá non tải:</strong> Thiết bị có nhãn `nontai` hoặc mang tải $< 50\% P_{đm}$ sẽ tự động đưa đánh giá nguyên nhân $\cos\phi$ thấp do vận hành nhẹ tải & khuyến nghị lắp tụ bù hạ thế / bộ APFC.<br>
-                      - <strong>Độ lệch điện áp δU:</strong> Vượt quá $\pm 10\%$ (+2 điểm); Vượt quá $\pm 5\%$ (+1 điểm).<br>
-                      - <strong>Mất cân bằng dòng ΔI:</strong> $> 20\%$ (+2 điểm); $> 10\%$ (+1 điểm).<br>
-                      - <strong>Mất cân bằng áp ΔU:</strong> $> 5\%$ (+2 điểm); $> 3\%$ (+1 điểm).<br>
-                      - <strong>Sóng hài điện áp $THD_V$:</strong> $> 12\%$ (+2 điểm); $> 8\%$ (+1 điểm).<br>
-                      - <strong>Sóng hài dòng $TDD_I$:</strong> $> 2 \times TDD_{lim}$ (+2 điểm); $> TDD_{lim}$ (+1 điểm). Bỏ phạt cờ lỗi khi thiếu dữ liệu TDD.<br>
-                      - <strong>Quá tải công suất:</strong> $> 115\%$ (+2 điểm); $> 100\%$ (+1 điểm).
+                      - <strong>Hệ số cosφ:</strong> &lt; 0,80 (+2 điểm); 0,80 ≤ cosφ &lt; 0,90 (+1 điểm).<br>
+                      - <strong>Phụ tải non tải:</strong> Thiết bị có nhãn <code>nontai</code> hoặc mang tải &lt; 50% P<sub>đm</sub> được ghi nhận thông số cosφ ở chế độ vận hành nhẹ tải.<br>
+                      - <strong>Độ lệch điện áp δU:</strong> Vượt quá ±10% (+2 điểm); Vượt quá ±5% (+1 điểm).<br>
+                      - <strong>Mất cân bằng dòng ΔI:</strong> &gt; 20% (+2 điểm); &gt; 10% (+1 điểm).<br>
+                      - <strong>Mất cân bằng áp ΔU:</strong> &gt; 5% (+2 điểm); &gt; 3% (+1 điểm).<br>
+                      - <strong>Sóng hài điện áp THD<sub>V</sub>:</strong> &gt; 12% (+2 điểm); &gt; 8% (+1 điểm).<br>
+                      - <strong>Sóng hài dòng TDD<sub>I</sub>:</strong> &gt; 2 × TDD<sub>lim</sub> (+2 điểm); &gt; TDD<sub>lim</sub> (+1 điểm). Bỏ phạt cờ lỗi khi thiếu dữ liệu TDD.<br>
+                      - <strong>Quá tải công suất:</strong> &gt; 115% (+2 điểm); &gt; 100% (+1 điểm).
                     </div>
-                    <div style="margin-top:6px">• <strong>Phân cấp xếp loại chất lượng tổng quan:</strong><br>
-                      - <code>0 ÷ 1 điểm</code>: Chất lượng điện <strong>Tốt</strong><br>
-                      - <code>2 ÷ 3 điểm</code>: Chất lượng điện <strong>Tương đối tốt</strong><br>
-                      - <code>≥ 4 điểm</code>: Chất lượng điện <strong>Chưa đạt / Chưa tốt</strong>
+                    <div style="margin-top:6px">• <strong>Phân cấp đánh giá tổng quan:</strong><br>
+                      - <code>0 ÷ 1 điểm</code>: Đánh giá vận hành <strong>Tốt</strong><br>
+                      - <code>2 ÷ 3 điểm</code>: Đánh giá vận hành <strong>Tương đối tốt</strong><br>
+                      - <code>≥ 4 điểm</code>: Ghi nhận đầy đủ thông số kỹ thuật (không đưa đánh giá tiêu cực)
                     </div>
                   </div>
                 </details>

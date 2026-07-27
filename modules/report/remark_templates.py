@@ -103,7 +103,7 @@ def get_cause_servo_unb_templates(di_s: str) -> list[str]:
 def get_cause_servo_harm_templates(td_s: str, lim_s: str) -> list[str]:
     """Mẫu câu nguyên nhân sóng hài cho nhóm Máy may Servo."""
     return [
-        f"Các bộ điều khiển động cơ servo (tải phi tuyến) phát sinh sóng hài dòng điện cao (TDDmax = {td_s}% > {lim_s}%).",
+        f"Các bộ điều khiển động cơ servo phát sinh sóng hài dòng điện cao (TDDmax = {td_s}% > {lim_s}%).",
         "Các khối nguồn và biến tần nhỏ trong máy may servo đóng ngắt liên tục là nguyên nhân tạo ra sóng hài dòng điện lớn.",
         f"Bộ điều khiển servo trong máy may là loại tải phi tuyến điển hình, có mạch chỉnh lưu tích hợp tạo ra các sóng hài dòng điện bậc lẻ cao, dẫn đến TDDmax = {td_s}% > {lim_s}%.",
         f"Hàng loạt động cơ servo vận hành đồng thời với tần suất đóng ngắt cao tích lũy sóng hài dòng điện đáng kể (TDDmax = {td_s}%) lên lưới điện cấp cho chuyền may.",
@@ -334,7 +334,7 @@ def get_pf_mba_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"hệ số công suất cosφ ở mức {pf_txt}",
             f"hệ số công suất ở mức {pf_txt}",
             f"hệ số công suất cosφ ở mức {pf_txt}",
-            f"hệ số công suất ở mức {pf_txt}, ảnh hưởng đến hiệu quả truyền tải và có thể phát sinh phí công suất phản kháng",
+            f"hệ số công suất cosφ duy trì ở mức {pf_txt}",
             f"hệ số công suất đo được ở mức {pf_txt}",
         ]
 
@@ -343,11 +343,8 @@ def get_mba_closing_templates() -> list[str]:
     """Mẫu câu chốt dẫn bảng thông số cho MBA."""
     return [
         "Dưới đây là bảng tổng hợp thông số hoạt động của máy biến áp:",
-        "Chất lượng dòng điện đo được tại máy biến áp được thể hiện chi tiết tại bảng sau:",
-        "Bảng sau tổng hợp các thông số điện đặc trưng ghi nhận được tại máy biến áp:",
-        "Chi tiết các thông số đo kiểm tại máy biến áp được trình bày trong bảng dưới đây:",
-        "Các thông số hoạt động chi tiết của máy biến áp được tổng hợp trong bảng sau:",
-        "Các thông số vận hành chi tiết của máy biến áp được tổng hợp trong bảng dưới đây:",
+        "Chi tiết các thông số đo đạc máy biến áp được tổng hợp trong bảng bên dưới:",
+        "Bảng tổng hợp dưới đây thể hiện các giá trị điện áp, dòng điện và công suất đo kiểm được của MBA:",
     ]
 
 
@@ -499,8 +496,8 @@ def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
         return [
             f"Hệ số công suất cosφ ở mức {pf_txt}.",
             f"Hệ số công suất ở mức {pf_txt}.",
-            f"Hệ số cosφ đo được ở mức {pf_txt}, ảnh hưởng đến hiệu quả sử dụng điện và có thể phát sinh phí công suất phản kháng từ đơn vị cung cấp điện.",
-            f"Hệ số cosφ đo được {pf_txt}, ảnh hưởng đến hiệu quả sử dụng điện và có thể phát sinh phí công suất phản kháng từ đơn vị cung cấp điện.",
+            f"Hệ số cosφ đo được ở mức {pf_txt}.",
+            f"Hệ số cosφ đo được có giá trị {pf_txt}.",
             f"Hệ số công suất đo được ở mức {pf_txt}.",
         ]
 
@@ -809,13 +806,5 @@ def get_cause_pf_motor_light_load_templates(pf_txt: str, load_pct_str: str | Non
 
 def get_anomaly_pf_light_load_templates(pf_txt: str, pct_s: str | None = None) -> list[str]:
     """Mẫu câu cảnh báo hệ số công suất cosφ thấp do động cơ/phụ tải chạy non tải."""
-    if pct_s:
-        return [
-            f"Cảnh báo hệ số công suất: cosφ duy trì ở mức thấp ({pf_txt}) do động cơ vận hành non tải (chỉ đạt ~{pct_s}% công suất định mức). Khuyến nghị tối ưu hóa tải vận hành hoặc bổ sung tụ bù hạ thế để tránh phí công suất phản kháng.",
-            f"Ghi nhận hệ số công suất cosφ ở mức thấp ({pf_txt}) do phụ tải hoạt động dưới công suất thiết kế ({pct_s}% Pđm), phát sinh nhiều công suất phản kháng lên hệ thống.",
-        ]
-    return [
-        f"Cảnh báo hệ số công suất: cosφ ở mức thấp ({pf_txt}) do động cơ vận hành ở chế độ non tải. Khuyến nghị điều chỉnh tải vận hành gần công suất định mức hoặc lắp bổ sung bộ tụ bù tự động APFC.",
-        f"Ghi nhận hệ số cosφ duy trì ở mức thấp ({pf_txt}) do thiết bị chạy non tải trong thời gian khảo sát, cần xem xét giải pháp nâng cao hệ số công suất.",
-    ]
+    return []
 

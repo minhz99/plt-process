@@ -1351,18 +1351,6 @@ def _compose_remarks_from_excel_fields(
         elif not di_pass:
             cause_sent = "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
 
-    if not cause_sent and cos_phi is not None and abs(cos_phi) < _PF_LIMIT:
-        is_motor = _is_motor_device(name, cat)
-        load_pct_val = None
-        if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
-            load_pct_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if abs(cos_phi) > 0.01 else (p_kw / pdm_kva) * 100.0
-        is_light_load = (cat == "motor_nontai") or (load_pct_val is not None and load_pct_val < 50.0)
-        if is_motor or is_light_load:
-            load_pct_str = _pct(load_pct_val, 2) if load_pct_val is not None else None
-            _causes = remark_templates.get_cause_pf_motor_light_load_templates(pf_txt, load_pct_str)
-            cause_sent = _pick_tpl(_causes, "cause_pf_light_load")
-
-
     # ── MBA: format mới ──────────────────────────────────────────────────────
     if kind == "mba":
         mba_parts: list[str] = []
@@ -1473,14 +1461,6 @@ def _compose_remarks_from_excel_fields(
     if du_lo is not None and du_hi is not None and (du_lo < -8.0 or du_hi > 8.0):
         anom_sents.append(_pick_tpl(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), "anom_volt"))
 
-    if cos_phi is not None and abs(cos_phi) < 0.85:
-        is_motor = _is_motor_device(name, cat)
-        _load_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if (pdm_kva is not None and pdm_kva > 0 and p_kw is not None and abs(cos_phi) > 0.01) else None
-        is_light_load = (cat == "motor_nontai") or (_load_val is not None and _load_val < 50.0)
-        if is_motor or is_light_load:
-            _pct_s_str = _pct(_load_val, 2) if _load_val is not None else None
-            anom_sents.append(_pick_tpl(remark_templates.get_anomaly_pf_light_load_templates(pf_txt, _pct_s_str), "anom_pf_light_load"))
-
     if quality == "chưa tốt":
         parts: list[str] = []
         if load_sent_dev:
@@ -1497,7 +1477,6 @@ def _compose_remarks_from_excel_fields(
             parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
-        parts.append("Nhìn chung, chất lượng điện năng chưa đạt yêu cầu tối ưu.")
         return " ".join(parts)
     else:
         openings = remark_templates.get_device_openings(name_mid, quality)
@@ -3073,11 +3052,11 @@ def _t6_auto_nhan_xet(delta_I: object, cos_phi: object, tdd: object) -> str:
     tdd_bad = tdd_missing or (val_tdd is not None and val_tdd >= _T6_TDD_HIGH)
 
     if val_cos is not None and abs(val_cos) < _T6_COSPHI_LOW:
-        vi_pham.append("Hệ số Cosφ còn thấp")
+        vi_pham.append("Hệ số Cosφ thấp")
     if val_di is not None and val_di >= _T6_DELTA_I_HIGH:
-        vi_pham.append("Độ lệch pha dòng điện còn cao")
+        vi_pham.append("Độ lệch pha dòng điện cao")
     if tdd_bad:
-        vi_pham.append("Tổng biến dạng sóng hài dòng điện còn cao")
+        vi_pham.append("Tổng biến dạng sóng hài dòng điện cao")
 
     if not vi_pham:
         return "Thiết bị vận hành ổn định"
