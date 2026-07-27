@@ -62,15 +62,33 @@
                 kiểm. Khi thiết bị ngoài MBA có khai báo <code>pdm</code> và công suất tiêu thụ <code>p</code>, hệ thống
                 sẽ <strong>tự động tính toán & sinh nhận xét đánh giá % tiêu thụ so với công suất định mức
                   (P/Pđm)</strong>.<br>
-                * <strong>Các giá trị hợp lệ của <code>current_char</code>:</strong>
-                <code>ổn định</code>, <code>tương đối ổn định</code>, <code>ổn định nhưng có biến đổi</code>,
-                <code>dao động quanh ngưỡng</code>, <code>dao động biên độ lớn</code>, <code>dao động nhẹ</code>,
-                <code>biến đổi nhẹ</code>,
-                <code>biến đổi liên tục</code>, <code>biên độ nhỏ</code>,
-                <code>biến đổi liên tục theo tải</code>, <code>load/unload</code>,
-                <code>cao đột biến và có tính chu kỳ</code>, <code>biến đổi theo bậc tải</code>,
-                <code>dòng đỉnh nhọn khi khởi động</code>, <code>biến đổi mượt mà theo tần số</code>,
-                <code>biến đổi theo ca sản xuất</code>, <code>biến đổi tuần hoàn theo chu kỳ công nghệ</code>.<br>
+                * <strong>Cột <code>current_char</code> (Đặc tính dòng điện):</strong> Tự động phân tích từ file <code>INPS</code> (nếu để trống) hoặc nhận nhập tay để sinh nhận xét đồ thị phụ tải trong Báo cáo Word.
+                <details style="margin: 6px 0 8px 12px; background: rgba(16,185,129,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.2);">
+                  <summary style="cursor: pointer; font-weight: 600; color: var(--accent2, #10b981);">🔍 Chi tiết các nhóm giá trị hợp lệ của <code>current_char</code> & Loại thiết bị phù hợp</summary>
+                  <div style="margin-top: 8px; font-size: 0.71rem; line-height: 1.6;">
+                    <div>• <strong>Nhóm Phụ tải Ổn định (Chạy nền, Chiếu sáng, MBA):</strong><br>
+                      <code>ổn định</code>, <code>tương đối ổn định</code>, <code>biên độ nhỏ</code>
+                    </div>
+                    <div style="margin-top:4px">• <strong>Nhóm Phụ tải Biến đổi & Dao động (Động cơ, Văn phòng, Bơm/Quạt):</strong><br>
+                      <code>biến đổi nhẹ</code>, <code>dao động nhẹ</code>, <code>ổn định nhưng có biến đổi</code>, <code>dao động quanh ngưỡng</code>, <code>biến đổi liên tục</code>, <code>biến đổi liên tục theo tải</code>, <code>dao động biên độ lớn</code>
+                    </div>
+                    <div style="margin-top:4px">• <strong>Nhóm Máy nén khí (Compressor):</strong><br>
+                      <code>load/unload</code> (Tự động nhận diện phụ tải 2 mức Chạy tải / Không tải)
+                    </div>
+                    <div style="margin-top:4px">• <strong>Nhóm Biến tần (VFD / VSD / Chiller VSD):</strong><br>
+                      <code>biến đổi mượt mà theo tần số</code>
+                    </div>
+                    <div style="margin-top:4px">• <strong>Nhóm Dây chuyền & Chu kỳ Công nghệ:</strong><br>
+                      <code>biến đổi theo bậc tải</code>, <code>biến đổi theo ca sản xuất</code>, <code>biến đổi tuần hoàn theo chu kỳ công nghệ</code>
+                    </div>
+                    <div style="margin-top:4px">• <strong>Nhóm Phụ tải Xung & Khởi động:</strong><br>
+                      <code>cao đột biến và có tính chu kỳ</code>, <code>dòng đỉnh nhọn khi khởi động</code>
+                    </div>
+                    <div style="margin-top:6px; color: var(--text-muted); font-style: italic;">
+                      💡 <em>Lưu ý: Nếu để trống cột này trong Excel, thuật toán OCR & DSP của hệ thống sẽ dựa vào chuỗi dữ liệu dòng 3 pha (AVG_A1..3) trong file INPS để tự ước lượng và điền tự động.</em>
+                    </div>
+                  </div>
+                </details>
                 * <strong>Tùy chọn khác:</strong> <code>imgomit</code> (ảnh bỏ qua), <code>imglu</code> (ảnh load/unload
                 cho máy nén).<br>
                 * <strong>Nhận xét & Bảng 6.3:</strong>
