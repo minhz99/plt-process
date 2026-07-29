@@ -907,19 +907,19 @@ def _pf_phrase(cos_phi: float | None, kind: str = "device") -> str:
         return "chưa xác định"
     p = abs(cos_phi)
     if p >= 0.995:
-        return "rất cao (cosφ ≈ 1, có thể đã lắp đặt tụ bù)"
+        return "rất cao"
     if kind == "mba":
         if p >= 0.9:
-            return "cao (trên 0,9)"
+            return "cao"
         if p >= 0.7:
-            return "trung bình (dưới 0,9)"
-        return "thấp (dưới 0,9)"
+            return "trung bình"
+        return "thấp"
     else:
         if p >= 0.8:
-            return "cao (trên 0,8)"
+            return "cao"
         if p >= 0.5:
-            return "trung bình (dưới 0,8)"
-        return "thấp (dưới 0,8)"
+            return "trung bình"
+        return "thấp"
 
 def _compose_short_remark_for_table(
     *,
@@ -1013,6 +1013,7 @@ def _compose_remarks_from_excel_fields(
     nominal_voltage: float | None = None,
     raw_kind: str | None = None,
     extra_seed: object = "",
+    is_repeat_category: bool = False,
 ) -> str:
     """Sinh nội dung nhận xét tự động dựa trên các thông số kỹ thuật đo được."""
     ct_reversed_in_fields = False
@@ -1027,6 +1028,7 @@ def _compose_remarks_from_excel_fields(
     wave = _wave_phrase_from_char(current_char)
     name_mid = _format_name_mid(name)
     cat = _detect_equipment_category(name, kind=raw_kind or kind)
+    is_servo = (cat == "servo_sewing") or (_norm_kind(kind) in ("servo", "4servo"))
 
     # ── Định dạng helper ─────────────────────────────────────────────────
     def _pct(v: float | None, d: int = 2) -> str:
@@ -1271,7 +1273,9 @@ def _compose_remarks_from_excel_fields(
     # ── Câu nguyên nhân theo nhóm phụ tải đặc thù ─────────────
     cause_sent = ""
 
-    if cat == "vfd_inverter":
+    if is_repeat_category:
+        cause_sent = ""
+    elif cat == "vfd_inverter":
         if not tdd_ok:
             _causes = remark_templates.get_cause_vfd_templates(td_s, lim_s)
             cause_sent = _pick_tpl(_causes, "cause_vfd")
@@ -1437,30 +1441,6 @@ def _compose_remarks_from_excel_fields(
         _inst_p_tpl = remark_templates.get_inst_power_val_templates(p_str)
         load_sent_dev = _pick_tpl(_inst_p_tpl, "inst_p_val")
 
-    import hashlib
-    pos_seed = int(hashlib.md5(f"{name}_{extra_seed}_pos_qual".encode('utf-8')).hexdigest(), 16)
-    place_at_end = (pos_seed % 2 == 1)
-
-    # ── Phát hiện bất thường đặc biệt (Anomaly Highlights) ─────────────
-    anom_sents: list[str] = []
-
-    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
-        if cos_phi is not None and abs(cos_phi) > 0.01:
-            _pct_val = (p_kw / abs(cos_phi)) / pdm_kva * 100.0
-        else:
-            _pct_val = (p_kw / pdm_kva) * 100.0
-        if _pct_val > 115.0:
-            anom_sents.append(_pick_tpl(remark_templates.get_anomaly_overload_templates(pct_s, p_str, pdm_str), "anom_load"))
-
-    if di_num is not None and di_num > 20.0:
-        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_unbalance_templates(di_s), "anom_unb"))
-
-    if tdd_max is not None and tdd_max > 50.0:
-        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_harmonic_templates(td_s), "anom_harm"))
-
-    if du_lo is not None and du_hi is not None and (du_lo < -8.0 or du_hi > 8.0):
-        anom_sents.append(_pick_tpl(remark_templates.get_anomaly_voltage_templates(dlo_s, dhi_s), "anom_volt"))
-
     if quality == "chưa tốt":
         parts: list[str] = []
         if load_sent_dev:
@@ -1473,8 +1453,6 @@ def _compose_remarks_from_excel_fields(
             parts.append(unbalance_sent)
         if harm_sent:
             parts.append(harm_sent)
-        if anom_sents:
-            parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
         return " ".join(parts)
@@ -1482,26 +1460,22 @@ def _compose_remarks_from_excel_fields(
         openings = remark_templates.get_device_openings(name_mid, quality)
         chosen_opening = _pick_tpl(openings, "opening_dev")
 
-        closings_eval = remark_templates.get_device_closings_eval(name, quality)
-        chosen_closing_eval = _pick_tpl(closings_eval, "closing_eval_dev")
-
         _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
         pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
 
-        _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
-        wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
+        if is_repeat_category:
+            wave_sent = f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm."
+        else:
+            _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
+            wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
 
         parts: list[str] = []
         if load_sent_dev:
             parts.append(load_sent_dev)
 
-        if not place_at_end:
-            parts.append(chosen_opening)
-            parts.append(wave_sent)
-            parts.append(pf_sent)
-        else:
-            parts.append(wave_sent)
-            parts.append(pf_sent)
+        parts.append(chosen_opening)
+        parts.append(wave_sent)
+        parts.append(pf_sent)
 
         if volt_sent:
             parts.append(volt_sent)
@@ -1509,41 +1483,38 @@ def _compose_remarks_from_excel_fields(
             parts.append(unbalance_sent)
         if harm_sent:
             parts.append(harm_sent)
-        if anom_sents:
-            parts.extend(anom_sents)
         if cause_sent:
             parts.append(cause_sent)
-
-        if place_at_end:
-            parts.append(chosen_closing_eval)
-        elif quality == "tốt" and loi_dem == 0 and kind != "mba":
-            _closing_dev = remark_templates.get_closing_dev_templates()
-            parts.append(_pick_tpl(_closing_dev, "closing_dev"))
 
         return " ".join(parts)
 
 
 
 
-def _estimate_current_char_from_df(df) -> str | None:
-    """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS.
+def _estimate_current_char_from_df(df, name: str = "", kind: str = "") -> str | None:
+    """Tự động phân loại đặc tính dòng điện (current_char) từ chuỗi dữ liệu INPS & loại thiết bị.
 
     Phân tích chuỗi dòng điện đo được từ các cột AVG_A1[A], AVG_A2[A], AVG_A3[A]
-    trong file INPS để ước lượng 1 trong 8 đặc tính:
-    1. ổn định
-    2. tương đối ổn định
-    3. biên độ nhỏ
-    4. biến đổi nhẹ
-    5. dao động nhẹ
-    6. biến đổi liên tục
-    7. biến đổi liên tục theo tải
-    8. load/unload
+    kết hợp với từ khóa tên/loại thiết bị để đưa ra đặc tính dòng điện chính xác nhất.
     """
     import pandas as pd
     import numpy as np
+    import unicodedata
+
+    nm = unicodedata.normalize("NFKC", str(name)).lower()
+    k = (kind or "").lower()
 
     if df is None or df.empty:
-        return None
+        # Nếu không có dữ liệu INPS, dựa trên loại thiết bị để đưa ra mặc định hợp lý
+        if any(x in k or x in nm for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter")):
+            return "biến đổi mượt mà theo tần số"
+        if any(x in k or x in nm for x in ("máy nén", "may nen", "compressor")):
+            return "load/unload"
+        if any(x in k or x in nm for x in ("mba", "biến áp", "bien ap", "transformer")):
+            return "tương đối ổn định"
+        if any(x in k or x in nm for x in ("cs", "lighting", "chiếu sáng", "chieu sang")):
+            return "ổn định"
+        return "tương đối ổn định"
 
     # Tìm các cột dòng điện trung bình
     current_cols = []
@@ -1568,46 +1539,64 @@ def _estimate_current_char_from_df(df) -> str | None:
 
     # Tính dòng điện trung bình 3 pha tại mỗi thời điểm
     mean_currents = df_currents.mean(axis=1)
-    mean_val = mean_currents.mean()
+    mean_val = float(mean_currents.mean())
     
-    if mean_val < 0.1:  # Thiết bị không chạy hoặc dòng cực nhỏ
+    if mean_val < 0.1:  # Dòng cực nhỏ
         return "ổn định"
 
-    std_val = mean_currents.std()
+    std_val = float(mean_currents.std())
     cv = std_val / mean_val if mean_val > 0 else 0.0
 
-    p10 = mean_currents.quantile(0.10)
-    p90 = mean_currents.quantile(0.90)
-    
+    p10 = float(mean_currents.quantile(0.10))
+    p90 = float(mean_currents.quantile(0.90))
+    p95 = float(mean_currents.quantile(0.95))
+    max_val = float(mean_currents.max())
+
+    # 1. Nhận diện Biến tần / VSD / VFD điều tốc
+    is_vfd_type = any(x in k or x in nm for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter", "điều tốc"))
+    if is_vfd_type and cv >= 0.04:
+        return "biến đổi mượt mà theo tần số"
+
+    # 2. Nhận diện Load/Unload (Máy nén khí hoặc phụ tải 2 mức rõ rệt)
     mid_low = p10 + (p90 - p10) * 0.35
     mid_high = p10 + (p90 - p10) * 0.65
     in_middle = mean_currents[(mean_currents > mid_low) & (mean_currents < mid_high)].count()
     total = len(mean_currents)
     mid_ratio = in_middle / total if total > 0 else 0.0
 
-    diffs = np.abs(np.diff(mean_currents.values))
-    mean_diff = np.mean(diffs) if len(diffs) > 0 else 0.0
-    step_ratio = mean_diff / std_val if std_val > 0 else 0.0
-
-    # 1. Kiểm tra load/unload (chạy bimodal)
-    if mid_ratio < 0.10 and p90 > 0 and (p10 / p90) < 0.65:
+    is_compressor = any(x in k or x in nm for x in ("máy nén", "may nen", "compressor", "load/unload"))
+    if (is_compressor or mid_ratio < 0.12) and p90 > 0 and (p10 / p90) < 0.70:
         return "load/unload"
 
-    # 2. Phân loại theo hệ số biến thiên (CV)
+    # 3. Phụ tải có đỉnh nhọn / xung ngắt đột biến có tính chu kỳ
+    if max_val > p95 * 1.35 and (max_val - mean_val) / mean_val > 0.40:
+        return "cao đột biến và có tính chu kỳ"
+
+    # 4. Phân loại theo hệ số biến thiên (CV) và đặc tính sóng
+    diffs = np.abs(np.diff(mean_currents.values))
+    mean_diff = float(np.mean(diffs)) if len(diffs) > 0 else 0.0
+    step_ratio = mean_diff / std_val if std_val > 0 else 0.0
+
     if cv <= 0.02:
         return "ổn định"
     elif cv <= 0.05:
         return "tương đối ổn định"
     elif cv <= 0.08:
         return "biên độ nhỏ"
-    elif cv <= 0.11:
+    elif cv <= 0.12:
+        if step_ratio < 0.35:
+            return "ổn định nhưng có sự biến đổi trong quá trình đo"
         return "biến đổi nhẹ"
-    elif cv <= 0.15:
+    elif cv <= 0.18:
+        if step_ratio < 0.35:
+            return "biến đổi theo ca sản xuất"
         return "dao động nhẹ"
     else:
-        # cv > 0.15: kiểm tra xu hướng thay đổi mượt mà theo tải vs nhiễu ngẫu nhiên
+        # cv > 0.18: biến động lớn
         if step_ratio < 0.40:
             return "biến đổi liên tục theo tải"
+        elif step_ratio > 0.75:
+            return "dao động liên tục với biên độ lớn"
         else:
             return "biến đổi liên tục"
 
@@ -1620,6 +1609,7 @@ def _resolve_remarks_field(
     nominal_voltage: float | None,
     excel_params: dict | None = None,
     raw_kind: str | None = None,
+    is_repeat_category: bool = False,
 ) -> str:
     """Quyết định nội dung nhận xét dựa trên dữ liệu Excel hiện trường hoặc tự động."""
     raw = (user_remarks or "").strip()
@@ -1627,18 +1617,22 @@ def _resolve_remarks_field(
     params = excel_params or {}
     current_char = params.get("current_char")
     
-    # Tự động nhận diện current_char từ file INPS nếu chưa có
+    # Tự động nhận diện current_char từ file INPS (hoặc tên/loại thiết bị) nếu chưa có
     if not current_char:
         import os
         from modules.kew.analyse_kew import find_file
         inps_path = find_file(str(folder), "INPS")
+        df = None
         if inps_path and os.path.isfile(inps_path):
             try:
                 from modules.kew.analyse_kew import parse_inps
                 _, df = parse_inps(inps_path)
-                estimated = _estimate_current_char_from_df(df)
-                if estimated:
-                    current_char = estimated
+            except Exception as e:
+                print(f"[WARN] Lỗi đọc file INPS cho {name}: {e}")
+
+        estimated = _estimate_current_char_from_df(df, name=name, kind=raw_kind or _norm_kind(kind))
+        if estimated:
+            current_char = estimated
             except Exception as e:
                 print(f"[WARN] Lỗi tự động nhận diện current_char từ file INPS cho {name}: {e}")
 
@@ -1680,6 +1674,7 @@ def _resolve_remarks_field(
         nominal_voltage=nominal_voltage,
         raw_kind=raw_kind,
         extra_seed=extra_seed,
+        is_repeat_category=is_repeat_category,
     )
     return _merge_auto_and_excel_notes(auto, raw)
 
@@ -1994,6 +1989,7 @@ def mba_kwargs_from_folder(
     cap_tab_mba: str | None = None,
     excel_params: dict | None = None,
     raw_kind: str | None = None,
+    is_repeat_category: bool = False,
 ) -> dict:
     """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template MBA."""
     folder = Path(folder)
@@ -2018,6 +2014,7 @@ def mba_kwargs_from_folder(
         nominal_voltage=None,
         excel_params=excel_params,
         raw_kind=raw_kind,
+        is_repeat_category=is_repeat_category,
     )
     return kw
 
@@ -2030,6 +2027,7 @@ def device_kwargs_from_folder(
     nominal_voltage: float | None = None,
     excel_params: dict | None = None,
     raw_kind: str | None = None,
+    is_repeat_category: bool = False,
 ) -> dict:
     """Tự động chọn ảnh và dữ liệu từ thư mục để dựng tham số cho template thiết bị đo kiểm."""
     images = auto_pick_device_images(folder)
@@ -2045,6 +2043,7 @@ def device_kwargs_from_folder(
             nominal_voltage=nominal_voltage,
             excel_params=excel_params,
             raw_kind=raw_kind,
+            is_repeat_category=is_repeat_category,
         ),
         **images,
     }
@@ -2287,6 +2286,8 @@ def build_field_word_report(
             })
 
     sections: list[tuple[SectionKind, dict]] = []
+    seen_categories: set[str] = set()
+
     for spec in devices:
         name = _nfc(str(spec.get("name") or "").strip())
         folder_raw = spec.get("folder")
@@ -2324,11 +2325,17 @@ def build_field_word_report(
                 warnings.append(f"«{name}»: {st_check.get('_ct_reversed_msg')}")
 
         raw_k = str(spec.get("kind") or "")
+        cat = _detect_equipment_category(name, kind=raw_k or default_kind)
+        is_repeat = cat in seen_categories
+        if cat in ("vfd_inverter", "vsd_compressor", "servo_sewing", "motor_nontai", "lighting", "chiller_hvac", "ups_datacenter", "building_1pha", "welding_furnace"):
+            seen_categories.add(cat)
+
         try:
             if kind == "mba":
                 kwargs = mba_kwargs_from_folder(
                     folder, name=name, remarks_mba=remarks,
                     excel_params=excel_params, raw_kind=raw_k,
+                    is_repeat_category=is_repeat,
                 )
                 kwargs["ds_mba"] = ds_mba
             else:  # "device" or "device4"
@@ -2339,6 +2346,7 @@ def build_field_word_report(
                     nominal_voltage=nom_v,
                     excel_params=excel_params,
                     raw_kind=raw_k,
+                    is_repeat_category=is_repeat,
                 )
             sections.append((kind, kwargs))
 
