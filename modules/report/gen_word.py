@@ -1633,8 +1633,6 @@ def _resolve_remarks_field(
         estimated = _estimate_current_char_from_df(df, name=name, kind=raw_kind or _norm_kind(kind))
         if estimated:
             current_char = estimated
-            except Exception as e:
-                print(f"[WARN] Lỗi tự động nhận diện current_char từ file INPS cho {name}: {e}")
 
     u_min = _parse_float_field(params.get("u_min"))
     u_max = _parse_float_field(params.get("u_max"))
