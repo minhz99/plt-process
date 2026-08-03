@@ -1,0 +1,737 @@
+% !TeX program = pdflatex
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage[T5]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+
+% Định nghĩa màu sắc thương hiệu và giao diện
+\definecolor{primary}{HTML}{1F4E78}      % Xanh lam đậm kỹ thuật
+\definecolor{secondary}{HTML}{D9EAF7}    % Xanh nhạt highlight
+\definecolor{accent}{HTML}{C00000}       % Đỏ cảnh báo
+\definecolor{darkgreen}{HTML}{385723}    % Xanh lá đánh giá tốt
+\definecolor{warningyellow}{HTML}{C65911} % Cam tương đối tốt
+\definecolor{lightgray}{HTML}{F2F4F5}    % Xám nhạt kẻ bảng
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=primary,
+  urlcolor=primary,
+  citecolor=primary,
+  pdftitle={Hướng dẫn chi tiết đánh giá chất lượng điện năng bằng thuật toán LoiDem và xây dựng nhận xét hoàn chỉnh}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\emergencystretch}{2em}
+\setlist[itemize]{leftmargin=1.6em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.3}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% Khung tcolorbox cho chú thích kỹ thuật thuyết minh
+\newtcolorbox{techbox}[1][]{
+  colback=secondary!40,
+  colframe=primary,
+  fonttitle=\bfseries\sffamily,
+  coltitle=white,
+  boxrule=0.8pt,
+  arc=3pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,
+  #1
+}
+
+\newtcolorbox{warningbox}[1][]{
+  colback=accent!10,
+  colframe=accent,
+  fonttitle=\bfseries\sffamily,
+  coltitle=white,
+  boxrule=0.8pt,
+  arc=3pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,
+  #1
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily Hướng Dẫn Đánh Giá Chất Lượng Điện Năng}
+\fancyhead[R]{\small\sffamily Thuật Toán LoiDem \& Nhận Xét Hoàn Chỉnh}
+\fancyfoot[C]{\thepage}
+\setlength{\headheight}{15pt}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+  \centering
+  \vspace*{2.5cm}
+  {\sffamily\bfseries\color{primary}\Huge
+  HƯỚNG DẪN CHI TIẾT ĐÁNH GIÁ\\[0.3em]
+  CHẤT LƯỢNG ĐIỆN NĂNG\par}
+  \vspace{1.0cm}
+  {\sffamily\Large\bfseries Bằng Thuật Toán Cờ Báo Lỗi (LoiDem)\\[0.35em]
+  và Quy Trình Sinh Đoạn Nhận Xét Hoàn Chỉnh\par}
+  \vspace{0.8cm}
+  \rule{0.6\textwidth}{1.5pt}
+  \vspace{1.2cm}
+
+  {\large\sffamily\bfseries Tài Liệu Kỹ Thuật Thuyết Minh Đo Kiểm \& Kiểm Toán Năng Lượng\par}
+  \vspace{0.5cm}
+  {\small Dành cho Kỹ sư Đo kiểm, Kỹ sư M\&E và Chuyên gia Đánh giá Chất lượng Điện\par}
+
+  \vfill
+  {\sffamily\small Phiên bản: 2.5\par}
+  \vspace*{1.5cm}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\tableofcontents
+\clearpage
+
+\section*{Lời Nói Đầu}
+\addcontentsline{toc}{section}{Lời Nói Đầu}
+
+Trong công tác quản lý vận hành hệ thống điện công nghiệp và tòa nhà thương mại, việc đánh giá chất lượng điện năng không chỉ dừng lại ở việc tổng hợp số liệu đo thô mà đòi hỏi một \textbf{phương pháp luận chẩn đoán logic}, có khả năng phát hiện sớm các nguy cơ sự cố (như nổ tụ bù do sóng hài, phát nhiệt trung tính do lệch pha, sụt áp làm ngắt rơ-le biến tần) và chuẩn hóa đoạn văn nhận xét đánh giá theo đúng văn phong báo cáo kỹ thuật.
+
+Tài liệu này trình bày thuần túy dưới dạng **thuyết minh hướng dẫn kỹ thuật**, tập trung vào cơ sở lý thuyết, công thức toán học, quy tắc dung sai thích ứng, phương pháp chấm điểm phạt tích lũy LoiDem, cùng nguyên lý cấu trúc câu chẩn đoán chuyên nghiệp nhằm giúp kỹ sư dễ dàng áp dụng vào thực tế kiểm toán và lập báo cáo kỹ thuật.
+
+\section{Tổng Quan Quy Trình Đánh Giá Chất Lượng Điện Năng}
+
+Đánh giá chất lượng điện năng là quy trình chẩn đoán toàn diện gồm 5 giai đoạn chính, kết nối chặt chẽ giữa xử lý dữ liệu đo đạc thực tế từ thiết bị đo chuyên dụng (như Kyoritsu KEW 6305 / KEW 6315) và các quy tắc chuyên miền về phụ tải điện công nghiệp:
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=6mm,
+  processbox/.style={draw=primary,fill=secondary!60,rounded corners=3pt,
+    minimum height=11mm,text width=12cm,align=center,font=\sffamily\small\bfseries},
+  flow/.style={-{Latex[length=3mm]},very thick,draw=primary}
+]
+  \node[processbox] (a) {1. Thu thập \& Tiền xử lý Dữ liệu Đo kiểm Thực tế};
+  \node[processbox,below=of a] (b) {2. Phân loại Nhóm Phụ tải Đặc thù theo Đặc tính Vận hành};
+  \node[processbox,below=of b] (c) {3. Chấm điểm Phạt Tích lũy LoiDem \& Xếp loại Chất lượng};
+  \node[processbox,below=of c] (d) {4. Ghép nối Đoạn văn Nhận xét Đánh giá Hoàn chỉnh};
+  \node[processbox,below=of d] (e) {5. Lập Ma trận Đề xuất Giải pháp Kỹ thuật Khắc phục};
+  \draw[flow] (a) -- (b);
+  \draw[flow] (b) -- (c);
+  \draw[flow] (c) -- (d);
+  \draw[flow] (d) -- (e);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Chi Tiết Các Bước Vận Hành Trong Quy Trình Thuyết Minh}
+
+\begin{enumerate}
+  \item \textbf{Thu thập \& Tiền xử lý dữ liệu đo kiểm:}
+  Trích xuất và tổng hợp chuỗi số liệu đo đạc theo thời gian gồm: điện áp pha ($U_A, U_B, U_C$), dòng điện pha ($I_A, I_B, I_C$), công suất tác dụng ($P$), công suất phản kháng ($Q$), công suất biểu kiến ($S$), hệ số công suất ($\cos\phi$), tổng biến dạng sóng hài điện áp ($THD_V$) và sóng hài dòng điện ($TDD_I$).
+
+  \item \textbf{Phân loại nhóm phụ tải đặc thù (Domain Category):}
+  Dựa trên tên thiết bị và đặc tính công nghệ, phụ tải được phân chia vào các nhóm chức năng chính:
+  \begin{itemize}
+    \item \textbf{Trạm máy biến áp (MBA):} Trạm biến áp phân phối hạ áp.
+    \item \textbf{Biến tần công nghiệp (VFD):} Các bộ biến tần điều khiển tốc độ động cơ.
+    \item \textbf{Máy nén khí biến tần (VSD):} Cụm máy nén khí tự động điều tốc.
+    \item \textbf{Chuyền máy may Servo:} Hệ thống máy may công nghiệp sử dụng động cơ Servo 1 pha.
+    \item \textbf{Hệ thống chiếu sáng LED:} Đèn chiếu sáng nhà xưởng/tòa nhà dùng nguồn xung điện tử.
+    \item \textbf{Hệ thống Chiller / HVAC:} Cụm máy nén làm lạnh trung tâm, quạt AHU và bơm nước.
+    \item \textbf{Trung tâm dữ liệu / UPS:} Bộ lưu điện UPS và phòng máy chủ vận hành 24/7.
+    \item \textbf{Inverter Điện mặt trời (PV):} Bộ biến tần hòa lưới điện mặt trời mái nhà.
+    \item \textbf{Máy hàn / Lò công nghiệp:} Thiết bị hàn inverter và lò điện đóng ngắt xung.
+  \end{itemize}
+
+  \item \textbf{Chấm điểm phạt tích lũy LoiDem:}
+  So sánh từng chỉ tiêu kỹ thuật với các ngưỡng dung sai (đã điều chỉnh thích ứng theo loại tải) để tính điểm phạt (0, +1, hoặc +2 điểm). Tổng điểm phạt tích lũy xác định xếp loại chất lượng vận hành: \textbf{Tốt} ($0\div2$), \textbf{Tương đối tốt} ($3\div4$), hoặc \textbf{Chưa thực sự tốt} ($\ge5$).
+
+  \item \textbf{Tổng hợp đoạn văn nhận xét hoàn chỉnh:}
+  Ứng dụng phương pháp ghép nối mệnh đề logic, xử lý gộp câu đa chỉ tiêu vi phạm, loại bỏ lặp từ mạo đầu và chuẩn hóa thuật ngữ để tạo ra đoạn văn nhận xét đánh giá chuyên nghiệp.
+
+  \item \textbf{Lập ma trận đề xuất giải pháp kỹ thuật khắc phục:}
+  Đưa ra các giải pháp xử lý công trình tương ứng với từng chỉ tiêu vi phạm điểm phạt.
+\end{enumerate}
+
+\clearpage
+\section{Hướng Dẫn Chi Tiết Đánh Giá 6 Chỉ Tiêu Điện Năng}
+
+\subsection{\texorpdfstring{Hệ Số Công Suất ($\cos\phi$)}{Hệ Số Công Suất (cos phi)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Hệ số công suất ($\cos\phi$) đo lường góc lệch pha giữa điện áp và dòng điện, phản ánh tỷ lệ giữa công suất tác dụng $P$ (kW) sinh công hữu ích và công suất biểu kiến $S$ (kVA) cấp từ lưới điện:
+\begin{equation}
+  \cos\phi = \frac{P}{S} = \frac{P}{\sqrt{P^2 + Q^2}}
+\end{equation}
+Khi hệ số công suất thấp ($\cos\phi < 0{,}90$), dòng điện tổng $I = \frac{S}{\sqrt{3}U}$ tăng cao, gây ra các tác hại:
+\begin{itemize}
+  \item Phạt tiền công suất phản kháng $Q$ (kVARh) theo quy định của Bộ Công Thương (Thông tư 15/2014/TT-BCT).
+  \item Tăng tổn thất công suất tác dụng trên đường dây: $\Delta P = 3 I^2 R = \frac{P^2 + Q^2}{U^2} R$.
+  \item Gây sụt áp cuối đường dây và giảm khả năng mang tải của Máy biến áp.
+\end{itemize}
+
+\subsubsection{b) Chuẩn Đánh Giá \& Tiêu Chuẩn Áp Dụng}
+\begin{itemize}
+  \item \textbf{Máy biến áp (MBA):} Ngưỡng an toàn tối thiểu $|\cos\phi| \ge 0{,}90$.
+  \item \textbf{Thiết bị / Phụ tải hạ áp:} Ngưỡng an toàn tối thiểu $|\cos\phi| \ge 0{,}80$.
+\end{itemize}
+
+\subsubsection{c) Thang Điểm Phạt Trong Thuật Toán LoiDem}
+\begin{equation}
+  \text{Điểm phạt}_{\cos\phi} = 
+  \begin{cases} 
+    0 & \text{nếu } |\cos\phi| \ge \text{Ngưỡng chuẩn} \quad (\text{Đạt chuẩn}) \\
+    +1 & \text{nếu } 0{,}70 \le |\cos\phi| < \text{Ngưỡng chuẩn} \quad (\text{Cảnh báo cos}\phi \text{ thấp}) \\
+    +2 & \text{nếu } |\cos\phi| < 0{,}70 \quad (\text{Vi phạm nặng: Bắt buộc cải thiện})
+  \end{cases}
+\end{equation}
+
+---
+
+\subsection{\texorpdfstring{Độ Lệch Điện Áp Danh Định ($\delta U$)}{Độ Lệch Điện Áp Danh Định (delta U)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Độ lệch điện áp đo lường mức trôi của điện áp cực đại ($U_{\max}$) và cực tiểu ($U_{\min}$) trong suốt chu kỳ khảo sát so với điện áp danh định $V_{\mathrm{ref}}$ ($380\,\mathrm{V}$ hoặc $400\,\mathrm{V}$):
+\begin{equation}
+  \delta U_{\mathrm{lo}} = \frac{U_{\min} - V_{\mathrm{ref}}}{V_{\mathrm{ref}}} \times 100\%, \qquad
+  \delta U_{\mathrm{hi}} = \frac{U_{\max} - V_{\mathrm{ref}}}{V_{\mathrm{ref}}} \times 100\%
+\end{equation}
+
+Tác hại của biến động điện áp:
+\begin{itemize}
+  \item \textbf{Quá áp ($\delta U > +5\%$):} Gây chọc thủng cách điện, giảm tuổi thọ tụ bù, tăng phát nóng lõi thép MBA và hư hỏng thiết bị điện tử nhạy cảm.
+  \item \textbf{Sụt áp ($\delta U < -5\%$):} Làm động cơ không phát đủ mô-men kéo, tăng dòng điện vận hành gây nóng cuộn dây, hoặc làm ngắt rơ-le thấp áp của biến tần.
+\end{itemize}
+
+\subsubsection{b) Chuẩn Đánh Giá \& Tiêu Chuẩn Áp Dụng}
+Theo Quy định Hệ thống điện phân phối (Thông tư 39/2015/TT-BCT và Thông tư 30/2019/TT-BCT), dải điện áp cho phép trong điều kiện vận hành bình thường là $\pm 5{,}0\%$.
+
+\subsubsection{c) Thang Điểm Phạt Trong Thuật Toán LoiDem}
+\begin{equation}
+  \text{Điểm phạt}_{\delta U} = 
+  \begin{cases} 
+    0 & \text{nếu } -5{,}0\% \le \delta U_{\mathrm{lo}} \text{ và } \delta U_{\mathrm{hi}} \le +5{,}0\% \quad (\text{Điện áp ổn định}) \\
+    +1 & \text{nếu trôi trong dải } \pm 5{,}0\% \to \pm 10{,}0\% \quad (\text{Điện áp dao động nhẹ}) \\
+    +2 & \text{nếu } \delta U_{\mathrm{lo}} < -10{,}0\% \text{ hoặc } \delta U_{\mathrm{hi}} > +10{,}0\% \quad (\text{Trôi áp nghiêm trọng})
+  \end{cases}
+\end{equation}
+
+---
+
+\subsection{\texorpdfstring{Mất Cân Bằng Dòng Điện ($\Delta I$)}{Mất Cân Bằng Dòng Điện (Delta I)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Độ mất cân bằng dòng điện $\Delta I$ đánh giá sự chênh lệch dòng tải giữa 3 pha $A, B, C$ so với dòng điện trung bình $I_{\mathrm{avg}} = \frac{I_A + I_B + I_C}{3}$:
+\begin{equation}
+  \Delta I = \frac{\max\left(|I_A - I_{\mathrm{avg}}|, |I_B - I_{\mathrm{avg}}|, |I_C - I_{\mathrm{avg}}|\right)}{I_{\mathrm{avg}}} \times 100\%
+\end{equation}
+Khi mất cân bằng dòng điện xảy ra:
+\begin{itemize}
+  \item Xuất hiện dòng điện chạy trên dây trung tính $I_N = \vec{I}_A + \vec{I}_B + \vec{I}_C \neq 0$, gây phát nhiệt trên dây N và rủi ro đứt dây trung tính gây dâng áp pha phá hủy thiết bị 1 pha.
+  \item Tạo ra thành phần dòng điện thứ tự ngược ($I_2$) gây từ trường quay ngược trong động cơ 3 pha, hãm mô-men quay và gây phát nóng stator.
+\end{itemize}
+
+\subsubsection{b) Dung Sai Thích Ứng Theo Nhóm Phụ Tải}
+Do đặc thù đóng ngắt nhịp và phân bổ tải 1 pha, thuật toán LoiDem áp dụng dung sai linh hoạt:
+\begin{itemize}
+  \item \textbf{Phụ tải tiêu chuẩn 3 pha (MBA, Động cơ 3 pha, Chiller):} Ngưỡng trung bình $10{,}0\%$, Ngưỡng cao $20{,}0\%$.
+  \item \textbf{Phụ tải đặc thù (Máy may Servo, Chiếu sáng LED, Tòa nhà 1 pha):} Ngưỡng trung bình $15{,}0\%$, Ngưỡng cao $25{,}0\%$.
+\end{itemize}
+
+\subsubsection{c) Thang Điểm Phạt Trong Thuật Toán LoiDem}
+\begin{equation}
+  \text{Điểm phạt}_{\Delta I} = 
+  \begin{cases} 
+    0 & \text{nếu } \Delta I \le \text{Ngưỡng trung bình} \quad (\text{Cân bằng pha tốt}) \\
+    +1 & \text{nếu } \text{Ngưỡng trung bình} < \Delta I \le \text{Ngưỡng cao} \quad (\text{Lệch pha mức trung bình}) \\
+    +2 & \text{nếu } \Delta I > \text{Ngưỡng cao} \quad (\text{Lệch pha nghiêm trọng: Cần đảo pha})
+  \end{cases}
+\end{equation}
+
+---
+
+\subsection{\texorpdfstring{Sóng Hài Điện Áp ($THD_V$) \& Dòng Điện ($TDD_I$)}{Sóng Hài Điện Áp (THD V) & Dòng Điện (TDD I)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Sóng hài là các thành phần dòng điện/điện áp có tần số là bội số của tần số cơ bản ($50\,\mathrm{Hz}$), phát sinh từ các phụ tải phi tuyến (bộ chỉnh lưu bán dẫn, biến tần VFD/VSD, LED driver, máy hàn, lò hồ quang):
+\begin{equation}
+  THD_V = \frac{\sqrt{\sum_{h=2}^{50} U_h^2}}{U_1} \times 100\%, \qquad
+  TDD_I = \frac{\sqrt{\sum_{h=2}^{50} I_h^2}}{I_L} \times 100\%
+\end{equation}
+Trong đó $I_L$ là dòng điện tải cực đại danh định (Maximum demand load current). 
+
+Tác hại sóng hài:
+\begin{itemize}
+  \item Gây cộng hưởng $LC$ giữa cuộn kháng lưới và tụ bù, gây nổ tụ điện.
+  \item Tăng tổn thất do hiệu ứng bề mặt (Skin effect) và hiệu ứng tiệm cận (Proximity effect) trên dây dẫn.
+  \item Sóng hài dòng thứ tự bội 3 ($h=3, 9, 15$) tích tụ trên dây trung tính gây quá nhiệt dây N.
+\end{itemize}
+
+\subsubsection{b) Chuẩn Đánh Giá \& Dung Sai Thích Ứng}
+
+\paragraph{1. Sóng hài điện áp ($THD_V$):}
+\begin{itemize}
+  \item $THD_V \le 8{,}0\%$: \textbf{0 điểm} (Đạt tiêu chuẩn TCVN / IEEE 519-2014).
+  \item $8{,}0\% < THD_V \le 12{,}0\%$: \textbf{+1 điểm} (Cảnh báo sóng hài áp).
+  \item $THD_V > 12{,}0\%$: \textbf{+2 điểm} (Vi phạm nghiêm trọng: Nguy cơ nổ tụ bù).
+\end{itemize}
+
+\paragraph{2. Sóng hài dòng điện ($TDD_I$):}
+Ngưỡng cơ sở $TDD_{\mathrm{lim}}$:
+\begin{itemize}
+  \item Phụ tải công suất lớn ($P > 50\,\mathrm{kW}$), MBA, hoặc phụ tải phi tuyến: $TDD_{\mathrm{lim}} = 12{,}0\%$.
+  \item Phụ tải công suất nhỏ ($\le 50\,\mathrm{kW}$) hoặc tải thường: $TDD_{\mathrm{lim}} = 20{,}0\%$.
+\end{itemize}
+
+Hệ số nắn dung sai $mult$ theo loại tải:
+\begin{itemize}
+  \item Phụ tải phi tuyến công nghiệp (VSD, VFD, Servo, Chiếu sáng, Chiller, Lò hàn): Hệ số trung bình $1{,}5$, Hệ số cao $2{,}5$.
+  \item Phụ tải thường: Hệ số trung bình $1{,}0$, Hệ số cao $2{,}0$.
+\end{itemize}
+
+\subsubsection{c) Thang Điểm Phạt Sóng Hài Dòng Điện}
+\begin{equation}
+  \text{Điểm phạt}_{TDD_I} = 
+  \begin{cases} 
+    0 & \text{nếu } TDD_I \le \text{Hệ số trung bình} \times TDD_{\mathrm{lim}} \\
+    +1 & \text{nếu } \text{Hệ số trung bình} \times TDD_{\mathrm{lim}} < TDD_I \le \text{Hệ số cao} \times TDD_{\mathrm{lim}} \\
+    +2 & \text{nếu } TDD_I > \text{Hệ số cao} \times TDD_{\mathrm{lim}}
+  \end{cases}
+\end{equation}
+
+---
+
+\subsection{\texorpdfstring{Mất Cân Bằng Điện Áp ($\Delta U$)}{Mất Cân Bằng Điện Áp (Delta U)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Mất cân bằng điện áp giữa các pha hạ áp được tính theo tiêu chuẩn NEMA:
+\begin{equation}
+  \Delta U = \frac{\max\left(|U_{AB} - U_{\mathrm{avg}}|, |U_{BC} - U_{\mathrm{avg}}|, |U_{CA} - U_{\mathrm{avg}}|\right)}{U_{\mathrm{avg}}} \times 100\%
+\end{equation}
+Mất cân bằng áp chỉ $1\%$ có thể tạo ra dòng điện thứ tự ngược $I_2$ chiếm $6\% \div 10\%$ dòng định mức động cơ, làm giảm công suất kéo của động cơ (Derating factor) và tăng phát nóng stator.
+
+\subsubsection{b) Thang Điểm Phạt Trong Thuật Toán LoiDem}
+\begin{equation}
+  \text{Điểm phạt}_{\Delta U \text{ (lệch áp)}} = 
+  \begin{cases} 
+    0 & \text{nếu } \Delta U \le 3{,}0\% \quad (\text{Vận hành an toàn}) \\
+    +1 & \text{nếu } 3{,}0\% < \Delta U \le 5{,}0\% \quad (\text{Cảnh báo lệch áp}) \\
+    +2 & \text{nếu } \Delta U > 5{,}0\% \quad (\text{Vi phạm nghiêm trọng tiêu chuẩn an toàn})
+  \end{cases}
+\end{equation}
+
+---
+
+\subsection{\texorpdfstring{Mức Mang Tải \& Quá Tải ($\%P_{\text{đm}}$)}{Mức Mang Tải & Quá Tải (phần trăm P định mức)}}
+
+\subsubsection{a) Ý Nghĩa Kỹ Thuật \& Cơ Sở Toán Học}
+Tỷ lệ mang tải ($\text{Load\_Pct}$) so với công suất thiết kế định mức $S_{\text{đm,kVA}}$ hoặc $P_{\text{đm,kW}}$:
+\begin{equation}
+  \text{Load\_Pct} = \frac{S_{\mathrm{kVA}}}{S_{\text{đm,kVA}}} \times 100\% = \frac{P_{\mathrm{kW}} / |\cos\phi|}{S_{\text{đm,kVA}}} \times 100\%
+\end{equation}
+Vận hành quá tải kéo dài sinh nhiệt phá hủy cách điện cuộn dây (Quy tắc Arrhenius: Nhiệt độ tăng $8^\circ\mathrm{C}$ làm giảm $50\%$ tuổi thọ cách điện) và gây nguy cơ nhảy aptomat tổng.
+
+\subsubsection{b) Thang Điểm Phạt Trong Thuật Toán LoiDem}
+\begin{equation}
+  \text{Điểm phạt}_{\text{Quá tải}} = 
+  \begin{cases} 
+    0 & \text{nếu } \text{Load\_Pct} \le 105{,}0\% \quad (\text{Vận hành đúng/dưới định mức}) \\
+    +1 & \text{nếu } 105{,}0\% < \text{Load\_Pct} \le 120{,}0\% \quad (\text{Mang tải cao, cận quá tải}) \\
+    +2 & \text{nếu } \text{Load\_Pct} > 120{,}0\% \quad (\text{Quá tải nghiêm trọng: Nguy cơ sự cố})
+  \end{cases}
+\end{equation}
+
+\clearpage
+\section{Ma Trận Chẩn Đoán và Thang Xếp Loại LoiDem}
+
+\subsection{Bảng Ma Trận Tổng Hợp Điểm Phạt Tích Lũy (LoiDem)}
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.0cm}
+                  >{\centering\arraybackslash}p{1.4cm}
+                  >{\raggedright\arraybackslash}p{3.5cm}
+                  >{\raggedright\arraybackslash}p{3.8cm}
+                  >{\raggedright\arraybackslash}p{3.5cm}}
+\toprule
+\rowcolor{primary}
+\color{white}\textbf{Chỉ tiêu kỹ thuật} & \color{white}\textbf{Ký hiệu} &
+\color{white}\textbf{Ngưỡng an toàn (0 điểm)} & \color{white}\textbf{Phạt nhẹ (+1 điểm)} &
+\color{white}\textbf{Phạt nặng (+2 điểm)} \\
+\midrule
+\textbf{Hệ số công suất} & $\cos\phi$ &
+$\ge0{,}90$ (MBA) / $\ge0{,}80$ (Khác) &
+$0{,}70\le\cos\phi<\text{Ngưỡng}$ & $\cos\phi<0{,}70$ \\
+\rowcolor{lightgray}
+\textbf{Lệch điện áp} & $\delta U$ & Trong khoảng $\pm5{,}0\%$ &
+Vượt $\pm5{,}0\%$ đến $\pm10{,}0\%$ & Vượt quá $\pm10{,}0\%$ \\
+\textbf{Mất cân bằng dòng} & $\Delta I$ &
+$\le10\%$ (Thường) / $\le15\%$ (Servo/1P) &
+$>10\%\to20\%$ / $>15\%\to25\%$ &
+$>20\%$ (Thường) / $>25\%$ (Đặc thù) \\
+\rowcolor{lightgray}
+\textbf{Sóng hài điện áp} & $THD_V$ & $\le8{,}0\%$ &
+$>8{,}0\%\to12{,}0\%$ & $>12{,}0\%$ \\
+\textbf{Sóng hài dòng điện} & $TDD_I$ &
+$\le \text{Hệ số}_{\mathrm{mid}} \times TDD_{\mathrm{lim}}$ &
+$>\text{Hệ số}_{\mathrm{mid}}TDD_{\mathrm{lim}} \to \text{Hệ số}_{\mathrm{high}}TDD_{\mathrm{lim}}$ &
+$>\text{Hệ số}_{\mathrm{high}}TDD_{\mathrm{lim}}$ \\
+\rowcolor{lightgray}
+\textbf{Mất cân bằng áp} & $\Delta U$ & $\le3{,}0\%$ &
+$>3{,}0\%\to5{,}0\%$ & $>5{,}0\%$ \\
+\textbf{Quá tải công suất} & $\%P_{\text{đm}}$ & $\le105{,}0\%$ &
+$>105{,}0\%\to120{,}0\%$ & $>120{,}0\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Phân Cấp Xếp Loại Chất Lượng Vận Hành}
+
+Dựa trên tổng điểm phạt tích lũy $\mathrm{LoiDem} = \sum \text{Điểm phạt}_i$:
+
+\begin{table}[htbp]
+\centering
+\begin{tabularx}{\textwidth}{>{\centering\arraybackslash}p{2.8cm}
+                              >{\centering\arraybackslash}p{3.5cm}Y}
+\toprule
+\rowcolor{primary}
+\color{white}\textbf{Tổng điểm LoiDem} & \color{white}\textbf{Đánh giá vận hành} &
+\color{white}\textbf{Ý nghĩa kỹ thuật \& Hành động đề xuất} \\
+\midrule
+\textbf{$0\div2$ điểm} & \textbf{\color{darkgreen}Tốt} & Thiết bị vận hành an toàn, ổn định. Tất cả các thông số đo đạc đều đạt chuẩn quy định. Không cần can thiệp kỹ thuật. \\
+\rowcolor{lightgray}
+\textbf{$3\div4$ điểm} & \textbf{\color{warningyellow}Tương đối tốt} & Xuất hiện 1--2 chỉ tiêu cận hoặc vượt nhẹ ngưỡng cảnh báo. Cần lập kế hoạch theo dõi và bảo dưỡng định kỳ. \\
+\textbf{$\ge5$ điểm} & \textbf{\color{accent}Chưa thực sự tốt} & Có vi phạm nghiêm trọng hoặc xuất hiện nhiều vi phạm đồng thời. Bắt buộc phải triển khai giải pháp kỹ thuật khắc phục. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Cơ Sở Logic Chẩn Đoán và Quy Trình Chấm Điểm Phạt Tích Lũy}
+
+Quy trình chẩn đoán điểm phạt tích lũy LoiDem được thực hiện qua các bước tính toán logic định tính và định lượng tuần tự:
+
+\begin{enumerate}
+  \item \textbf{Đánh giá Hệ số công suất $\cos\phi$:}
+  Kiểm tra giá trị tuyệt đối $|\cos\phi|$. Nếu $|\cos\phi| < 0{,}70$, cộng ngay **+2 điểm phạt** (vi phạm nghiêm trọng nguy cơ phạt tiền kVARh cao). Nếu $0{,}70 \le |\cos\phi| < \text{Ngưỡng}$ ($0{,}90$ cho MBA, $0{,}80$ cho tải khác), cộng **+1 điểm phạt** cảnh báo.
+
+  \item \textbf{Đánh giá Trôi điện áp $\delta U$:}
+  So sánh độ lệch điện áp cực tiểu và cực đại so với dải danh định. Nếu điện áp trôi vượt ngoài khoảng $\pm 10{,}0\%$, cộng **+2 điểm phạt**. Nếu dao động trong khoảng $\pm 5{,}0\% \to \pm 10{,}0\%$, cộng **+1 điểm phạt**.
+
+  \item \textbf{Đánh giá Mất cân bằng dòng điện $\Delta I$:}
+  Xác định ngưỡng dung sai thích ứng theo nhóm tải. Nếu $\Delta I$ vượt ngưỡng cao ($20\%$ cho tải thường, $25\%$ cho tải đặc thù), cộng **+2 điểm phạt**. Nếu nằm trong dải trung bình đến cao, cộng **+1 điểm phạt**.
+
+  \item \textbf{Đánh giá Sóng hài ($THD_V$ và $TDD_I$):}
+  Đánh giá biến dạng áp và dòng điện. Nếu $THD_V > 12{,}0\%$, cộng **+2 điểm phạt** (nguy cơ cộng hưởng nổ tụ bù). Với sóng hài dòng $TDD_I$, so sánh với ngưỡng nắn dung sai của loại tải để cộng điểm phạt tương ứng +1 hoặc +2.
+
+  \item \textbf{Tổng hợp xếp loại cuối cùng:}
+  Tích lũy toàn bộ các điểm phạt trên để tính tổng điểm `LoiDem`. Điểm tổng từ 0 đến 2 kết luận chất lượng **Tốt**; từ 3 đến 4 kết luận **Tương đối tốt**; từ 5 điểm trở lên kết luận **Chưa thực sự tốt**.
+\end{enumerate}
+
+\clearpage
+\section{Cấu Trúc Đoạn Nhận Xét Đánh Giá Hoàn Chỉnh}
+
+Đoạn văn nhận xét chất lượng điện năng hoàn chỉnh trong báo cáo kỹ thuật được phối hợp từ các thành phần thuyết minh logic nhằm đảm bảo sự đa dạng văn phong, chính xác về số liệu và chặt chẽ về mặt logic kỹ thuật.
+
+\subsection{Cấu Trúc Đoạn Nhận Xét Cho Máy Biến Áp (MBA)}
+Đoạn văn nhận xét hoàn chỉnh cho trạm MBA gồm \textbf{5 thành phần câu nối tiếp}:
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=3.5mm,
+  mbanode/.style={draw=primary,fill=secondary!50,rounded corners=2pt,
+    minimum height=9mm,text width=11.5cm,align=left,font=\sffamily\small},
+  arrow/.style={-{Latex[length=2.5mm]},thick,draw=primary}
+]
+  \node[mbanode] (m1) {\textbf{Câu 1:} Mức mang tải theo \% công suất thiết kế ($S_{\mathrm{kVA}} / S_{\text{đm,kVA}}$)};
+  \node[mbanode,below=of m1] (m2) {\textbf{Câu 2:} Đặc tính biểu đồ dòng điện tiêu thụ (ổn định, dao động, Load/Unload)};
+  \node[mbanode,below=of m2] (m3) {\textbf{Câu 3:} Đánh giá chất lượng tổng quan (\textbf{Tốt}/\textbf{Tương đối tốt}/\textbf{Chưa thực sự tốt}) + độ lệch pha $\Delta U, \Delta I$ + hệ số $\cos\phi$};
+  \node[mbanode,below=of m3] (m4) {\textbf{Câu 4 (nếu có):} Phân tích nguyên nhân kỹ thuật mất cân bằng hạ nguồn};
+  \node[mbanode,below=of m4] (m5) {\textbf{Câu 5:} Câu chốt dẫn dắt tới bảng tổng hợp số liệu đo kiểm};
+  \draw[arrow] (m1) -- (m2);
+  \draw[arrow] (m2) -- (m3);
+  \draw[arrow] (m3) -- (m4);
+  \draw[arrow] (m4) -- (m5);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Cấu Trúc Đoạn Nhận Xét Cho Thiết Bị / Phụ Tải (Device)}
+Đối với các thiết bị phụ tải hạ áp thông thường, đoạn nhận xét gồm \textbf{7 thành phần câu}:
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=3.5mm,
+  devnode/.style={draw=primary,fill=lightgray!80,rounded corners=2pt,
+    minimum height=8.5mm,text width=11.5cm,align=left,font=\sffamily\small},
+  arrow/.style={-{Latex[length=2.5mm]},thick,draw=primary}
+]
+  \node[devnode] (d1) {\textbf{Câu 1:} Công suất tiêu thụ $P$ (kW) \& tỷ lệ \% mang tải so với $P_{\text{đm}}$};
+  \node[devnode,below=of d1] (d2) {\textbf{Câu 2:} Mở đầu đánh giá chất lượng điện tổng quan (\textbf{Tốt}/\textbf{Tương đối tốt}/\textbf{Chưa tốt})};
+  \node[devnode,below=of d2] (d3) {\textbf{Câu 3:} Đặc tính đồ thị dòng điện \& công suất theo loại phụ tải};
+  \node[devnode,below=of d3] (d4) {\textbf{Câu 4:} Đánh giá hệ số công suất $\cos\phi$};
+  \node[devnode,below=of d4] (d5) {\textbf{Câu 5:} Điện áp dao động $(U_{\min} \div U_{\max})$ \& độ lệch chuẩn $\delta U$};
+  \node[devnode,below=of d5] (d6) {\textbf{Câu 6:} Câu ghép nhận xét Lệch pha ($\Delta U, \Delta I$) \& Sóng hài ($THD_V, TDD_I$)};
+  \node[devnode,below=of d6] (d7) {\textbf{Câu 7:} Nguyên nhân kỹ thuật đặc thù theo công nghệ phụ tải};
+  \draw[arrow] (d1) -- (d2);
+  \draw[arrow] (d2) -- (d3);
+  \draw[arrow] (d3) -- (d4);
+  \draw[arrow] (d4) -- (d5);
+  \draw[arrow] (d5) -- (d6);
+  \draw[arrow] (d6) -- (d7);
+\end{tikzpicture}
+\end{center}
+
+\clearpage
+\section{Quy Tắc Ghép Câu và Tối Ưu Văn Phong Chẩn Đoán}
+
+\subsection{Kỹ Thuật Ghép Câu Đa Chỉ Tiêu Vi Phạm Trong Văn Phong Báo Cáo}
+
+Trong quá trình chẩn đoán, khi một thiết bị ghi nhận **từ 2 chỉ tiêu vi phạm trở lên**, việc trình bày bằng các câu đơn rời rạc sẽ làm đoạn văn bị lặp từ và thiếu tính mượt mà kỹ thuật. Quy tắc xử lý gộp câu được triển khai theo nguyên tắc:
+\begin{itemize}
+  \item Gom toàn bộ các chỉ tiêu **đạt chuẩn** vào mệnh đề đầu tiên.
+  \item Gom toàn bộ các chỉ tiêu **vượt chuẩn** vào mệnh đề thứ hai, liên kết bằng liên từ *"tuy nhiên..."*.
+\end{itemize}
+
+\begin{warningbox}[title=So Sánh Văn Phong Trước \& Sau Khi Áp Dụng Ghép Câu Đa Chỉ Tiêu]
+\textbf{Chưa gộp câu (Văn phong rời rạc, lặp từ):}
+\begin{quote}
+"Tổng biến dạng sóng hài điện áp ở mức cho phép ($THD_{\max} = 3{,}2\% < 8{,}0\%$). Độ lệch pha điện áp ở mức thấp ($\Delta U = 1{,}2\% < 5{,}0\%$). Độ lệch pha dòng điện vượt mức cho phép ($\Delta I = 18{,}5\% > 10{,}0\%$). Tổng biến dạng sóng hài dòng điện vượt mức cho phép ($TDD_{\max} = 24{,}2\% > 12{,}0\%$)."
+\end{quote}
+
+\textbf{Sau khi áp dụng gộp câu đa chỉ tiêu (Văn phong báo cáo chuyên nghiệp):}
+\begin{quote}
+\textbf{"Tổng biến dạng sóng hài điện áp và độ lệch pha điện áp ở mức cho phép ($THD_{\max} = 3{,}2\% < 8{,}0\%$; $\Delta U = 1{,}2\% < 5{,}0\%$); tuy nhiên, độ lệch pha dòng điện và tổng biến dạng sóng hài dòng điện đều vượt mức cho phép ($\Delta I = 18{,}5\% > 10{,}0\%$; $TDD_{\max} = 24{,}2\% > 12{,}0\%$)."}\end{quote}
+\end{warningbox}
+
+\subsection{Khử Lặp Cụm Từ Mở Đầu \& Tối Ưu Thuật Ngữ}
+\begin{enumerate}
+  \item \textbf{Khử lặp từ mạo đầu (Deduplication):}
+  Tự động kiểm soát sự lặp lại của các cụm từ mạo đầu như *"Tại thời điểm khảo sát,"*, *"Kết quả đo kiểm cho thấy,"*, *"Dữ liệu đo kiểm ghi nhận,"* trong cùng một đoạn văn và thay thế bằng các từ nối hợp lý.
+  \item \textbf{Rút gọn thuật ngữ theo đặc tính tải:}
+  Đối với các phụ tải có đồ thị dòng điện vận hành phẳng, ổn định (như tủ chiếu sáng, MBA hạ áp), thuật ngữ *"công suất tức thời"* được rút gọn thành *"công suất"* để tránh tạo cảm giác sai lệch rằng phụ tải đang bị biến động mạnh.
+\end{enumerate}
+
+\subsection{Bản Đồ Phân Tích Nguyên Nhân Kỹ Thuật Theo Loại Phụ Tải}
+
+\begin{description}[style=nextline,leftmargin=1.5em,labelindent=0pt,itemsep=0.6em]
+  \item[\textbf{Biến tần công nghiệp (VFD)}]
+  Sóng hài dòng điện ở mức cao xuất phát từ nguyên lý đóng ngắt phi tuyến của bộ chỉnh lưu bán dẫn 6 xung trong biến tần.
+
+  \item[\textbf{Máy nén khí biến tần (VSD)}]
+  Biến dạng sóng hài dòng điện do bộ điều khiển VSD tự động biến đổi tần số để điều chỉnh tốc độ motor theo nhu cầu áp suất khí nén.
+
+  \item[\textbf{Chuyền máy may Servo}]
+  Mất cân bằng dòng điện và sóng hài tăng cao do phân bổ phụ tải 1 pha chưa đều nhấp nhô theo nhịp may, kết hợp với các bộ điều khiển servo đóng ngắt độc lập.
+
+  \item[\textbf{Hệ thống chiếu sáng LED}]
+  Sóng hài dòng điện (đặc biệt là sóng hài bậc 3, 5, 7) sinh ra từ bộ nguồn xung (LED driver/ballast điện tử), kết hợp với việc chia tuyến dây 1 pha lệch pha giữa các khu vực.
+
+  \item[\textbf{Hệ thống Chiller / HVAC}]
+  Sóng hài dòng điện xuất phát từ khối biến tần điều tốc tích hợp trong cụm máy nén Chiller và hệ thống quạt AHU/bơm nước lạnh.
+
+  \item[\textbf{UPS / Phòng Server / Data Center}]
+  Sóng hài dòng điện là đặc tính kỹ thuật phổ biến ở trung tâm dữ liệu, tạo ra bởi bộ chỉnh lưu đầu vào UPS và mật độ cao các nguồn xung SMPS vận hành 24/7.
+
+  \item[\textbf{Inverter Điện mặt trời}]
+  Sóng hài dòng điện do đặc tính đóng ngắt tần số cao của bộ Inverter hòa lưới, đặc biệt khi hệ thống vận hành ở dải công suất phát nhẹ.
+
+  \item[\textbf{Máy hàn / Lò công nghiệp}]
+  Xung dòng nhọn và sóng hài dòng điện cao do đặc tính vận hành ngắn hạn, đóng ngắt tải xung gián đoạn của bộ nguồn hàn chỉnh lưu.
+
+  \item[\textbf{Máy biến áp hạ áp}]
+  Mất cân bằng dòng điện tại hạ áp MBA do phụ tải 1 pha hạ nguồn phân bổ không đồng đều giữa các pha, tạo dòng chạy trên dây trung tính.
+\end{description}
+
+\clearpage
+\section{Ma Trận Đề Xuất Giải Pháp Kỹ Thuật Khắc Phục}
+
+Dựa trên các chỉ tiêu vi phạm điểm phạt trong LoiDem, ma trận đề xuất giải pháp xử lý kỹ thuật tương ứng được thiết lập như sau:
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=4mm,
+  solution/.style={draw=primary,fill=secondary!50,rounded corners=2pt,
+    minimum height=9mm,text width=12cm,align=center,font=\sffamily\small\bfseries},
+  flow/.style={-{Latex[length=2.5mm]},thick,draw=primary}
+]
+  \node[solution,fill=primary,text=white] (root) {Chỉ tiêu vi phạm điểm phạt trong LoiDem};
+  \node[solution,below=of root] (s1) {$\cos\phi < \text{Ngưỡng}$: Lắp đặt Tụ Bù Tự Động APFC / Cuộn Kháng Kháng Sóng Hài};
+  \node[solution,below=of s1] (s2) {$\Delta I > \text{Ngưỡng}$: Đảo Pha \& Cân Bằng Lại Phụ Tải 1 Pha Hạ Nguồn};
+  \node[solution,below=of s2] (s3) {$TDD_I / THD_V > \text{Ngưỡng}$: Lắp Bộ Lọc Tích Cực AHF / Cuộn Kháng Line Reactor};
+  \node[solution,below=of s3] (s4) {$\delta U \text{ Trôi Áp}$: Cân Chỉnh Nấc Phân Áp MBA (OLTC) / Lắp Ổn Áp AVR};
+  \node[solution,below=of s4] (s5) {$\%P_{\text{đm}} > 105\%$: Sa Thải Tải Phụ / Nâng Công Suất MBA \& Aptomat};
+  \draw[flow] (root) -- (s1);
+  \draw[flow] (s1) -- (s2);
+  \draw[flow] (s2) -- (s3);
+  \draw[flow] (s3) -- (s4);
+  \draw[flow] (s4) -- (s5);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Bảng Chi Tiết Đề Xuất Giải Pháp Kỹ Thuật Khắc Phục}
+
+\begin{description}[style=nextline,leftmargin=1.5em,labelindent=0pt,itemsep=0.8em]
+  \item[\color{primary}\textbf{1. Hệ số công suất thấp ($\cos\phi < \text{Ngưỡng}$)}]
+  \textbf{Tình trạng kỹ thuật:} Tiêu tốn công suất phản kháng $Q$ (kVARh), tăng tổn thất $I^2 R$ và nguy cơ bị phạt tiền điện lực.
+  \textbf{Giải pháp khuyến cáo:} Bổ sung dung lượng bù công suất phản kháng.
+  \begin{itemize}
+    \item Lắp đặt hoặc nâng cấp tủ tụ bù tự động (APFC) sử dụng bộ điều khiển vi xử lý.
+    \item Trong môi trường có sóng hài, bắt buộc nối tiếp tụ bù với cuộn kháng lọc sóng hài ($7\%$ để chặn sóng hài bậc 5 hoặc $14\%$ để chặn sóng hài bậc 3).
+  \end{itemize}
+
+  \item[\color{primary}\textbf{2. Mất cân bằng dòng điện ($\Delta I > \text{Ngưỡng}$)}]
+  \textbf{Tình trạng kỹ thuật:} Lệch pha dòng giữa $A, B, C$, sinh dòng trung tính $I_N$ lớn gây phát nhiệt cáp N và dâng áp pha.
+  \textbf{Giải pháp khuyến cáo:} Phân bổ lại phụ tải đơn pha hạ nguồn.
+  \begin{itemize}
+    \item Tiến hành đo ampe kìm từng nhánh phụ tải 1 pha.
+    \item Đảo nối các tuyến máy may, hệ thống đèn chiếu sáng và ổ cắm đều lên 3 pha $A, B, C$.
+    \item Giảm thiểu dòng chạy trên dây trung tính về dưới $10\%$ dòng pha.
+  \end{itemize}
+
+  \item[\color{primary}\textbf{3. Sóng hài dòng điện cao ($TDD_I > \text{Ngưỡng}$)}]
+  \textbf{Tình trạng kỹ thuật:} Dòng điện bị biến dạng dạng sóng do tải phi tuyến (biến tần, LED driver, máy hàn).
+  \textbf{Giải pháp khuyến cáo:} Lọc và dập sóng hài dòng điện.
+  \begin{itemize}
+    \item Lắp cuộn kháng đầu vào (Input Line Reactor $3\% \div 5\%$) tại nguồn cấp cho biến tần.
+    \item Triển khai Bộ lọc sóng hài tích cực (Active Harmonic Filter - AHF) tại busbar tủ điện chính.
+    \item Sử dụng bộ lọc thụ động (Passive Filter) cho cụm máy nén khí VSD.
+  \end{itemize}
+
+  \item[\color{primary}\textbf{4. Sóng hài điện áp nghiêm trọng ($THD_V > 8{,}0\%$)}]
+  \textbf{Tình trạng kỹ thuật:} Sóng hài điện áp làm biến dạng điện áp lưới, nguy cơ nổ tụ bù do cộng hưởng $LC$.
+  \textbf{Giải pháp khuyến cáo:} Cách ly và dập sóng hài áp tổng.
+  \begin{itemize}
+    \item Kiểm tra ngay lập tức hệ thống tụ bù (tránh hiện tượng nổ tụ do cộng hưởng).
+    \item Sử dụng biến áp cách ly (Isolation Transformer) cấp nguồn cho các thiết bị điện tử nhạy cảm.
+    \item Lắp đặt bộ AHF dập sóng hài áp tại trạm biến áp.
+  \end{itemize}
+
+  \item[\color{primary}\textbf{5. Điện áp trôi ngoài dải ($\delta U$ vượt $\pm 5\%$)}]
+  \textbf{Tình trạng kỹ thuật:} Điện áp cấp quá cao gây cháy cách điện hoặc quá thấp làm dừng máy.
+  \textbf{Giải pháp khuyến cáo:} Cân chỉnh điện áp nguồn cấp.
+  \begin{itemize}
+    \item Điều chỉnh nấc phân áp của Máy biến áp phân phối (Tap Changer / OLTC).
+    \item Lắp đặt bộ ổn áp tự động (AVR) cho tuyến điện áp chập chờn.
+    \item Nâng tiết diện cáp nguồn nếu sụt áp do đường dây truyền tải quá xa.
+  \end{itemize}
+
+  \item[\color{primary}\textbf{6. Quá tải công suất ($\%P_{\text{đm}} > 105\%$)}]
+  \textbf{Tình trạng kỹ thuật:} Mức mang tải vượt quá dung lượng thiết kế, nguy cơ nhảy aptomat tổng và cháy thiết bị.
+  \textbf{Giải pháp khuyến cáo:} Giảm tải hoặc nâng cấp hạ tầng cấp điện.
+  \begin{itemize}
+    \item Lập kế hoạch sa thải bớt các phụ tải không ưu tiên trong giờ cao điểm.
+    \item Điều chỉnh lịch vận hành của các cụm máy nén/bơm lệch giờ nhau.
+    \item Nâng công suất Máy biến áp, cáp nguồn và thay aptomat bảo vệ lớn hơn.
+  \end{itemize}
+\end{description}
+
+\clearpage
+\section{Các Ví Dụ Thực Tế Chẩn Đoán \& Nhận Xét Mẫu (Case Studies)}
+
+\subsection{Ví Dụ 1: Máy Biến Áp MBA1 (1600 kVA) --- Xếp Loại Tốt}
+
+\begin{itemize}
+  \item \textbf{Thông số đo đạc:} $P = 980\,\mathrm{kW}$, $\cos\phi = 0{,}96$, $U_{\min} = 376\,\mathrm{V}$, $U_{\max} = 384\,\mathrm{V}$ ($\delta U = \pm 1{,}5\%$), $\Delta I = 6{,}2\%$, $\Delta U = 0{,}8\%$.
+  \item \textbf{Phân tích điểm phạt LoiDem:}
+  \begin{itemize}
+    \item $\cos\phi = 0{,}96 \ge 0{,}90 \Rightarrow 0$ điểm.
+    \item $\delta U = \pm 1{,}5\% \in [-5\%, +5\%] \Rightarrow 0$ điểm.
+    \item $\Delta I = 6{,}2\% \le 10\% \Rightarrow 0$ điểm.
+    \item $\Delta U = 0{,}8\% \le 3\% \Rightarrow 0$ điểm.
+    \item Mang tải: $S = 980 / 0{,}96 = 1020{,}8\,\mathrm{kVA} \Rightarrow 63{,}8\% \le 105\% \Rightarrow 0$ điểm.
+  \end{itemize}
+  \item \textbf{Kết luận:} Điểm LoiDem = 0 $\Rightarrow$ Xếp loại \textbf{\color{darkgreen}Tốt}.
+  \item \textbf{Đoạn nhận xét hoàn chỉnh chuẩn báo cáo kỹ thuật:}
+\end{itemize}
+
+\begin{quote}\itshape
+"Mức mang tải của máy biến áp đạt 63,80\% so với công suất định mức. Biểu đồ dòng điện tiêu thụ tại máy biến áp tương đối ổn định trong thời gian đo kiểm. Dữ liệu đo kiểm cho thấy MBA1 có chất lượng điện ở mức tốt, độ lệch pha điện áp và dòng điện đều ở mức thấp, hệ số công suất $\cos\phi$ ở mức 0,96. Dưới đây là bảng tổng hợp thông số hoạt động của máy biến áp:"
+\end{quote}
+
+---
+
+\subsection{Ví Dụ 2: Máy Nén Khí Biến Tần VSD (75 kW) --- Xếp Loại Tốt}
+
+\begin{itemize}
+  \item \textbf{Thông số đo đạc:} $P = 58\,\mathrm{kW}$, $P_{\text{đm}} = 75\,\mathrm{kW}$, $\cos\phi = 0{,}92$, $U_{\min} = 375{,}4\,\mathrm{V}$, $U_{\max} = 384{,}6\,\mathrm{V}$ ($\delta U = -1{,}2\% \div +1{,}2\%$), $\Delta I = 8{,}5\%$, $THD_V = 4{,}1\%$, $TDD_I = 26{,}5\%$.
+  \item \textbf{Phân tích điểm phạt LoiDem:}
+  \begin{itemize}
+    \item Thuộc nhóm Máy nén khí VSD $\Rightarrow TDD_{\mathrm{lim}} = 12{,}0\%$, Hệ số trung bình = $1{,}5$, Hệ số cao = $2{,}5$.
+    \item Ngưỡng cảnh báo: $1{,}5 \times 12\% = 18{,}0\%$; Ngưỡng cao: $2{,}5 \times 12\% = 30{,}0\%$.
+    \item $TDD_I = 26{,}5\%$ nằm trong $(18{,}0\%, 30{,}0\%] \Rightarrow$ \textbf{+1 điểm} (Cảnh báo sóng hài dòng nhẹ).
+    \item Tất cả chỉ tiêu khác đạt chuẩn $\Rightarrow 0$ điểm.
+  \end{itemize}
+  \item \textbf{Kết luận:} Điểm LoiDem = 1 $\Rightarrow$ Xếp loại \textbf{\color{darkgreen}Tốt}.
+  \item \textbf{Đoạn nhận xét hoàn chỉnh chuẩn báo cáo kỹ thuật:}
+\end{itemize}
+
+\begin{quote}\itshape
+"Công suất tiêu thụ của thiết bị đạt 58 kW (tương đương 84,06\% công suất định mức $P_{\text{đm}} = 75$ kW). Dữ liệu đo kiểm cho thấy Máy nén khí VSD hoạt động với chất lượng điện ở mức tốt. Biểu đồ dòng điện tiêu thụ biến đổi mượt mà theo áp suất khí nén nhờ bộ biến tần VSD điều chỉnh tốc độ động cơ. Hệ số công suất $\cos\phi$ ở mức 0,92. Điện áp dao động từ $375{,}4 \div 384{,}6$ V, độ lệch chuẩn của điện áp $\delta U = (-1{,}2\% \div 1{,}2\%)$, đạt tiêu chuẩn ($-5{,}0\% \le \delta \le 5{,}0\%$). Tổng biến dạng sóng hài điện áp và độ lệch pha dòng điện đều ở mức cho phép ($THD_{\max} = 4{,}1\% < 8{,}0\%$; $\Delta I = 8{,}5\% < 10{,}0\%$); tuy nhiên, tổng biến dạng sóng hài dòng điện ở mức cảnh báo ($TDD_{\max} = 26{,}5\% > 12{,}0\%$). Biến dạng sóng hài dòng điện do đặc tính đóng ngắt phi tuyến của bộ điều khiển VSD máy nén."
+\end{quote}
+
+---
+
+\subsection{Ví Dụ 3: Chuyền Máy May Servo (Xưởng May 2) --- Xếp Loại Tương Đối Tốt}
+
+\begin{itemize}
+  \item \textbf{Thông số đo đạc:} $\cos\phi = 0{,}74$, $U_{\min} = 372\,\mathrm{V}$, $U_{\max} = 388\,\mathrm{V}$ ($\delta U = -2{,}1\% \div +2{,}1\%$), $\Delta I = 18{,}5\%$, $THD_V = 4{,}1\%$, $TDD_I = 35{,}2\%$.
+  \item \textbf{Phân tích điểm phạt LoiDem:}
+  \begin{itemize}
+    \item Thuộc nhóm Chuyền may Servo $\Rightarrow$ Ngưỡng lệch pha trung bình = $15\%$, Ngưỡng cao = $25\%$; $TDD_{\mathrm{lim}} = 12\%$.
+    \item $\cos\phi = 0{,}74 < 0{,}80 \Rightarrow$ \textbf{+1 điểm} (Cảnh báo cos$\phi$ thấp).
+    \item $\Delta I = 18{,}5\% > 15\% \Rightarrow$ \textbf{+1 điểm} (Lệch pha dòng nhẹ do nhịp may).
+    \item $TDD_I = 35{,}2\% > 2{,}5 \times 12\% = 30{,}0\% \Rightarrow$ \textbf{+2 điểm} (Sóng hài dòng cao).
+  \end{itemize}
+  \item \textbf{Kết luận:} Điểm LoiDem = 4 $\Rightarrow$ Xếp loại \textbf{\color{warningyellow}Tương đối tốt}.
+  \item \textbf{Đoạn nhận xét hoàn chỉnh chuẩn báo cáo kỹ thuật:}
+\end{itemize}
+
+\begin{quote}\itshape
+"Dữ liệu đo kiểm cho thấy Chuyền may Servo Xưởng 2 hoạt động với chất lượng điện ở mức tương đối tốt. Biểu đồ dòng điện tiêu thụ dao động liên tục với tần suất cao, phản ánh đúng đặc tính vận hành nhấp nhô theo từng nhịp may của công nhân. Hệ số công suất $\cos\phi$ ở mức 0,74. Điện áp dao động từ $372 \div 388$ V, độ lệch chuẩn của điện áp $\delta U = (-2{,}1\% \div 2{,}1\%)$, đạt tiêu chuẩn ($-5{,}0\% \le \delta \le 5{,}0\%$). Tổng biến dạng sóng hài điện áp ở mức cho phép ($THD_{\max} = 4{,}1\% < 8{,}0\%$); tuy nhiên, độ lệch pha dòng điện và tổng biến dạng sóng hài dòng điện đều vượt mức cho phép ($\Delta I = 18{,}5\% > 15{,}0\%$; $TDD_{\max} = 35{,}2\% > 30{,}0\%$). Sự kết hợp giữa phụ tải đơn pha phân bổ chưa cân đối và đặc tính bán dẫn phi tuyến của bộ điều khiển servo tạo ra hai vấn đề chất lượng điện."
+\end{quote}
+
+\textbf{Đề xuất giải pháp khắc phục:}
+\begin{enumerate}
+  \item Lắp tủ tụ bù công suất phản kháng cho chuyền may để nâng $\cos\phi \ge 0{,}80$.
+  \item Bố trí đảo pha các nhánh máy may giữa 3 pha để hạ độ lệch pha dòng $\Delta I \le 15\%$.
+  \item Nghiên cứu lắp đặt bộ lọc tích cực AHF tại tủ phân phối chuyền may.
+\end{enumerate}
+
+---
+
+\subsection{\texorpdfstring{Ví Dụ 4: Tủ Động Cơ Cũ Bị Quá Tải, Lệch Pha \& Cos$\phi$ Thấp --- Chưa Thực Sự Tốt}{Ví Dụ 4: Tủ Động Cơ Cũ Bị Quá Tải, Lệch Pha và Cos phi Thấp --- Chưa Thực Sự Tốt}}
+
+\begin{itemize}
+  \item \textbf{Thông số đo đạc:} $P = 110\,\mathrm{kW}$, $P_{\text{đm}} = 90\,\mathrm{kW}$, $\cos\phi = 0{,}66$, $U_{\min} = 358\,\mathrm{V}$, $U_{\max} = 392\,\mathrm{V}$ ($\delta U = -5{,}8\% \div +3{,}2\%$), $\Delta I = 23{,}5\%$, $\Delta U = 4{,}2\%$, mang tải $126\%$.
+  \item \textbf{Phân tích điểm phạt LoiDem:}
+  \begin{itemize}
+    \item $\cos\phi = 0{,}66 < 0{,}70 \Rightarrow$ \textbf{+2 điểm}.
+    \item $\delta U_{\min} = -5{,}8\% < -5{,}0\% \Rightarrow$ \textbf{+1 điểm}.
+    \item $\Delta I = 23{,}5\% > 20\% \Rightarrow$ \textbf{+2 điểm}.
+    \item $\Delta U = 4{,}2\% > 3\% \Rightarrow$ \textbf{+1 điểm}.
+    \item Quá tải $= 126\% > 120\% \Rightarrow$ \textbf{+2 điểm}.
+  \end{itemize}
+  \item \textbf{Kết luận:} Điểm LoiDem = 8 $\Rightarrow$ Xếp loại \textbf{\color{accent}Chưa thực sự tốt}.
+  \item \textbf{Đoạn nhận xét hoàn chỉnh chuẩn báo cáo kỹ thuật:}
+\end{itemize}
+
+\begin{quote}\itshape
+"Mức tải thực tế đạt 110 kW ($126{,}00\% P_{\text{đm}}$). Dữ liệu đo kiểm cho thấy Tủ động cơ xưởng cơ khí hoạt động với chất lượng điện ở mức chưa thực sự tốt. Đồ thị dòng điện ghi nhận các bước nhảy công suất lớn và liên tục theo từng chu kỳ vận hành sản xuất. Hệ số công suất $\cos\phi$ ở mức 0,66. Điện áp dao động từ $358 \div 392$ V, độ lệch chuẩn của điện áp $\delta U = (-5{,}8\% \div 3{,}2\%)$, chưa đáp ứng tiêu chuẩn điện áp (vượt giới hạn $\pm 5{,}0\%$). Độ lệch pha điện áp, độ lệch pha dòng điện và mức mang tải đều vượt mức cho phép ($\Delta U = 4{,}2\% > 3{,}0\%$; $\Delta I = 23{,}5\% > 20{,}0\%$; $\mathrm{Load} = 126{,}00\% > 105{,}00\%$). Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
+\end{quote}
+
+\textbf{Đề xuất giải pháp khắc phục khẩn cấp:}
+\begin{enumerate}
+  \item \textbf{Sa thải phụ tải / Nâng công suất cấp nguồn:} Tủ điện đang bị quá tải $126\%$, cần chia tải sang tủ phụ hoặc thay aptomat/cáp nguồn lớn hơn.
+  \item \textbf{Lắp đặt tủ tụ bù tự động APFC:} Nâng hệ số $\cos\phi$ từ $0{,}66$ lên $\ge 0{,}90$ để tránh phạt tiền điện kVARh và giảm dòng điện tổng.
+  \item \textbf{Cân bằng pha:} Kiểm tra đấu nối 3 pha và đảo dây các phụ tải 1 pha để giảm $\Delta I$ từ $23{,}5\%$ xuống $< 10\%$.
+\end{enumerate}
+
+\end{document}
