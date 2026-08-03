@@ -906,8 +906,6 @@ def _pf_phrase(cos_phi: float | None, kind: str = "device") -> str:
     if cos_phi is None or cos_phi != cos_phi:
         return "chưa xác định"
     p = abs(cos_phi)
-    if p >= 0.995:
-        return "rất cao"
     if kind == "mba":
         if p >= 0.9:
             return "cao"
@@ -915,11 +913,15 @@ def _pf_phrase(cos_phi: float | None, kind: str = "device") -> str:
             return "trung bình"
         return "thấp"
     else:
+        if p >= 0.995:
+            return "rất tốt (trên 0,99)"
+        if p >= 0.9:
+            return "tốt (trên 0,9)"
         if p >= 0.8:
-            return "cao"
+            return "cao (trên 0,8)"
         if p >= 0.5:
-            return "trung bình"
-        return "thấp"
+            return "trung bình (dưới 0,8)"
+        return "thấp (dưới 0,8)"
 
 def _compose_short_remark_for_table(
     *,
@@ -1047,7 +1049,7 @@ def _compose_remarks_from_excel_fields(
         du_lo = (u_min - vref) / vref * 100.0
         du_hi = (u_max - vref) / vref * 100.0
 
-    # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) đã nâng cấp (Weighted Severity Scoring) ──
+    # ── Thuật toán "Cờ báo lỗi" (Loi_Dem) nâng cấp tối đa (Domain-aware Weighted Severity) ──
     if kind == "mba" or cat == "mba":
         tdd_lim = _TDD_LIMIT_PCT
     elif p_kw is not None:
@@ -1056,14 +1058,16 @@ def _compose_remarks_from_excel_fields(
         tdd_lim = 12.0
     else:
         tdd_lim = _device_tdd_limit_from_name(name)
+
     loi_dem = 0
 
-    # 1. Hệ số công suất cosφ (Trọng số 1 cho mức vừa < 0.90, 2 cho mức thấp nghiêm trọng < 0.80)
+    # 1. Hệ số công suất cosφ (Trọng số thích ứng theo loại phụ tải)
     if cos_phi is not None:
         abs_p = abs(cos_phi)
-        if abs_p < 0.80:
+        pf_thresh = 0.90 if (kind == "mba" or cat == "mba") else 0.80
+        if abs_p < 0.70:
             loi_dem += 2
-        elif abs_p < _PF_LIMIT:  # 0.90
+        elif abs_p < pf_thresh:
             loi_dem += 1
 
     # 2. Độ lệch điện áp δU (Trọng số 1 cho vượt ±5%, 2 cho vượt ±10%)
@@ -1073,25 +1077,29 @@ def _compose_remarks_from_excel_fields(
         elif du_lo < -_V_DEV_LIMIT_PCT or du_hi > _V_DEV_LIMIT_PCT:  # ±5%
             loi_dem += 1
 
-    # 3. Mất cân bằng dòng điện ΔI (Trọng số 1 cho >10%, 2 cho >20%)
+    # 3. Mất cân bằng dòng điện ΔI (Dung sai linh hoạt cho Servo / 1pha / Chiếu sáng)
     if delta_i is not None:
-        if delta_i > 20.0:
+        di_lim_mid = 15.0 if cat in ("servo_sewing", "lighting", "building_1pha") else 10.0
+        di_lim_high = 25.0 if cat in ("servo_sewing", "lighting", "building_1pha") else 20.0
+        if delta_i > di_lim_high:
             loi_dem += 2
-        elif delta_i > 10.0:
+        elif delta_i > di_lim_mid:
             loi_dem += 1
 
-    # 4. Sóng hài điện áp & dòng điện (Chỉ tính cho thiết bị ngoài MBA)
+    # 4. Sóng hài điện áp & dòng điện (Dung sai cho các phụ tải phi tuyến VSD, VFD, Servo, Lighting...)
     if kind != "mba" and cat != "mba":
         if thd_max is not None:
             if thd_max > 12.0:
                 loi_dem += 2
             elif thd_max > _THDV_LIMIT_PCT:  # 8.0%
                 loi_dem += 1
-        # Sửa lỗi: tdd_max is None KHÔNG bị cộng lỗi (tránh phạt sai khi thiếu dữ liệu)
+
         if tdd_max is not None:
-            if tdd_max > 2.0 * tdd_lim:
+            mult_high = 2.5 if cat in ("vsd_compressor", "vfd_inverter", "servo_sewing", "lighting", "chiller_hvac", "welding_furnace") else 2.0
+            mult_mid = 1.5 if cat in ("vsd_compressor", "vfd_inverter", "servo_sewing", "lighting", "chiller_hvac", "welding_furnace") else 1.0
+            if tdd_max > mult_high * tdd_lim:
                 loi_dem += 2
-            elif tdd_max > tdd_lim:
+            elif tdd_max > mult_mid * tdd_lim:
                 loi_dem += 1
 
     # 5. Mất cân bằng điện áp ΔU (Lỗi nghiêm trọng)
@@ -1104,30 +1112,18 @@ def _compose_remarks_from_excel_fields(
     # 6. Mức mang tải quá tải % Pđm
     if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
         _calc_load_pct = (p_kw / abs(cos_phi)) / pdm_kva * 100.0 if (cos_phi is not None and abs(cos_phi) > 0.01) else (p_kw / pdm_kva) * 100.0
-        if _calc_load_pct > 115.0:
+        if _calc_load_pct > 120.0:
             loi_dem += 2
-        elif _calc_load_pct > 100.0:
+        elif _calc_load_pct > 105.0:
             loi_dem += 1
 
-    # ── Đánh giá chất lượng tổng quan ────────────────────────────────────
-    if kind == "mba":
-        if loi_dem == 0:
-            quality = "tốt"
-        elif loi_dem == 1:
-            quality = "tốt"
-        elif loi_dem == 2:
-            quality = "tương đối tốt"
-        else:
-            quality = "chưa thực sự tốt"
+    # ── Đánh giá chất lượng tổng quan (3 mức: "tốt", "tương đối tốt", "chưa thực sự tốt") ──
+    if loi_dem <= 2:
+        quality = "tốt"
+    elif loi_dem <= 4:
+        quality = "tương đối tốt"
     else:
-        if loi_dem == 0:
-            quality = "tốt"
-        elif loi_dem == 1:
-            quality = "tốt"
-        elif loi_dem == 2:
-            quality = "tương đối tốt"
-        else:
-            quality = "chưa tốt"
+        quality = "chưa thực sự tốt"
 
     # ── Câu Hệ số công suất ───────────────────────────────────────────────
     pf_txt = _pf_phrase(cos_phi, kind=kind)
@@ -1389,14 +1385,20 @@ def _compose_remarks_from_excel_fields(
         mba_openings = remark_templates.get_mba_openings(name_mid, quality)
         chosen_mba_opening = _pick_tpl(mba_openings, "opening_mba")
 
-        _pf_mba_tpl = remark_templates.get_pf_mba_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
-        chosen_pf_mba = _pick_tpl(_pf_mba_tpl, "pf_mba")
-
-        quality_sent = (
-            f"{chosen_mba_opening}, "
-            f"{unbalance_part}, "
-            f"{chosen_pf_mba}."
-        )
+        abs_pf = abs(cos_phi) if cos_phi is not None else 0.0
+        if abs_pf >= 0.9:
+            _pf_mba_tpl = remark_templates.get_pf_mba_templates(pf_txt, abs_pf)
+            chosen_pf_mba = _pick_tpl(_pf_mba_tpl, "pf_mba")
+            quality_sent = (
+                f"{chosen_mba_opening}, "
+                f"{unbalance_part}, "
+                f"{chosen_pf_mba}."
+            )
+        else:
+            quality_sent = (
+                f"{chosen_mba_opening}, "
+                f"{unbalance_part}."
+            )
         mba_parts.append(quality_sent)
 
         if cause_sent:
@@ -1431,62 +1433,83 @@ def _compose_remarks_from_excel_fields(
             load_pct_dev = (p_kw / pdm_kva) * 100.0
 
         pct_s = _pct(load_pct_dev, 2)
-        p_str = _pct(p_kw, 1)
+        p_str = _pct(p_kw, 0)
         pdm_str = f"{pdm_kva:.0f}".replace(".", ",") if pdm_kva.is_integer() else _pct(pdm_kva, 1)
 
         _load_dev_tpl = remark_templates.get_load_dev_templates(load_pct_dev, pct_s, p_str, pdm_str)
         load_sent_dev = _pick_tpl(_load_dev_tpl, "load_dev")
     elif p_kw is not None and p_kw > 0:
-        p_str = _pct(p_kw, 1)
+        p_str = _pct(p_kw, 0)
         _inst_p_tpl = remark_templates.get_inst_power_val_templates(p_str)
         load_sent_dev = _pick_tpl(_inst_p_tpl, "inst_p_val")
 
-    if quality == "chưa tốt":
-        parts: list[str] = []
-        if load_sent_dev:
-            parts.append(load_sent_dev)
-        parts.append(f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm.")
-        parts.append(f"Hệ số công suất cosφ ở mức {pf_txt}.")
-        if volt_sent:
-            parts.append(volt_sent)
-        if unbalance_sent:
-            parts.append(unbalance_sent)
-        if harm_sent:
-            parts.append(harm_sent)
-        if cause_sent:
-            parts.append(cause_sent)
-        return " ".join(parts)
+    openings = remark_templates.get_device_openings(name_mid, quality)
+    chosen_opening = _pick_tpl(openings, "opening_dev")
+
+    _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
+    pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
+
+    if is_repeat_category:
+        wave_sent = f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm."
     else:
-        openings = remark_templates.get_device_openings(name_mid, quality)
-        chosen_opening = _pick_tpl(openings, "opening_dev")
+        _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
+        wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
 
-        _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
-        pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
+    parts: list[str] = []
+    if load_sent_dev:
+        parts.append(load_sent_dev)
 
-        if is_repeat_category:
-            wave_sent = f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm."
-        else:
-            _wave_dev_candidates = remark_templates.get_wave_dev_by_category(cat, wave)
-            wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
+    parts.append(chosen_opening)
+    parts.append(wave_sent)
+    parts.append(pf_sent)
 
-        parts: list[str] = []
-        if load_sent_dev:
-            parts.append(load_sent_dev)
+    if volt_sent:
+        parts.append(volt_sent)
+    if unbalance_sent:
+        parts.append(unbalance_sent)
+    if harm_sent:
+        parts.append(harm_sent)
+    if cause_sent:
+        parts.append(cause_sent)
 
-        parts.append(chosen_opening)
-        parts.append(wave_sent)
-        parts.append(pf_sent)
+    res_str = " ".join(parts)
 
-        if volt_sent:
-            parts.append(volt_sent)
-        if unbalance_sent:
-            parts.append(unbalance_sent)
-        if harm_sent:
-            parts.append(harm_sent)
-        if cause_sent:
-            parts.append(cause_sent)
+    intros_to_check = [
+        "Tại thời điểm khảo sát,",
+        "Kết quả đo kiểm cho thấy",
+        "Kết quả đo kiểm ghi nhận",
+        "Dữ liệu đo kiểm cho thấy",
+        "Theo số liệu đo kiểm,",
+    ]
+    for intro in intros_to_check:
+        if res_str.count(intro) > 1:
+            first_idx = res_str.find(intro)
+            head = res_str[:first_idx + len(intro)]
+            tail = res_str[first_idx + len(intro):]
 
-        return " ".join(parts)
+            parts_split = tail.split(intro)
+            cleaned_parts = [parts_split[0]]
+            for p in parts_split[1:]:
+                p_str = p.lstrip()
+                if p_str and p_str[0].islower():
+                    p_str = p_str[0].upper() + p_str[1:]
+                cleaned_parts.append(p_str)
+            res_str = head + "".join(cleaned_parts)
+
+    is_stable_load = False
+    if current_char:
+        _cc = unicodedata.normalize("NFKC", str(current_char)).lower()
+        if any(s in _cc for s in ("ổn định", "on dinh", "biên độ nhỏ", "bien do nho")):
+            is_stable_load = True
+    elif wave:
+        _wv = unicodedata.normalize("NFKC", str(wave)).lower()
+        if any(s in _wv for s in ("ổn định", "on dinh", "biên độ nhỏ", "bien do nho")):
+            is_stable_load = True
+
+    if is_stable_load:
+        res_str = res_str.replace("công suất tức thời", "công suất").replace("Công suất tức thời", "Công suất")
+
+    return res_str
 
 
 

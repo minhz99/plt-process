@@ -368,9 +368,9 @@ def get_inst_power_val_templates(p_str: str) -> list[str]:
     """Mẫu câu thông báo công suất tức thời khi ghi nhận giá trị P (kW)."""
     return [
         f"Công suất tức thời đạt mức {p_str} kW.",
-        f"Công suất tiêu thụ của thiết bị đạt {p_str} kW tại thời điểm khảo sát.",
-        f"Tại thời điểm khảo sát, công suất tiêu thụ tức thời của thiết bị ở mức {p_str} kW.",
-        f"Kết quả đo kiểm ghi nhận công suất tức thời đạt mức {p_str} kW.",
+        f"Công suất tiêu thụ của thiết bị đạt {p_str} kW.",
+        f"Ghi nhận công suất tiêu thụ thực tế của thiết bị ở mức {p_str} kW.",
+        f"Công suất tiêu thụ của thiết bị ở mức {p_str} kW.",
     ]
 
 
@@ -380,7 +380,7 @@ def get_load_dev_templates(load_pct_dev: float, pct_s: str, p_str: str, pdm_str:
         return [
             f"Công suất tức thời đạt mức {p_str} kW, đạt {pct_s}% công suất định mức Pđm = {pdm_str} kW, phụ tải vận hành ở mức tải nhẹ.",
             f"Công suất tiêu thụ của thiết bị đạt {p_str} kW, tương đương {pct_s}% công suất thiết kế (Pđm = {pdm_str} kW).",
-            f"Tại thời điểm khảo sát, công suất tức thời ghi nhận ở mức {p_str} kW, đạt khoảng {pct_s}% công suất định mức.",
+            f"Công suất tức thời ghi nhận ở mức {p_str} kW, đạt khoảng {pct_s}% công suất định mức Pđm = {pdm_str} kW.",
             f"Phụ tải mang tải khoảng {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW).",
             f"Thiết bị vận hành với mức tải nhẹ, công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% Pđm = {pdm_str} kW).",
             f"Công suất tiêu thụ đo được ở mức {pct_s}% so với công suất định mức (P = {p_str} kW / Pđm = {pdm_str} kW).",
@@ -389,7 +389,7 @@ def get_load_dev_templates(load_pct_dev: float, pct_s: str, p_str: str, pdm_str:
         return [
             f"Công suất tức thời đạt mức {p_str} kW (tương đương {pct_s}% công suất định mức Pđm = {pdm_str} kW).",
             f"Công suất tiêu thụ của thiết bị đạt {p_str} kW, đạt {pct_s}% công suất thiết kế.",
-            f"Tại thời điểm khảo sát, công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% Pđm = {pdm_str} kW).",
+            f"Công suất tiêu thụ thực tế đạt {p_str} kW (bằng {pct_s}% Pđm = {pdm_str} kW).",
             f"Phụ tải vận hành ở mức tải hợp lý, công suất tức thời đạt {p_str} kW ({pct_s}% Pđm).",
             f"Công suất tiêu thụ đạt {p_str} kW (tương đương {pct_s}% Pđm = {pdm_str} kW), thiết bị vận hành ổn định.",
         ]
@@ -397,12 +397,12 @@ def get_load_dev_templates(load_pct_dev: float, pct_s: str, p_str: str, pdm_str:
         return [
             f"Công suất tức thời đạt mức {p_str} kW, tương đương {pct_s}% công suất định mức (Pđm = {pdm_str} kW), phụ tải vận hành gần đầy tải.",
             f"Công suất tiêu thụ của thiết bị đạt {p_str} kW, đạt {pct_s}% công suất thiết kế (Pđm = {pdm_str} kW).",
-            f"Tại thời điểm khảo sát, công suất tiêu thụ thực tế đạt {p_str} kW, bằng {pct_s}% công suất danh định.",
+            f"Công suất tiêu thụ thực tế đạt {p_str} kW, bằng {pct_s}% công suất danh định.",
             f"Mức tải cao ghi nhận công suất tức thời đạt {p_str} kW, tương đương {pct_s}% Pđm.",
         ]
     else:
         return [
-            f"Công suất tức thời đạt mức {p_str} kW",
+            f"Công suất tức thời đạt mức {p_str} kW.",
             f"Mức tải thực tế đạt {p_str} kW ({pct_s}% Pđm).",
         ]
 
