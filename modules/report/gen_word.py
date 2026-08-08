@@ -2415,6 +2415,31 @@ def _nfc(s: object) -> str:
         return ""
     return unicodedata.normalize("NFC", str(s).strip())
 
+_S_PREFIX_RE = re.compile(
+    r"^\s*[Ss]\s*\d{1,4}\s*[-–—\s]+\s*",
+    re.UNICODE,
+)
+
+def _strip_s_prefix(name: str) -> str:
+    """Loại bỏ tiền tố dạng ``Sxxxx - `` khỏi tên thiết bị dùng trong báo cáo Word.
+
+    Ví dụ:
+        ``S0001 - Máy nén khí``  →  ``Máy nén khí``
+        ``S12 – MBA T1``         →  ``MBA T1``
+        ``Máy bơm``              →  ``Máy bơm``  (không đổi)
+
+    Chỉ áp dụng cho tên hiển thị trong báo cáo Word; tên thư mục vật lý giữ nguyên.
+
+    Args:
+        name (str): Tên thiết bị gốc (đã qua ``_nfc``).
+
+    Returns:
+        str: Tên sau khi loại bỏ tiền tố ``Sxxxx - `` (nếu có).
+    """
+    stripped = _S_PREFIX_RE.sub("", name).strip()
+    # Không trả về chuỗi rỗng — giữ nguyên nếu xóa hết
+    return stripped if stripped else name
+
 _DEVICE4_KIND_LABELS = frozenset({
     "4", "device4", "dev4",
     "4vfd", "vfd4",
@@ -2647,7 +2672,7 @@ def read_device_metadata_from_excel(
         raw_name = row[name_col]
         if raw_name is None or (isinstance(raw_name, float) and raw_name != raw_name):
             continue
-        name = _nfc(raw_name)
+        name = _strip_s_prefix(_nfc(raw_name))
         if not name:
             continue
 
@@ -2833,7 +2858,7 @@ def build_word_report_from_zip(
                 kind_no_meta = _resolve_word_section_kind({}, name=p.name, default_kind=None)
                 return (0 if kind_no_meta == "mba" else 1, _stt_fallback, p.name.lower())
             m = _lookup_device_metadata(metadata, p.name)
-            display = _nfc(m.get("name") or p.name)
+            display = _strip_s_prefix(_nfc(m.get("name") or p.name))
             kind = _resolve_word_section_kind({"kind": m.get("kind")}, name=display, default_kind=None)
             st = m.get("stt")
             st_val = st if isinstance(st, int) else _stt_fallback
@@ -2844,7 +2869,7 @@ def build_word_report_from_zip(
         devices: list[dict] = []
         for d in device_dirs:
             meta = _lookup_device_metadata(metadata, d.name)
-            display = _nfc(meta.get("name") or d.name)
+            display = _strip_s_prefix(_nfc(meta.get("name") or d.name))
             devices.append({
                 "name": display,
                 "folder": d,
@@ -2941,7 +2966,7 @@ def _build_chapter_from_zip(
                 kind_no_meta = _resolve_word_section_kind({}, name=p.name, default_kind=None)
                 return (0 if kind_no_meta == "mba" else 1, _stt_fallback, p.name.lower())
             m = _lookup_device_metadata(metadata, p.name)
-            display = _nfc(m.get("name") or p.name)
+            display = _strip_s_prefix(_nfc(m.get("name") or p.name))
             kind = _resolve_word_section_kind({"kind": m.get("kind")}, name=display, default_kind=None)
             st = m.get("stt")
             st_val = st if isinstance(st, int) else _stt_fallback
@@ -2952,7 +2977,7 @@ def _build_chapter_from_zip(
         devices: list[dict] = []
         for d in device_dirs:
             meta = _lookup_device_metadata(metadata, d.name)
-            display = _nfc(meta.get("name") or d.name)
+            display = _strip_s_prefix(_nfc(meta.get("name") or d.name))
             devices.append({
                 "name": display,
                 "folder": d,

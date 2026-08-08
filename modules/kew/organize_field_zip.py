@@ -1054,7 +1054,12 @@ def process_field_zip_bytes(
 ) -> tuple[str, list[str], list[str]]:
     """Xử lý toàn bộ quy trình tổ chức hồ sơ từ dữ liệu ZIP.
 
-    Giải nén, đọc kế hoạch, sắp xếp thư mục, chạy OCR và nén lại kết quả.
+    Tự động phát hiện 2 chế độ:
+    1. **Chế độ thông thường**: ZIP có file Excel kế hoạch + thư mục ``Sxxxx`` + ảnh BMP →
+       đổi tên thư mục, di chuyển ảnh, chạy OCR và điền Excel.
+    2. **Chế độ đã sắp xếp sẵn**: ZIP **không có Excel** + thư mục thiết bị đã đặt tên sẵn
+       chứa ảnh BMP bên trong → tạo mới Excel, chạy OCR, điền đầy đủ các cột nhận dạng và
+       dự đoán, giữ nguyên cấu trúc thư mục.
 
     Args:
         zip_bytes (bytes): Dữ liệu nhị phân của file ZIP đầu vào.
@@ -1091,7 +1096,16 @@ def process_field_zip_bytes(
 
     excel_path = find_first_excel(extract)
     if not excel_path:
-        return "", warnings, ["Không tìm thấy file Excel (.xlsx/.xlsm/.xls) trong ZIP."]
+        # ── Thử chế độ "Không có Excel + file đã sắp xếp sẵn" ───────────────
+        if progress_callback:
+            progress_callback(12, "Không tìm thấy Excel — kiểm tra chế độ thư mục đã sắp xếp sẵn...")
+        return process_prearranged_zip_bytes(
+            extract_root=extract,
+            work_dir=work_dir,
+            original_filename=original_filename,
+            progress_callback=progress_callback,
+            warnings=warnings,
+        )
 
     s_map, s_err = scan_s_folders(extract)
     warnings.extend(s_err)
@@ -1193,5 +1207,507 @@ def process_field_zip_bytes(
 
     if progress_callback:
         progress_callback(100, "Hoàn tất xử lý sơ bộ!")
+
+    return out_zip, warnings, []
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHẾ ĐỘ "KHÔNG CÓ EXCEL + FILE ĐÃ SẮP XẾP SẴN"
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class PreArrangedDevice:
+    """Thông tin một thiết bị trong chế độ thư mục đã sắp xếp sẵn."""
+    folder_name: str       # Tên thư mục thiết bị (= tên thiết bị)
+    folder_path: str       # Đường dẫn tuyệt đối đến thư mục
+    bmp_indices: list[int] # Danh sách chỉ số ảnh BMP tìm được trong thư mục
+    img_start: int         # Chỉ số ảnh nhỏ nhất (img)
+    img_end: int           # Chỉ số ảnh lớn nhất (imgend)
+    excel_row: int         # Chỉ số hàng trong Excel (1-based, bao gồm header)
+
+
+def scan_prearranged_devices(root: str) -> tuple[list[PreArrangedDevice], list[str]]:
+    """Quét các thư mục thiết bị đã được đặt tên sẵn trong chế độ pre-arranged.
+
+    Tìm kiếm các thư mục con trực tiếp trong ``root`` (không phải ``Sxxxx``)
+    có chứa ít nhất một ảnh ``PS-SDxxx.BMP``. Ảnh có thể nằm trực tiếp hoặc
+    trong thư mục con của thư mục thiết bị.
+
+    Args:
+        root (str): Thư mục gốc đã giải nén.
+
+    Returns:
+        tuple[list[PreArrangedDevice], list[str]]: Một tuple gồm:
+            - Danh sách ``PreArrangedDevice`` theo thứ tự thư mục.
+            - Danh sách cảnh báo.
+    """
+    warnings: list[str] = []
+    devices: list[PreArrangedDevice] = []
+
+    # Lấy danh sách thư mục con trực tiếp, bỏ qua __MACOSX và ._*
+    try:
+        entries = sorted(os.listdir(root))
+    except OSError:
+        return devices, warnings
+
+    excel_row = 2  # Header ở row 1
+    for entry in entries:
+        full_path = os.path.join(root, entry)
+        if not os.path.isdir(full_path):
+            continue
+        if entry in _SKIP_DIR_NAMES or entry.startswith("._"):
+            continue
+        # Bỏ qua thư mục có tên dạng Sxxxx (là chế độ thông thường)
+        if _S_DIR_RE.match(entry):
+            continue
+
+        # Quét ảnh BMP trong thư mục này (đệ quy)
+        bmp_indices: list[int] = []
+        for dirpath, _, filenames in os.walk(full_path):
+            if _is_skipped_path(dirpath):
+                continue
+            for fn in filenames:
+                m = _BMP_RE.match(fn)
+                if m:
+                    bmp_indices.append(int(m.group(1)))
+
+        if not bmp_indices:
+            # Thư mục không có ảnh BMP → bỏ qua (có thể là thư mục phụ trợ)
+            continue
+
+        bmp_indices.sort()
+        img_start = bmp_indices[0]
+        img_end = bmp_indices[-1]
+
+        devices.append(PreArrangedDevice(
+            folder_name=entry,
+            folder_path=full_path,
+            bmp_indices=bmp_indices,
+            img_start=img_start,
+            img_end=img_end,
+            excel_row=excel_row,
+        ))
+        excel_row += 1
+
+    return devices, warnings
+
+
+def create_excel_from_prearranged(
+    devices: list[PreArrangedDevice],
+    output_path: str,
+) -> None:
+    """Tạo file Excel mới với đầy đủ cột từ danh sách thiết bị đã sắp xếp sẵn.
+
+    Điền sẵn các cột nhận dạng (``stt``, ``name``, ``img``, ``imgend``) từ thông
+    tin quét thư mục. Các cột ``file``, ``type``, ``pdm`` được để trống cho user
+    điền tay. Tất cả cột OCR và ``current_char`` cũng được tạo sẵn (trống) để
+    bước OCR sau điền vào.
+
+    Args:
+        devices (list[PreArrangedDevice]): Danh sách thiết bị đã quét.
+        output_path (str): Đường dẫn file Excel đầu ra (.xlsx).
+    """
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise ImportError("Thiếu thư viện openpyxl để tạo file Excel.")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Field Data"
+
+    # ── Header row ────────────────────────────────────────────────────────────
+    # Thứ tự cột: required + optional + ocr (theo FIELD_XLSX_HEADERS)
+    headers = list(FIELD_XLSX_HEADERS)
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=10)
+    thin = Side(style="thin", color="AAAAAA")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[cell.column_letter].width = max(10, len(h) + 4)
+
+    # ── Đánh dấu màu cho các cột tùy chọn và OCR ─────────────────────────────
+    optional_fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")
+    ocr_fill = PatternFill(start_color="064E3B", end_color="064E3B", fill_type="solid")
+    optional_set = set(FIELD_XLSX_OPTIONAL)
+    ocr_set = set(FIELD_XLSX_OCR)
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx)
+        if h in optional_set:
+            cell.fill = optional_fill
+        elif h in ocr_set or h == "current_char":
+            cell.fill = ocr_fill
+
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    header_map = {h: i + 1 for i, h in enumerate(headers)}
+    data_font = Font(size=10)
+    data_align = Alignment(vertical="center")
+
+    for stt, dev in enumerate(devices, start=1):
+        row = dev.excel_row
+        # Điền các cột nhận dạng có sẵn
+        ws.cell(row=row, column=header_map["stt"], value=stt)
+        ws.cell(row=row, column=header_map["name"], value=dev.folder_name)
+        ws.cell(row=row, column=header_map["img"], value=dev.img_start)
+        ws.cell(row=row, column=header_map["imgend"], value=dev.img_end)
+        # Điền imgomit nếu có ảnh bị thiếu trong dải (gap giữa img_start và img_end)
+        if dev.bmp_indices:
+            expected = set(range(dev.img_start, dev.img_end + 1))
+            actual = set(dev.bmp_indices)
+            missing = sorted(expected - actual)
+            if missing:
+                omit_str = ", ".join(str(n) for n in missing)
+                ws.cell(row=row, column=header_map["imgomit"], value=omit_str)
+
+        # Áp dụng style cho toàn bộ dòng
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=row, column=col_idx)
+            cell.font = data_font
+            cell.alignment = data_align
+            cell.border = border
+
+    ws.row_dimensions[1].height = 28
+    wb.save(output_path)
+
+
+def run_ocr_on_prearranged(
+    excel_path: str,
+    devices: list[PreArrangedDevice],
+    progress_callback=None,
+    start_pct: int = 20,
+    end_pct: int = 95,
+) -> list[str]:
+    """Chạy OCR cho từng thiết bị trong chế độ pre-arranged và điền Excel.
+
+    Khác với ``run_ocr_and_update_excel()``, hàm này lấy ảnh BMP trực tiếp từ
+    thư mục của mỗi thiết bị (``device.folder_path``) thay vì từ bmp_map toàn cục.
+
+    Args:
+        excel_path (str): Đường dẫn đến file Excel cần cập nhật.
+        devices (list[PreArrangedDevice]): Danh sách thiết bị.
+        progress_callback: Hàm cập nhật tiến độ (%).
+        start_pct: Phần trăm tiến độ bắt đầu.
+        end_pct: Phần trăm tiến độ kết thúc.
+
+    Returns:
+        list[str]: Danh sách cảnh báo phát sinh.
+    """
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        return ["Thiếu thư viện openpyxl — bỏ qua bước OCR điền Excel."]
+
+    try:
+        from modules.image.ocr_kew import read_device_ocr
+    except ImportError as e:
+        return [f"Không tải được module OCR ({e}) — bỏ qua bước OCR."]
+
+    warnings_out: list[str] = []
+
+    try:
+        wb = load_workbook(excel_path)
+        ws = wb.active
+    except Exception as e:
+        return [f"OCR: không mở được workbook để ghi ({e})."]
+
+    header_row = 1
+
+    # Quét header để lấy col_indices
+    existing_col_map: dict[str, int] = {}
+    max_col = 0
+    for col_idx, cell in enumerate(ws[header_row], start=1):
+        max_col = max(max_col, col_idx)
+        if cell.value is not None:
+            k = _norm_key(str(cell.value))
+            if k:
+                existing_col_map[k] = col_idx
+
+    # Đảm bảo các cột OCR tồn tại
+    col_indices: dict[str, int] = {}
+    for field in FIELD_XLSX_OCR:
+        if field in existing_col_map:
+            col_indices[field] = existing_col_map[field]
+        else:
+            max_col += 1
+            ws.cell(row=header_row, column=max_col, value=field)
+            col_indices[field] = max_col
+            print(f"OCR (pre-arranged): tạo mới cột «{field}» tại cột số {max_col}.")
+
+    for idx, dev in enumerate(devices):
+        if progress_callback:
+            pct = start_pct + int((idx / len(devices)) * (end_pct - start_pct))
+            progress_callback(pct, f"OCR: Nhận dạng thông số đo cho «{dev.folder_name}» ({idx+1}/{len(devices)})...")
+
+        # Xây dựng bmp_map cục bộ cho thư mục này
+        local_bmp_map: dict[int, str] = {}
+        for dirpath, _, filenames in os.walk(dev.folder_path):
+            if _is_skipped_path(dirpath):
+                continue
+            for fn in filenames:
+                m = _BMP_RE.match(fn)
+                if m:
+                    local_bmp_map[int(m.group(1))] = os.path.join(dirpath, fn)
+
+        if not local_bmp_map:
+            warnings_out.append(f"[{dev.folder_name}] Không tìm thấy ảnh BMP — bỏ qua OCR.")
+            continue
+
+        ocr_vals, ocr_warns = read_device_ocr(
+            bmp_indices=dev.bmp_indices,
+            bmp_map=local_bmp_map,
+        )
+        if ocr_warns:
+            warnings_out.extend([f"[{dev.folder_name}] {w}" for w in ocr_warns])
+
+        for field_name, value in ocr_vals.items():
+            if value is None or field_name not in col_indices:
+                continue
+            col_idx = col_indices[field_name]
+            cell = ws.cell(row=dev.excel_row, column=col_idx)
+            if cell.value is not None and str(cell.value).strip():
+                continue
+            cell.value = round(value, 4)
+
+    try:
+        wb.save(excel_path)
+    except Exception as e:
+        warnings_out.append(f"OCR: không lưu được Excel sau khi cập nhật ({e}).")
+
+    return warnings_out
+
+
+def auto_fill_current_char_prearranged(
+    excel_path: str,
+    devices: list[PreArrangedDevice],
+    progress_callback=None,
+    start_pct: int = 95,
+    end_pct: int = 97,
+) -> list[str]:
+    """Tự động điền cột ``current_char`` từ file INPS cho chế độ pre-arranged.
+
+    Args:
+        excel_path (str): Đường dẫn đến file Excel cần cập nhật.
+        devices (list[PreArrangedDevice]): Danh sách thiết bị.
+        progress_callback: Hàm cập nhật tiến độ (%).
+        start_pct: Phần trăm tiến độ bắt đầu.
+        end_pct: Phần trăm tiến độ kết thúc.
+
+    Returns:
+        list[str]: Danh sách cảnh báo.
+    """
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        return ["Thiếu thư viện openpyxl — bỏ qua tự động điền current_char."]
+
+    warnings_out: list[str] = []
+
+    try:
+        wb = load_workbook(excel_path)
+        ws = wb.active
+    except Exception as e:
+        return [f"current_char: không mở được workbook để ghi ({e})."]
+
+    header_row = 1
+    existing_col_map: dict[str, int] = {}
+    for col_idx, cell in enumerate(ws[header_row], start=1):
+        if cell.value is not None:
+            k = _norm_key(str(cell.value))
+            if k:
+                existing_col_map[k] = col_idx
+
+    col_idx_cc = existing_col_map.get("current_char")
+    if not col_idx_cc:
+        max_col = max(existing_col_map.values(), default=0)
+        col_idx_cc = max_col + 1
+        ws.cell(row=header_row, column=col_idx_cc, value="current_char")
+        print(f"Tạo mới cột «current_char» tại cột số {col_idx_cc}.")
+
+    from modules.kew.analyse_kew import find_file, parse_inps
+
+    for idx, dev in enumerate(devices):
+        if progress_callback:
+            pct = start_pct + int((idx / len(devices)) * (end_pct - start_pct))
+            progress_callback(pct, f"Dòng điện: Ước lượng current_char cho «{dev.folder_name}» ({idx+1}/{len(devices)})...")
+
+        cell = ws.cell(row=dev.excel_row, column=col_idx_cc)
+        if cell.value is not None and str(cell.value).strip():
+            continue
+
+        inps_path = find_file(dev.folder_path, "INPS")
+        if not inps_path or not os.path.isfile(inps_path):
+            continue
+
+        try:
+            _, df = parse_inps(inps_path)
+            estimated = _estimate_current_char_from_df(df)
+            if estimated:
+                cell.value = estimated
+                print(f"[{dev.folder_name}] Tự động nhận diện current_char: {estimated}")
+        except Exception as e:
+            warnings_out.append(f"[{dev.folder_name}] Lỗi ước lượng current_char: {e}")
+
+    try:
+        wb.save(excel_path)
+    except Exception as e:
+        warnings_out.append(f"current_char: không lưu được Excel sau khi cập nhật ({e}).")
+
+    return warnings_out
+
+
+def process_prearranged_zip_bytes(
+    extract_root: str,
+    work_dir: str,
+    original_filename: str = "KEW",
+    progress_callback=None,
+    warnings: Optional[list[str]] = None,
+) -> tuple[str, list[str], list[str]]:
+    """Xử lý ZIP không có Excel, thư mục thiết bị và ảnh đã sắp xếp sẵn.
+
+    Quy trình:
+    1. Quét thư mục thiết bị và ảnh BMP bên trong.
+    2. Tạo file Excel mới với đầy đủ cột (tên thiết bị, dải ảnh, imgomit v.v.).
+    3. Chạy OCR và điền các cột dự đoán (p, cos_phi, i_max, ...).
+    4. Tự động ước lượng ``current_char`` từ file INPS.
+    5. Nén lại toàn bộ (giữ nguyên cấu trúc thư mục + thêm Excel mới).
+
+    Args:
+        extract_root (str): Thư mục đã giải nén ZIP gốc.
+        work_dir (str): Thư mục làm việc tạm thời.
+        original_filename (str): Tên file ZIP gốc (không có đuôi).
+        progress_callback: Hàm cập nhật tiến độ (%).
+        warnings (Optional[list[str]]): Danh sách cảnh báo đầu vào (sẽ được nối thêm).
+
+    Returns:
+        tuple[str, list[str], list[str]]: Một tuple gồm:
+            - Đường dẫn file ZIP kết quả.
+            - Danh sách cảnh báo (đã gộp).
+            - Danh sách lỗi nghiêm trọng.
+    """
+    if warnings is None:
+        warnings = []
+
+    if progress_callback:
+        progress_callback(15, "Quét thư mục thiết bị đã sắp xếp sẵn...")
+
+    devices, scan_warns = scan_prearranged_devices(extract_root)
+    warnings.extend(scan_warns)
+
+    if not devices:
+        return "", warnings, [
+            "Không tìm thấy file Excel và không phát hiện thư mục thiết bị nào "
+            "có ảnh BMP. Vui lòng kiểm tra lại cấu trúc ZIP:\n"
+            "  • Chế độ thông thường: ZIP cần có file .xlsx kế hoạch + thư mục Sxxxx + ảnh BMP.\n"
+            "  • Chế độ đã sắp xếp sẵn: ZIP cần có thư mục thiết bị (tên bất kỳ, không phải Sxxxx) "
+            "chứa ảnh PS-SDxxx.BMP bên trong."
+        ]
+
+    if progress_callback:
+        progress_callback(18, f"Tìm thấy {len(devices)} thư mục thiết bị — tạo file Excel mới...")
+
+    # Tạo Excel mới trong extract_root
+    excel_name = f"{original_filename}_field.xlsx"
+    excel_path = os.path.join(extract_root, excel_name)
+    try:
+        create_excel_from_prearranged(devices, excel_path)
+    except Exception as e:
+        return "", warnings, [f"Không tạo được file Excel: {e}"]
+
+    warnings.append(
+        f"Chế độ đã sắp xếp sẵn: Đã tạo file Excel «{excel_name}» "
+        f"với {len(devices)} dòng thiết bị. Cột «file», «type», «pdm» để trống — "
+        f"vui lòng điền thủ công trước khi tạo báo cáo Word."
+    )
+
+    # ── Chạy OCR ──────────────────────────────────────────────────────────────
+    if progress_callback:
+        progress_callback(20, "OCR: Bắt đầu nhận dạng thông số đo từ ảnh...")
+
+    ocr_warns = run_ocr_on_prearranged(
+        excel_path=excel_path,
+        devices=devices,
+        progress_callback=progress_callback,
+        start_pct=20,
+        end_pct=95,
+    )
+    warnings.extend(ocr_warns)
+
+    # ── Tự động điền current_char ─────────────────────────────────────────────
+    if progress_callback:
+        progress_callback(95, "Dòng điện: Bắt đầu ước lượng đặc tính dòng điện...")
+
+    cc_warns = auto_fill_current_char_prearranged(
+        excel_path=excel_path,
+        devices=devices,
+        progress_callback=progress_callback,
+        start_pct=95,
+        end_pct=97,
+    )
+    warnings.extend(cc_warns)
+
+    # ── Tự động kiểm tra và sửa ảnh ngược CT ─────────────────────────────────
+    if progress_callback:
+        progress_callback(97, "Tự động kiểm tra và sửa ảnh màn hình bị ngược CT...")
+
+    try:
+        from modules.image.image_api import fix_ct_reversal_in_sd140_image
+        from modules.kew.analyse_kew import find_file, parse_inps
+        for dev in devices:
+            inps_path = find_file(dev.folder_path, "INPS")
+            if inps_path and os.path.isfile(inps_path):
+                try:
+                    _, df_inps = parse_inps(inps_path)
+                    if df_inps is not None and df_inps.attrs.get('ct_reversed'):
+                        # Ảnh đầu tiên trong thư mục
+                        local_bmp = {}
+                        for dirpath, _, filenames in os.walk(dev.folder_path):
+                            for fn in filenames:
+                                m = _BMP_RE.match(fn)
+                                if m:
+                                    local_bmp[int(m.group(1))] = os.path.join(dirpath, fn)
+                        first_bmp = local_bmp.get(dev.img_start)
+                        if first_bmp and os.path.isfile(first_bmp):
+                            fixed = fix_ct_reversal_in_sd140_image(first_bmp)
+                            if fixed:
+                                warnings.append(
+                                    f"«{dev.folder_name}»: Đã tự động xóa dấu trừ (-) "
+                                    f"do đấu ngược CT trên ảnh PS-SD{dev.img_start:03d}.BMP."
+                                )
+                except Exception as e:
+                    print(f"[WARN] Lỗi kiểm tra/sửa ảnh ngược CT cho {dev.folder_name}: {e}")
+    except ImportError:
+        pass  # Module không có — bỏ qua
+
+    # ── Nén kết quả ───────────────────────────────────────────────────────────
+    if progress_callback:
+        progress_callback(98, "Đóng gói kết quả thành tệp ZIP...")
+
+    out_folder_name = f"KEW_{original_filename}"
+    staging = os.path.join(work_dir, "staging")
+    out_root = os.path.join(staging, out_folder_name)
+    os.makedirs(out_root, exist_ok=True)
+
+    # Copy toàn bộ thư mục thiết bị vào out_root
+    for dev in devices:
+        dest_dir = os.path.join(out_root, dev.folder_name)
+        if os.path.exists(dest_dir):
+            shutil.rmtree(dest_dir)
+        shutil.copytree(dev.folder_path, dest_dir)
+
+    # Copy file Excel đã điền vào out_root
+    shutil.copy2(excel_path, os.path.join(out_root, excel_name))
+
+    out_zip = os.path.join(work_dir, f"{original_filename}_processed.zip")
+    zip_directory(out_root, out_zip)
+
+    if progress_callback:
+        progress_callback(100, "Hoàn tất xử lý sơ bộ (chế độ đã sắp xếp sẵn)!")
 
     return out_zip, warnings, []
