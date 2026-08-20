@@ -2584,6 +2584,19 @@ def _lookup_device_metadata(metadata: dict[str, dict], folder_name: str) -> dict
                 matches.append(ent)
         if len(matches) == 1:
             return matches[0]
+    # Chế độ 2 (đã sắp xếp, không qua Excel): tên thư mục có dạng "S001 - Tên thiết bị"
+    # nhưng trong Excel tên đã được strip thành "Tên thiết bị" → thử tra lại sau khi strip prefix.
+    stripped_folder = _strip_s_prefix(_nfc(folder_name))
+    if stripped_folder and stripped_folder != folder_name:
+        hit = _metadata_first_hit(metadata, stripped_folder)
+        if hit:
+            return hit
+        # Thử thêm hậu tố _N nếu có (ví dụ "S001 - Máy nén khí_2")
+        ms = re.fullmatch(r"(.+)_([1-9]\d*)$", stripped_folder)
+        if ms:
+            hit = _metadata_first_hit(metadata, ms.group(1))
+            if hit:
+                return hit
     return {}
 
 def _excel_stt(value: object) -> int | None:
