@@ -12,3 +12,4 @@ opencv-python-headless>=5.0.0.93
 pytesseract>=0.3.13
 pdfplumber>=0.11.10
 pywin32>=306; sys_platform == 'win32'
+waitress>=3.0.2
