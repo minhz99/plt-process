@@ -5,6 +5,7 @@
 
 let currentMode = 'string_mode';
 let dataRows = [];           // [{nam, thang, ky, thue_vat, bt_don_gia, bt_san_luong, cd_don_gia, cd_san_luong, td_don_gia, td_san_luong, ghi_chu}]
+let selectedRowIndices = new Set();
 let currentDataFilename = "";
 
 const DATA_SHEET_NAME = "DuLieu";
@@ -78,6 +79,7 @@ function switchExcelTab(modeId) {
  */
 window.excelCreateNewFile = function () {
     dataRows = [];
+    selectedRowIndices.clear();
     currentDataFilename = `DuLieu_Dien_${new Date().getFullYear()}.xlsx`;
     activateWorkspace();
     renderDataTable();
@@ -126,6 +128,7 @@ window.excelLoadExistingFile = function (inputEl) {
 
             // Parse data rows
             dataRows = [];
+            selectedRowIndices.clear();
             for (let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if (!row || row.length === 0) continue;
@@ -205,6 +208,155 @@ window.excelLoadExistingFile = function (inputEl) {
     };
     reader.readAsArrayBuffer(file);
 }
+
+/**
+ * Tự động đọc và bóc tách dữ liệu từ file ZIP hoặc nhiều file PDF hóa đơn EVN (vector / digital PDF).
+ */
+window.excelParseInvoices = async function (inputEl) {
+    const files = inputEl.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+    }
+
+    showMessage("⏳ Đang giải nén và phân tích hóa đơn điện...", false);
+
+    try {
+        const response = await fetch('/api/excel/parse-invoices', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Lỗi khi bóc tách hóa đơn.');
+        }
+
+        if (!result.data || result.data.length === 0) {
+            showMessage("⚠️ Không bóc tách được số liệu nào từ các file đã tải lên.", true);
+            inputEl.value = '';
+            return;
+        }
+
+        if (!currentDataFilename) {
+            const firstYear = result.data[0].nam || new Date().getFullYear();
+            currentDataFilename = `DuLieu_Dien_${firstYear}.xlsx`;
+        }
+
+        activateWorkspace();
+
+        result.data.forEach(entry => {
+            dataRows.push(entry);
+        });
+
+        dataRows.sort((a, b) => {
+            if (a.nam !== b.nam) return a.nam - b.nam;
+            if (a.thang !== b.thang) return a.thang - b.thang;
+            return a.ky - b.ky;
+        });
+
+        if (dataRows.length > 0) {
+            const maxYear = Math.max(...dataRows.map(r => r.nam));
+            document.getElementById('input_year').value = maxYear;
+        }
+
+        renderDataTable();
+        updateExportSection();
+
+        let msg = `✓ Đã tự động bóc tách thành công ${result.parsed_count}/${result.total_pdfs} hóa đơn!`;
+        if (result.failed_count > 0) {
+            msg += ` (Bỏ qua ${result.failed_count} file scan/ảnh hoặc không đúng định dạng)`;
+        }
+        showMessage(msg);
+
+    } catch (err) {
+        showMessage("Lỗi: " + err.message, true);
+    } finally {
+        inputEl.value = '';
+    }
+};
+
+/**
+ * Nạp file text (.txt) hoặc kết quả OCR từ máy cá nhân
+ */
+window.excelLoadTxtFile = function (inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const content = e.target.result;
+        excelParseFromText(content, file.name);
+        inputEl.value = '';
+    };
+    reader.readAsText(file, 'utf-8');
+};
+
+
+/**
+ * Phân tích chuỗi văn bản (plaintext từ OCR hoặc file .txt) và điền vào bảng dữ liệu.
+ */
+window.excelParseFromText = async function (textContent, sourceLabel = "Text OCR") {
+    if (!textContent || !textContent.trim()) {
+        showMessage("Văn bản rỗng, không có dữ liệu để phân tích.", true);
+        return;
+    }
+
+    showMessage("⏳ Đang phân tích dữ liệu điện từ văn bản...", false);
+
+    try {
+        const response = await fetch('/api/excel/parse-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textContent })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || "Không thể phân tích dữ liệu từ văn bản.");
+        }
+
+        if (!result.data || result.data.length === 0) {
+            showMessage("⚠️ Không tìm thấy cấu trúc số điện hợp lệ trong văn bản.", true);
+            return;
+        }
+
+        if (!currentDataFilename) {
+            const firstYear = result.data[0].nam || new Date().getFullYear();
+            currentDataFilename = `DuLieu_Dien_${firstYear}.xlsx`;
+        }
+
+        activateWorkspace();
+
+        result.data.forEach(entry => {
+            if (sourceLabel && (!entry.ghi_chu || entry.ghi_chu === 'OCR txt')) {
+                entry.ghi_chu = sourceLabel;
+            }
+            dataRows.push(entry);
+        });
+
+        dataRows.sort((a, b) => {
+            if (a.nam !== b.nam) return a.nam - b.nam;
+            if (a.thang !== b.thang) return a.thang - b.thang;
+            return a.ky - b.ky;
+        });
+
+        if (dataRows.length > 0) {
+            const maxYear = Math.max(...dataRows.map(r => r.nam));
+            document.getElementById('input_year').value = maxYear;
+        }
+
+        renderDataTable();
+        updateExportSection();
+        showMessage(`✓ Đã nạp thành công ${result.count} dòng dữ liệu từ văn bản (${sourceLabel})!`);
+
+    } catch (err) {
+        showMessage("Lỗi: " + err.message, true);
+    }
+};
 
 function activateWorkspace() {
     document.getElementById('data_entry_section').style.opacity = '1';
@@ -352,7 +504,7 @@ window.excelSubmitData = function () {
 }
 
 // ───────────────────────────────────────────────────────
-// Render bảng dữ liệu
+// Render bảng dữ liệu & Xử lý chọn nhiều / Xóa hàng loạt
 // ───────────────────────────────────────────────────────
 
 function renderDataTable() {
@@ -360,19 +512,43 @@ function renderDataTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    const selectAllCb = document.getElementById('select_all_rows');
+    const btnClearAll = document.getElementById('btn_clear_all');
+
     if (dataRows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" class="empty-state">Chưa có dữ liệu. Nhập dữ liệu ở bước 2.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="empty-state">Chưa có dữ liệu. Tạo file mới hoặc nạp file có sẵn để bắt đầu.</td></tr>`;
+        if (selectAllCb) {
+            selectAllCb.checked = false;
+            selectAllCb.disabled = true;
+        }
+        if (btnClearAll) btnClearAll.disabled = true;
+        selectedRowIndices.clear();
+        updateBulkActionUI();
         return;
     }
 
+    if (selectAllCb) {
+        selectAllCb.disabled = false;
+        selectAllCb.checked = selectedRowIndices.size === dataRows.length && dataRows.length > 0;
+    }
+    if (btnClearAll) btnClearAll.disabled = false;
+
     dataRows.forEach((row, index) => {
         const tr = document.createElement('tr');
+        const isChecked = selectedRowIndices.has(index);
+        if (isChecked) {
+            tr.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
+        }
+
         const taxDisp = row.thue_vat !== undefined && row.thue_vat !== null ? `${row.thue_vat}%` : '0%';
         tr.innerHTML = `
+            <td style="text-align:center;">
+                <input type="checkbox" class="row-checkbox" data-index="${index}" onchange="excelToggleRowSelect(${index}, this.checked)" ${isChecked ? 'checked' : ''}>
+            </td>
             <td style="text-align:center;"><b>${row.nam}</b></td>
             <td style="text-align:center;"><b>${row.thang}</b></td>
             <td style="text-align:center;">${row.ky}</td>
-            <td style="text-align:center; color: var(--accent4);">${taxDisp}</td>
+            <td style="text-align:center; color: var(--accent4); font-weight: 500;">${taxDisp}</td>
             <td>${fmtNum(row.bt_don_gia)}</td>
             <td>${fmtNum(row.bt_san_luong)}</td>
             <td>${fmtNum(row.cd_don_gia)}</td>
@@ -380,19 +556,96 @@ function renderDataTable() {
             <td>${fmtNum(row.td_don_gia)}</td>
             <td>${fmtNum(row.td_san_luong)}</td>
             <td style="font-size:0.78rem; color:var(--text-muted);">${row.ghi_chu || ''}</td>
-            <td>
-                <button class="btn-small" style="background: var(--danger); padding: 4px 10px; font-size: 0.72rem;" onclick="excelDeleteRow(${index})">✕</button>
+            <td style="text-align:center;">
+                <button class="btn-small" style="background: var(--danger); padding: 3px 8px; font-size: 0.72rem;" onclick="excelDeleteRow(${index})" title="Xóa dòng này">✕</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+
+    updateBulkActionUI();
+}
+
+function updateBulkActionUI() {
+    const btnDeleteSelected = document.getElementById('btn_delete_selected');
+    const selectedCountSpan = document.getElementById('selected_count');
+    const selectAllCb = document.getElementById('select_all_rows');
+
+    const count = selectedRowIndices.size;
+    if (selectedCountSpan) selectedCountSpan.textContent = count;
+
+    if (btnDeleteSelected) {
+        btnDeleteSelected.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+
+    if (selectAllCb && dataRows.length > 0) {
+        selectAllCb.checked = count === dataRows.length;
+        selectAllCb.indeterminate = count > 0 && count < dataRows.length;
+    }
+}
+
+window.excelToggleSelectAll = function (masterCb) {
+    if (masterCb.checked) {
+        dataRows.forEach((_, idx) => selectedRowIndices.add(idx));
+    } else {
+        selectedRowIndices.clear();
+    }
+    renderDataTable();
+}
+
+window.excelToggleRowSelect = function (index, isChecked) {
+    if (isChecked) {
+        selectedRowIndices.add(index);
+    } else {
+        selectedRowIndices.delete(index);
+    }
+    renderDataTable();
+}
+
+window.excelDeleteSelectedRows = function () {
+    const count = selectedRowIndices.size;
+    if (count === 0) return;
+
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${count} dòng dữ liệu đã chọn?`)) return;
+
+    // Lọc các dòng không nằm trong selectedRowIndices
+    dataRows = dataRows.filter((_, idx) => !selectedRowIndices.has(idx));
+    selectedRowIndices.clear();
+
+    renderDataTable();
+    updateExportSection();
+    showMessage(`✓ Đã xóa ${count} dòng dữ liệu.`);
+}
+
+window.excelClearAllRows = function () {
+    if (dataRows.length === 0) return;
+
+    if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu trong bảng?")) return;
+
+    dataRows = [];
+    selectedRowIndices.clear();
+
+    renderDataTable();
+    updateExportSection();
+    showMessage("Đã xóa toàn bộ dữ liệu.");
 }
 
 window.excelDeleteRow = function (index) {
     if (index < 0 || index >= dataRows.length) return;
     const row = dataRows[index];
     if (!confirm(`Xóa dòng: Năm ${row.nam}, Tháng ${row.thang}, Kỳ ${row.ky}?`)) return;
+    
     dataRows.splice(index, 1);
+    selectedRowIndices.delete(index);
+    
+    // Cập nhật lại các index trong selectedRowIndices lớn hơn index đã xóa
+    const newSelected = new Set();
+    selectedRowIndices.forEach(idx => {
+        if (idx < index) newSelected.add(idx);
+        else if (idx > index) newSelected.add(idx - 1);
+    });
+    selectedRowIndices = newSelected;
+
     renderDataTable();
     updateExportSection();
     showMessage("Đã xóa dòng dữ liệu.");

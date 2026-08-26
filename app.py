@@ -8,6 +8,7 @@ from modules.kew.kew_api import kew_bp
 from modules.image.image_api import image_bp
 from modules.pdf.pdf_api import pdf_bp
 from modules.video.video_api import video_bp
+from modules.ocr.ocr_api import ocr_bp
 
 def _env_int(name, default):
     """
@@ -37,6 +38,7 @@ app.register_blueprint(kew_bp, url_prefix='/api/kew')
 app.register_blueprint(image_bp, url_prefix='/api/image')
 app.register_blueprint(pdf_bp, url_prefix='/api/pdf')
 app.register_blueprint(video_bp, url_prefix='/api/video')
+app.register_blueprint(ocr_bp, url_prefix='/api/ocr')
 
 
 
@@ -63,6 +65,7 @@ def handle_request_entity_too_large(_exc):
 @app.route('/pdf')
 @app.route('/video')
 @app.route('/chart')
+@app.route('/ocr')
 def index():
     """Render the main dashboard UI application."""
     return render_template('dashboard.html')

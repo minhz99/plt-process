@@ -516,7 +516,7 @@ def export_electricity_report():
             e["thue_vat"],
             e["bt_don_gia"], e["bt_san_luong"], e["bt_thanh_tien"],
             e["cd_don_gia"], e["cd_san_luong"], e["cd_thanh_tien"],
-            e["td_don_gia"], e["td_san_luong"], e["td_thanh_tien"],
+e["td_don_gia"], e["td_san_luong"], e["td_thanh_tien"],
             e["tong_san_luong"], e["tien_chua_thue"], e["tien_thue"], e["tong_thanh_tien"],
             e["ghi_chu"]
         ])
@@ -545,3 +545,371 @@ def export_electricity_report():
         download_name=output_name,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+def parse_electricity_text_content(raw_text: str) -> list:
+    """
+    Thuật toán phân tích và bóc tách dữ liệu điện 3 giá chuyên sâu từ file văn bản (.txt) hoặc kết quả OCR.
+    
+    Hỗ trợ:
+    1. Bóc tách nhiều trạm biến áp / công tơ (PB...) trên cùng 1 file.
+    2. Nhận diện chính xác Kỳ / Tháng / Năm từ tên file (# FILE: ...), tiêu đề hóa đơn hoặc khoảng thời gian ghi chỉ số.
+    3. Nhận diện Thuế suất VAT (8%, 10%, 5%, 0%).
+    4. Tự động nhận diện và gán đúng 3 mức Đơn giá & Sản lượng (Bình thường, Cao điểm, Thấp điểm) 
+       kể cả khi bảng có cấu trúc hàng ngang, cột dọc hoặc OCR ngắt dòng.
+    5. Fallback nhận diện cho dạng dữ liệu dán trực tiếp 3 dòng số từ bảng kê.
+    """
+    if not raw_text or not raw_text.strip():
+        return []
+
+    def clean_num(s):
+        if not s:
+            return 0.0
+        s = str(s).strip().replace(" ", "").replace("\xa0", "").replace("\u200b", "").replace("\ufeff", "")
+        # Nếu có cả dấu chấm và dấu phẩy (VD: 1.508.795,647 hoặc 1,508,795.647)
+        if "." in s and "," in s:
+            if s.rfind(",") > s.rfind("."):
+                s = s.replace(".", "").replace(",", ".")
+            else:
+                s = s.replace(",", "")
+        elif "," in s:
+            parts = s.split(",")
+            if len(parts) == 2 and len(parts[1]) in [1, 2, 3]:
+                s = s.replace(",", ".")
+            else:
+                s = s.replace(",", "")
+        elif "." in s:
+            parts = s.split(".")
+            if len(parts) > 2:
+                s = s.replace(".", "")
+            elif len(parts) == 2 and len(parts[1]) == 3:
+                s = s.replace(".", "")
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    # 1. Tách theo từng tệp (# FILE: ...) hoặc trang
+    file_pattern = re.compile(r'(?:^|\n)#{5,}\s*\n#\s*FILE:\s*([^\n#]+)\s*\n#{5,}', re.IGNORECASE)
+    splits = list(file_pattern.finditer(raw_text))
+
+    blocks = []
+    if splits:
+        for i in range(len(splits)):
+            fname = splits[i].group(1).strip()
+            start = splits[i].end()
+            end = splits[i+1].start() if i + 1 < len(splits) else len(raw_text)
+            chunk = raw_text[start:end].strip()
+            if chunk:
+                blocks.append((fname, chunk))
+    else:
+        # Tách theo trang hoặc giữ nguyên
+        page_chunks = re.split(r'={3,}\s*\[Trang[^\n]+\]\s*={3,}', raw_text, flags=re.IGNORECASE)
+        if len(page_chunks) > 1:
+            for p in page_chunks:
+                p_str = p.strip()
+                if p_str:
+                    blocks.append(('', p_str))
+        else:
+            blocks = [('', raw_text.strip())]
+
+    extracted_rows = []
+
+    for filename, block_text in blocks:
+        # Nếu trong 1 file/trang có nhiều trạm (PB...) hoặc nhiều bảng thanh toán, tách nhỏ
+        station_splits = re.split(r'(?=(?:M[aã]\s*kh[aá]ch\s*h[aà]ng|M[aã]\s*tr[aạ]m|M[aã]\s*[ĐD]L|M[aã]\s*C[OÔ]NG\s*T[OƠ])[:\s]*(?:PB|PE|PA|PK|PD)\d+)', block_text, flags=re.IGNORECASE)
+        if len(station_splits) <= 1:
+            station_splits = [block_text]
+
+        for st_text in station_splits:
+            text = st_text.strip()
+            if len(text) < 15:
+                continue
+
+            # --- A. Xác định Kỳ / Tháng / Năm ---
+            ky, thang, nam = 1, 1, 2025
+            found_period = False
+
+            # 1. Từ câu: Kỳ hóa đơn: Kỳ 3 - 3/2026 hoặc Ky 1 - 01/2024
+            m_ky = re.search(r'(?:K[yỳ]|Ky)\s*(?:h[oó]a\s*[đd][oơ]n|hoa\s*don)?[:\s]*(?:K[yỳ]|Ky)?\s*(\d+)\s*[-_/]\s*(\d{1,2})[/_-](\d{4})', text, re.IGNORECASE)
+            if m_ky:
+                ky = int(m_ky.group(1))
+                thang = int(m_ky.group(2))
+                nam = int(m_ky.group(3))
+                found_period = True
+
+            # 2. Từ tên file (VD: 1-1-24.pdf, Ky_1_Thang_01_2024.pdf)
+            if not found_period and filename:
+                m_fn = re.search(r'(?:^|[^\d])(\d{1,2})[-_](\d{1,2})[-_](\d{2,4})(?:[^\d]|$)', filename)
+                if m_fn:
+                    ky = int(m_fn.group(1))
+                    thang = int(m_fn.group(2))
+                    raw_y = int(m_fn.group(3))
+                    nam = 2000 + raw_y if raw_y < 100 else raw_y
+                    found_period = True
+
+
+            # 3. Từ khoảng ngày: Từ ngày 01/01/2024 đến 10/01/2024
+            if not found_period:
+                m_range = re.search(r'T[uừ]\s*ng[aà]y\s*(\d{1,2})[/_-](\d{1,2})[/_-](\d{4})\s*[đd][eế]n\s*ng[aà]y\s*(\d{1,2})[/_-](\d{1,2})[/_-](\d{4})', text, re.IGNORECASE)
+                if m_range:
+                    start_day = int(m_range.group(1))
+                    thang = int(m_range.group(2))
+                    nam = int(m_range.group(3))
+                    if start_day <= 10:
+                        ky = 1
+                    elif start_day <= 20:
+                        ky = 2
+                    else:
+                        ky = 3
+                    found_period = True
+
+            # 4. Từ định dạng tiếng Anh: Period III 2026 hoặc March-Period III 2026
+            if not found_period:
+                m_p = re.search(r'Period\s+(I{1,3}|IV|\d+)\s+(\d{4})', text, re.IGNORECASE)
+                if m_p:
+                    p_map = {'I': 1, 'II': 2, 'III': 3, 'IV': 4}
+                    ky = p_map.get(m_p.group(1).upper(), 1)
+                    nam = int(m_p.group(2))
+                    m_m = re.search(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-_\s]+Period', text, re.IGNORECASE)
+                    if m_m:
+                        m_dict = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
+                        thang = m_dict.get(m_m.group(1).lower()[:3], 1)
+                    found_period = True
+
+            # 5. Từ tháng / năm thông thường
+            if not found_period:
+                m_th = re.search(r'th[aá]ng\s*(\d{1,2})\s*n[aă]m\s*(\d{4})', text, re.IGNORECASE)
+                if m_th:
+                    thang = int(m_th.group(1))
+                    nam = int(m_th.group(2))
+
+            # --- B. Xác định Thuế VAT (%) ---
+            thue_vat = 0.0
+            m_tax = re.search(r'(?:Thu[eếo]\s*su[aáâăắặẳẵấầẩẫậ]*t\s*GTGT|Thue\s*suat\s*GTGT|Thu[eế]\s*GTGT|VAT)[\s:\n]*(\d+)\s*%', text, re.IGNORECASE)
+            if m_tax:
+                thue_vat = float(m_tax.group(1))
+            elif '8%' in text or ' 8 %' in text or 'E%' in text:
+                thue_vat = 8.0
+            elif '10%' in text or ' 10 %' in text:
+                thue_vat = 10.0
+            elif '5%' in text or ' 5 %' in text:
+                thue_vat = 5.0
+
+            # --- C. Tìm Mã trạm / Mã Khách hàng ---
+            m_kh = re.search(r'((?:PB|PE|PA|PK|PD)\d{8,12})', text)
+            kh_code = m_kh.group(1) if m_kh else ''
+
+            # --- D. Trích xuất 3 khung giá (Bình thường, Cao điểm, Thấp điểm) ---
+            def extract_tier_smart(regex_tier, content):
+                matches = list(re.finditer(regex_tier, content, re.IGNORECASE))
+                best_price, best_vol = 0.0, 0.0
+                for m in matches:
+                    start_pos = m.end()
+                    chunk = content[start_pos:start_pos + 160]
+                    # Ngắt nếu gặp từ khóa khung giờ tiếp theo hoặc phần tổng
+                    chunk = re.split(r'(?:Khung\s*gi|Gi[oò]\s*cao|Gi[oò]\s*th|Gi[oò]\s*b|T[OỔ]NG\s*S[OỐ]|Thu[eếo]|100\s*%)', chunk, flags=re.IGNORECASE)[0]
+                    nums = [clean_num(n) for n in re.findall(r'\d+[\d\.,]*', chunk) if len(n) > 0]
+                    nums = [n for n in nums if n > 0]
+
+                    if len(nums) >= 3:
+                        # 3 số: [đơn_giá, sản_lượng, thành_tiền]
+                        p, v, tot = nums[0], nums[1], nums[2]
+                        if 800 <= p <= 6000:
+                            return p, v
+                        elif 800 <= nums[1] <= 6000:
+                            return nums[1], nums[0]
+                    elif len(nums) == 2:
+                        n1, n2 = nums[0], nums[1]
+                        if 800 <= n1 <= 6000:
+                            return n1, n2
+                        elif 800 <= n2 <= 6000:
+                            return n2, n1
+                        else:
+                            return 0.0, max(n1, n2)
+                    elif len(nums) == 1:
+                        if nums[0] > 6000:
+                            best_vol = nums[0]
+                return best_price, best_vol
+
+            # Ưu tiên lấy vùng bảng thanh toán (sau TỔNG SỐ TIỀN THANH TOÁN hoặc THÀNH TIỀN)
+            sub_search = text
+            m_sub = re.search(r'T[OỔ]NG\s*S[OỐ]\s*TI[EỀ]N\s*THANH\s*TO[AÁ]N|TH[AÀ]NH\s*TI[EỀ]N\s*\([đd][oồ]ng\)|TI[EỀ]N\s*[ĐD]I[EỆ]N\s*CHI\s*TI[EẾ]T', text, re.IGNORECASE)
+            if m_sub:
+                sub_search = text[m_sub.start():]
+
+            re_bt = r'(?:b[iìíỉĩị]nh\s*th[uư][oơờ][^\s]*|binh\s*thuong|BT|Normal)'
+            re_cd = r'(?:cao\s*[dđ][ií][^\s]*|cao\s*diem|CD|CĐ|Peak)'
+            re_td = r'(?:th[aáâăắặẳẵấầẩẫậ]p\s*[dđ][ií][^\s]*|thap\s*diem|TD|TĐ|Off-peak)'
+
+            bt_p, bt_v = extract_tier_smart(re_bt, sub_search)
+            cd_p, cd_v = extract_tier_smart(re_cd, sub_search)
+            td_p, td_v = extract_tier_smart(re_td, sub_search)
+
+            # Fallback nếu không có trong sub_search thì tìm toàn văn
+            if (bt_v + cd_v + td_v) == 0:
+                bt_p, bt_v = extract_tier_smart(re_bt, text)
+                cd_p, cd_v = extract_tier_smart(re_cd, text)
+                td_p, td_v = extract_tier_smart(re_td, text)
+
+            if (bt_v + cd_v + td_v) > 0:
+                note = f"OCR {kh_code}" if kh_code else (filename if filename else "OCR txt")
+                extracted_rows.append({
+                    "nam": nam,
+                    "thang": thang,
+                    "ky": ky,
+                    "thue_vat": thue_vat,
+                    "bt_don_gia": bt_p or 1833.0,
+                    "bt_san_luong": bt_v,
+                    "cd_don_gia": cd_p or 3398.0,
+                    "cd_san_luong": cd_v,
+                    "td_don_gia": td_p or 1190.0,
+                    "td_san_luong": td_v,
+                    "ghi_chu": note
+                })
+
+    # --- Fallback: Nhận diện dạng dán trực tiếp 3 dòng số (1.833 51.559 ...) ---
+    if len(extracted_rows) == 0:
+        lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        for i in range(0, len(lines) - 2, 3):
+            group_nums = []
+            for j in range(3):
+                nums = [clean_num(n) for n in re.findall(r'\d+[\d\.,]*', lines[i + j]) if clean_num(n) > 0]
+                if len(nums) >= 2:
+                    p, v = (nums[0], nums[1]) if 800 <= nums[0] <= 6000 else (nums[1], nums[0])
+                    group_nums.append((p, v))
+                elif len(nums) == 1:
+                    group_nums.append((0.0, nums[0]))
+            if len(group_nums) == 3 and (group_nums[0][1] + group_nums[1][1] + group_nums[2][1]) > 0:
+                extracted_rows.append({
+                    "nam": 2025,
+                    "thang": 1,
+                    "ky": 1,
+                    "thue_vat": 0.0,
+                    "bt_don_gia": group_nums[0][0] or 1833.0,
+                    "bt_san_luong": group_nums[0][1],
+                    "cd_don_gia": group_nums[1][0] or 3398.0,
+                    "cd_san_luong": group_nums[1][1],
+                    "td_don_gia": group_nums[2][0] or 1190.0,
+                    "td_san_luong": group_nums[2][1],
+                    "ghi_chu": "text paste"
+                })
+
+    extracted_rows.sort(key=lambda x: (x["nam"], x["thang"], x["ky"]))
+    return extracted_rows
+
+
+@excel_bp.route('/parse-invoices', methods=['POST'])
+def parse_invoices():
+    """
+    Tự động đọc và bóc tách dữ liệu điện 3 giá từ file ZIP hoặc nhiều file PDF hóa đơn EVN (dạng vector/digital PDF).
+    
+    Returns:
+        JSON response chứa mảng dataRows đã bóc tách.
+    """
+    try:
+        import pdfplumber
+    except ImportError:
+        return jsonify({"error": "Thiếu thư viện pdfplumber trên server."}), 500
+
+    uploaded_files = request.files.getlist("files")
+    if not uploaded_files or (len(uploaded_files) == 1 and not uploaded_files[0].filename):
+        single_file = request.files.get("file")
+        if single_file and single_file.filename:
+            uploaded_files = [single_file]
+
+    if not uploaded_files or not uploaded_files[0].filename:
+        return jsonify({"error": "Vui lòng chọn file ZIP hoặc PDF hóa đơn."}), 400
+
+    def extract_pdfs_from_bytes(file_bytes: bytes, fname: str) -> list:
+        pdf_list = []
+        if fname.lower().endswith(".pdf"):
+            pdf_list.append((fname, file_bytes))
+        elif fname.lower().endswith(".zip"):
+            try:
+                with zipfile.ZipFile(io.BytesIO(file_bytes), "r") as zf:
+                    pdf_names = [name for name in zf.namelist() if name.lower().endswith(".pdf") and not name.startswith("__MACOSX")]
+                    ctiet_names = [n for n in pdf_names if "_ctiet" in n.lower() or "_ct." in n.lower()]
+                    target_names = ctiet_names if len(ctiet_names) > 0 else pdf_names
+                    for pname in target_names:
+                        pdf_content = zf.read(pname)
+                        pdf_list.append((os.path.basename(pname), pdf_content))
+            except Exception:
+                pass
+        return pdf_list
+
+    all_pdf_items = []
+    for f in uploaded_files:
+        f_bytes = f.read()
+        extracted = extract_pdfs_from_bytes(f_bytes, f.filename)
+        all_pdf_items.extend(extracted)
+
+    if not all_pdf_items:
+        return jsonify({"error": "Không tìm thấy file PDF hóa đơn nào trong tệp đã tải lên."}), 400
+
+    parsed_rows = []
+    failed_files = []
+
+    for pdf_name, pdf_bytes in all_pdf_items:
+        try:
+            text = ""
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as doc:
+                for page in doc.pages:
+                    t = page.extract_text()
+                    if t:
+                        text += t + "\n"
+
+            if not text.strip():
+                raise ValueError(f"Không tìm thấy lớp văn bản (vector text) trong file {pdf_name}. Với file scan, vui lòng sử dụng Tool Desktop OCR.")
+
+            # Chạy qua bộ phân tích chuyên sâu
+            doc_text = f"########################################\n# FILE: {pdf_name}\n########################################\n\n{text}"
+            rows = parse_electricity_text_content(doc_text)
+            if not rows:
+                raise ValueError(f"Không bóc tách được số liệu điện 3 giá từ nội dung file {pdf_name}.")
+            parsed_rows.extend(rows)
+        except Exception as e:
+            failed_files.append({"file": pdf_name, "error": str(e)})
+
+    parsed_rows.sort(key=lambda x: (x["nam"], x["thang"], x["ky"]))
+
+    return jsonify({
+        "success": True,
+        "total_pdfs": len(all_pdf_items),
+        "parsed_count": len(parsed_rows),
+        "failed_count": len(failed_files),
+        "failed_files": failed_files,
+        "data": parsed_rows
+    })
+
+
+@excel_bp.route('/parse-text', methods=['POST'])
+def parse_text_endpoint():
+    """
+    Phân tích văn bản thuần (plaintext từ OCR hoặc copy/paste) và bóc tách các dòng số liệu điện 3 giá.
+    """
+    payload = request.get_json(silent=True) or {}
+    raw_text = payload.get('text', '')
+    if not raw_text and 'text' in request.form:
+        raw_text = request.form.get('text', '')
+
+    if not raw_text or not raw_text.strip():
+        if 'file' in request.files:
+            raw_text = request.files['file'].read().decode('utf-8', errors='ignore')
+
+    if not raw_text or not raw_text.strip():
+        return jsonify({"error": "Văn bản rỗng hoặc không có dữ liệu để phân tích."}), 400
+
+    extracted_rows = parse_electricity_text_content(raw_text)
+
+    if not extracted_rows:
+        return jsonify({"error": "Không nhận diện được cấu trúc số liệu điện 3 giá từ văn bản."}), 400
+
+    return jsonify({
+        "success": True,
+        "count": len(extracted_rows),
+        "data": extracted_rows
+    })
+
+
+

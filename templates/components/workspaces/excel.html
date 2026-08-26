@@ -3,20 +3,115 @@
   <div class="main-wrapper">
 
     <div class="card excel-hero">
-      <h2 class="excel-heading">Nhập liệu điện 3 giá</h2>
-      <p class="excel-hero-sub">Nhập dữ liệu điện theo kỳ/tháng, lưu file dữ liệu để nhập tiếp bất kỳ lúc nào, và xuất bảng tiêu thụ 12 tháng khi đủ dữ liệu.</p>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 class="excel-heading" style="margin-bottom: 0.35rem;">Nhập liệu điện 3 giá</h2>
+          <p class="excel-hero-sub" style="margin-top: 0;">Nhập dữ liệu điện theo kỳ/tháng, lưu file dữ liệu để tiếp tục bất kỳ lúc nào, và xuất bảng tổng hợp tiêu thụ 12 tháng chuyên nghiệp.</p>
+        </div>
+      </div>
+
+      <!-- Hướng dẫn chi tiết có thể thu gọn -->
+      <details style="margin-top: 15px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;">
+        <summary style="cursor: pointer; font-weight: 600; color: var(--accent2); font-size: 0.88rem; user-select: none;">
+          📖 Hướng dẫn chi tiết & Cấu trúc file dữ liệu / hóa đơn (Click để xem)
+        </summary>
+        
+        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 14px; font-size: 0.8rem; line-height: 1.6; color: var(--text-muted);">
+          
+          <!-- Phần 1: Cấu trúc file Excel -->
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              📊 1. Cấu trúc File Excel dữ liệu (.xlsx) lưu giữa chừng:
+            </div>
+            <div>• <strong>Tên Sheet chuẩn:</strong> <code>DuLieu</code></div>
+            <div style="margin: 8px 0 6px;">• <strong>Cấu trúc 11 cột chuẩn:</strong></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+              <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">nam</span>
+              <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">thang</span>
+              <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">ky</span>
+              <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">thue_vat</span>
+              <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">bt_don_gia</span>
+              <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">bt_san_luong</span>
+              <span style="background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">cd_don_gia</span>
+              <span style="background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">cd_san_luong</span>
+              <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">td_don_gia</span>
+              <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">td_san_luong</span>
+              <span style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-weight: 600;">ghi_chu</span>
+            </div>
+            <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.5;">
+              - <code>nam</code>, <code>thang</code>, <code>ky</code>: Năm (2024, 2025), Tháng (1-12), Kỳ (1-3).<br>
+              - <code>thue_vat</code>: Thuế suất VAT (%) áp dụng cho kỳ (VD: 0, 8, 10).<br>
+              - <code>bt_*</code>, <code>cd_*</code>, <code>td_*</code>: Đơn giá (đ/kWh) và Sản lượng tiêu thụ (kWh) theo 3 khung giờ Bình thường, Cao điểm, Thấp điểm.<br>
+              - <code>ghi_chu</code>: Ghi chú hoặc tên file hóa đơn gốc.<br>
+              💡 <em>Lưu ý: File dữ liệu dạng bảng phẳng (flat table) này giúp bạn có thể tải về lưu trên máy, lần sau bấm <strong>"Nạp file có sẵn (.xlsx)"</strong> để nhập tiếp mà không bị mất dữ liệu.</em>
+            </div>
+          </div>
+
+          <!-- Phần 2: Hướng dẫn file hóa đơn điện tử (ZIP / PDF Vector) -->
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              ⚡ 2. Hướng dẫn file hóa đơn điện tử (ZIP / PDF dạng vector):
+            </div>
+            <div style="font-size: 0.76rem; line-height: 1.55;">
+              • <strong>Định dạng chấp nhận:</strong> File <code>.zip</code> hoặc chọn nhiều file <code>.pdf</code> tải về từ cổng thông tin EVN (EVNSPC, EVNHCMC, EVNHANOI, EVNNPC, EVNCPC...).<br>
+              • <strong>Hỗ trợ ZIP lồng ZIP:</strong> Bạn có thể gom tất cả các file ZIP tải về từ EVN (ví dụ: <code>1-1-24.zip</code>, <code>2-1-24.zip</code>, <code>3-1-24.zip</code>...) vào 1 file ZIP lớn và nạp tự động.<br>
+              • <strong>Hóa đơn PDF scan (dạng ảnh):</strong> Với file PDF scan, vui lòng sử dụng <strong>Tool Desktop OCR (.exe)</strong> để OCR và xuất file <code>.txt</code>, sau đó dùng nút <em>"📄 Nạp file Text (.txt / OCR)"</em>.<br>
+              • <strong>File chi tiết ưu tiên:</strong> Hệ thống tự động tìm và đọc các file PDF bảng kê chi tiết có đuôi <code>_CTIET.pdf</code>, <code>_CT.pdf</code> hoặc file hóa đơn chuẩn.
+            </div>
+          </div>
+
+          <!-- Phần 3: Hướng dẫn nạp file Text (.txt) từ Tool OCR Desktop -->
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              📄 3. Hướng dẫn nạp file Text (.txt) từ Tool OCR Desktop:
+            </div>
+            <div style="font-size: 0.76rem; line-height: 1.55;">
+              • <strong>Quy trình tối ưu tài nguyên:</strong> Sử dụng ứng dụng <strong>Tool Desktop OCR (.exe)</strong> để OCR hàng loạt ảnh/PDF hóa đơn trực tiếp trên máy cá nhân mà không làm tốn tài nguyên server.<br>
+              • <strong>Nạp dữ liệu tự động:</strong> Bấm nút <strong>"📄 Nạp file Text (.txt / OCR)"</strong> và chọn file <code>.txt</code> vừa xuất ra từ tool desktop.<br>
+              • <strong>Nhận diện thông minh:</strong> Hệ thống tự động bóc tách chuẩn xác toàn bộ các kỳ, tháng, năm, 3 mức đơn giá & sản lượng (Bình thường, Cao điểm, Thấp điểm), thuế VAT (%) và mã từng trạm công tơ mà không bị ghi đè dữ liệu.
+            </div>
+          </div>
+
+          <!-- Phần 4: Hướng dẫn nhập thủ công -->
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;">
+            <div style="font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              ✍️ 4. Hướng dẫn nhập tay nhanh (Chuỗi / Từng ô):
+            </div>
+            <div style="font-size: 0.76rem; line-height: 1.55;">
+              • <strong>Nhập bằng chuỗi:</strong> Copy & dán 3 dòng (Bình thường, Cao điểm, Thấp điểm) từ bảng thông báo tiền điện theo mẫu <code>&lt;Đơn giá&gt; &lt;Sản lượng&gt;</code> (VD:<br>
+              &nbsp;&nbsp;<code>1.833 51.559</code><br>
+              &nbsp;&nbsp;<code>3.398 19.180</code><br>
+              &nbsp;&nbsp;<code>1.190 28.653</code>)<br>
+              • <strong>Nhập từng ô:</strong> Bạn có thể copy 3 dòng số liệu và dán trực tiếp vào ô <em>Đơn giá BT</em>, hệ thống sẽ tự động phân tách và điền đủ 6 ô còn lại.
+            </div>
+          </div>
+
+        </div>
+      </details>
     </div>
 
     <!-- 1. Quản lý File Dữ Liệu -->
     <div class="card">
-      <h3 class="excel-step-title">Bước 1: Quản lý file dữ liệu</h3>
-      <p class="excel-hero-sub" style="margin-bottom: 15px; font-size: 14px;">Tạo file mới hoặc nạp file dữ liệu có sẵn để nhập tiếp.</p>
+      <h3 class="excel-step-title">Quản lý file dữ liệu</h3>
+      <p class="excel-hero-sub" style="margin-bottom: 15px; font-size: 14px;">Tạo file mới, nạp file dữ liệu có sẵn, hoặc tự động đọc từ file hóa đơn / Text OCR.</p>
 
       <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <button onclick="excelCreateNewFile()">Tạo file mới</button>
         <button class="btn-outline" onclick="document.getElementById('load_file_input').click()">Nạp file có sẵn (.xlsx)</button>
         <input type="file" id="load_file_input" accept=".xlsx" style="display: none;" onchange="excelLoadExistingFile(this)">
+
+        <button class="btn-outline" style="border-color: var(--accent); color: var(--accent);" onclick="document.getElementById('txt_file_input').click()">
+          📄 Nạp file Text (.txt / OCR)
+        </button>
+        <input type="file" id="txt_file_input" accept=".txt" style="display: none;" onchange="excelLoadTxtFile(this)">
+
+        <button class="btn-outline" style="border-color: var(--accent2); color: var(--accent2);" onclick="document.getElementById('invoice_files_input').click()">
+          ⚡ Đọc tự động từ ZIP / PDF hóa đơn
+        </button>
+        <input type="file" id="invoice_files_input" accept=".zip,.pdf" multiple style="display: none;" onchange="excelParseInvoices(this)">
       </div>
+
+
 
       <div id="active_file_display" style="display: none; margin-top: 15px; align-items: center; gap: 10px;">
         <div class="excel-active-file-meta" style="flex-grow: 1;">
@@ -29,7 +124,7 @@
 
     <!-- 2. Vùng Nhập Liệu -->
     <div class="card" id="data_entry_section" style="opacity: 0.5; pointer-events: none;">
-      <h3 class="excel-step-title">Bước 2: Nhập dữ liệu</h3>
+      <h3 class="excel-step-title">Nhập dữ liệu</h3>
 
       <div class="form-row">
         <div class="form-col">
@@ -99,13 +194,41 @@
       <div id="message"></div>
     </div>
 
-    <!-- 3. Bảng Dữ Liệu -->
+    <!-- 3. Export & Download (Đưa lên trước phần dữ liệu đã nhập) -->
+    <div class="card" id="export_section" style="opacity: 0.5; pointer-events: none;">
+      <h3 class="excel-step-title">Lưu & Xuất báo cáo</h3>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="excelSaveDataFile()" class="btn-outline">
+          💾 Lưu file dữ liệu (.xlsx)
+        </button>
+        <button onclick="excelExportReport()">
+          📊 Xuất bảng tiêu thụ 12 tháng
+        </button>
+      </div>
+      <div id="export_message" style="margin-top: 12px;"></div>
+    </div>
+
+    <!-- 4. Bảng Dữ Liệu -->
     <div class="card" id="data_table_section">
-      <h3 class="excel-step-title">Bước 3: Dữ liệu đã nhập</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <h3 class="excel-step-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Dữ liệu đã nhập</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn_delete_selected" class="btn-small" style="background: var(--danger); display: none;" onclick="excelDeleteSelectedRows()">
+            🗑️ Xóa đã chọn (<span id="selected_count">0</span>)
+          </button>
+          <button id="btn_clear_all" class="btn-small btn-outline" style="border-color: rgba(248, 113, 113, 0.45); color: var(--state-error-text);" onclick="excelClearAllRows()" disabled>
+            Xóa tất cả
+          </button>
+        </div>
+      </div>
+      
       <div class="table-scroll">
         <table class="history-table" id="data_table">
           <thead>
             <tr>
+              <th style="width: 36px; text-align: center;">
+                <input type="checkbox" id="select_all_rows" onchange="excelToggleSelectAll(this)" title="Chọn tất cả">
+              </th>
               <th>Năm</th>
               <th>Tháng</th>
               <th>Kỳ</th>
@@ -117,30 +240,16 @@
               <th>ĐG TĐ</th>
               <th>SL TĐ</th>
               <th>Ghi chú</th>
-              <th></th>
+              <th style="width: 40px;"></th>
             </tr>
           </thead>
           <tbody id="data_table_body">
             <tr>
-              <td colspan="12" class="empty-state">Chưa có dữ liệu. Tạo file mới hoặc nạp file có sẵn để bắt đầu.</td>
+              <td colspan="13" class="empty-state">Chưa có dữ liệu. Tạo file mới hoặc nạp file có sẵn để bắt đầu.</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
-
-    <!-- 4. Export & Download -->
-    <div class="card" id="export_section" style="opacity: 0.5; pointer-events: none;">
-      <h3 class="excel-step-title">Bước 4: Lưu & Xuất báo cáo</h3>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="excelSaveDataFile()" class="btn-outline">
-          💾 Lưu file dữ liệu (.xlsx)
-        </button>
-        <button onclick="excelExportReport()">
-          📊 Xuất bảng tiêu thụ 12 tháng
-        </button>
-      </div>
-      <div id="export_message" style="margin-top: 12px;"></div>
     </div>
 
   </div>

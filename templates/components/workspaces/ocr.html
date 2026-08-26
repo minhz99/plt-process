@@ -1,0 +1,119 @@
+<!-- ══════════════════ OCR WORKSPACE ══════════════════ -->
+<div id="workspace-ocr" class="workspace" style="display:none;">
+  <div class="main-wrapper">
+
+    <!-- Hero Card -->
+    <div class="card excel-hero">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 class="excel-heading" style="margin-bottom: 0.35rem;">OCR Hình ảnh / PDF sang Văn bản</h2>
+          <p class="excel-hero-sub" style="margin-top: 0;">Trích xuất toàn bộ chữ & số từ file ảnh, file PDF scan, hoặc file ZIP thành văn bản thuần (.txt) để sử dụng cho Excel hoặc các công cụ khác.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Tải lên & Cấu hình -->
+    <div class="card">
+      <h3 class="excel-step-title">Tải lên tệp cần OCR</h3>
+      
+      <div class="file-drop-zone" id="ocr_drop_zone" style="border: 2px dashed var(--border); border-radius: 10px; padding: 30px 20px; text-align: center; background: var(--surface2); cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('ocr_files_input').click()">
+        <div style="font-size: 2.2rem; margin-bottom: 10px; color: var(--accent2);">📄</div>
+        <div style="font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 6px;">Kéo & thả file ảnh, PDF hoặc ZIP vào đây</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">Hỗ trợ: .png, .jpg, .jpeg, .bmp, .tiff, .webp, .pdf, .zip (cho phép chọn nhiều file)</div>
+        <input type="file" id="ocr_files_input" accept=".png,.jpg,.jpeg,.bmp,.tiff,.webp,.pdf,.zip" multiple style="display: none;" onchange="ocrHandleFileSelect(this)">
+      </div>
+
+      <!-- Danh sách file đã chọn -->
+      <div id="ocr_selected_files_container" style="display: none; margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">Các tệp đã chọn:</span>
+          <button class="btn-small btn-outline" style="font-size: 0.72rem; padding: 2px 8px;" onclick="ocrClearSelectedFiles()">Xóa tất cả</button>
+        </div>
+        <div id="ocr_file_list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;"></div>
+      </div>
+
+      <!-- Cấu hình nâng cao -->
+      <div class="form-row" style="margin-top: 15px; align-items: center;">
+        <div class="form-col">
+          <label style="font-size: 0.8rem;">Mô hình OCR</label>
+          <select id="ocr_engine_type" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+            <option value="vietocr" selected>DeepDoc + VietOCR (Chính xác cao cho Tiếng Việt)</option>
+            <option value="rapidocr">RapidOCR (Siêu tốc độ)</option>
+          </select>
+        </div>
+        <div class="form-col">
+          <label style="font-size: 0.8rem;">Độ phân giải PDF (DPI)</label>
+          <select id="ocr_resolution" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text);">
+            <option value="150" selected>150 DPI (Tiêu chuẩn)</option>
+            <option value="200">200 DPI (Sắc nét hơn)</option>
+            <option value="100">100 DPI (Siêu tốc)</option>
+          </select>
+        </div>
+        <div class="form-col" style="display: flex; align-items: flex-end; padding-bottom: 8px;">
+          <label class="excel-inline-label" style="font-size: 0.85rem;">
+            <input type="checkbox" id="ocr_skip_blank" checked>
+            Bỏ qua trang trắng
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; display: flex; gap: 10px; align-items: center;">
+        <button id="btn_run_ocr" onclick="ocrStartProcessing()" style="padding: 10px 24px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+          <span>🚀 Bắt đầu OCR</span>
+        </button>
+        <div id="ocr_status_badge" style="display: none; font-size: 0.85rem; color: var(--accent2);"></div>
+      </div>
+
+      <div id="ocr_progress_container" style="display: none; margin-top: 15px;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;" id="ocr_progress_text">Đang nhận diện văn bản...</div>
+        <div style="width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+          <div id="ocr_progress_bar" style="width: 100%; height: 100%; background: var(--accent2); animation: progress-anim 1.5s infinite linear;"></div>
+        </div>
+      </div>
+
+      <div id="ocr_error_message" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 2. Kết quả OCR -->
+    <div class="card" id="ocr_results_section" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 class="excel-step-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Kết quả OCR</h3>
+          <div id="ocr_stats_badge" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;"></div>
+        </div>
+        
+        <!-- Thanh công cụ hành động -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn-small btn-outline" onclick="ocrCopyText()" title="Sao chép toàn bộ text vào bộ nhớ tạm">
+            📋 Sao chép Text
+          </button>
+          <button class="btn-small btn-outline" onclick="ocrDownloadSingleTxt()" title="Tải về file .txt gộp">
+            💾 Tải file .txt
+          </button>
+          <button class="btn-small btn-outline" id="btn_ocr_download_zip" onclick="ocrDownloadZip()" title="Tải về file ZIP chứa các file .txt riêng lẻ">
+            📦 Tải ZIP (Từng file)
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Tab chuyển đổi Xem gộp / Xem theo file -->
+      <div class="tabs" style="margin-bottom: 10px;">
+        <button class="tab-btn active" id="ocr_tab_all_btn" onclick="ocrSwitchViewTab('all')">Toàn bộ văn bản (Gộp)</button>
+        <button class="tab-btn" id="ocr_tab_files_btn" onclick="ocrSwitchViewTab('by_file')">Xem theo từng File</button>
+      </div>
+
+      <!-- Khung hiển thị text gộp -->
+      <div id="ocr_view_all" class="tab-pane active" style="display: block;">
+        <textarea id="ocr_result_textarea" style="width: 100%; height: 380px; font-family: monospace; font-size: 0.85rem; line-height: 1.5; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); resize: vertical;" placeholder="Kết quả nhận dạng văn bản sẽ hiển thị ở đây..."></textarea>
+      </div>
+
+      <!-- Khung hiển thị text theo từng file -->
+      <div id="ocr_view_by_file" class="tab-pane" style="display: none;">
+        <div id="ocr_files_accordion" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

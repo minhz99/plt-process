@@ -40,3 +40,4 @@ dist/
 # Project-specific
 /temp/
 /tests
+/tools
