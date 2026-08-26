@@ -3,34 +3,27 @@
   <div class="main-wrapper">
 
     <div class="card excel-hero">
-      <h2 class="excel-heading">Excel số điện</h2>
-      <p class="excel-hero-sub">Nhập nhanh chỉ số điện theo tháng/kỳ, dữ liệu sẽ được ghi vào file Excel.</p>
+      <h2 class="excel-heading">Nhập liệu điện 3 giá</h2>
+      <p class="excel-hero-sub">Nhập dữ liệu điện theo kỳ/tháng, lưu file dữ liệu để nhập tiếp bất kỳ lúc nào, và xuất bảng tiêu thụ 12 tháng khi đủ dữ liệu.</p>
     </div>
 
-    <!-- 1. Quản lý File Excel -->
+    <!-- 1. Quản lý File Dữ Liệu -->
     <div class="card">
-      <h3 class="excel-step-title">Bước 1: Quản lý danh sách file</h3>
-      <p class="excel-hero-sub" style="margin-bottom: 15px; font-size: 14px;">Bạn có thể tạo và nhập cùng lúc nhiều file
-        khác nhau.</p>
+      <h3 class="excel-step-title">Bước 1: Quản lý file dữ liệu</h3>
+      <p class="excel-hero-sub" style="margin-bottom: 15px; font-size: 14px;">Tạo file mới hoặc nạp file dữ liệu có sẵn để nhập tiếp.</p>
 
       <div class="file-area" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <input type="text" id="new_filename" placeholder="Nhập tên file (VD: Cong_ty_A)"
-          style="flex-grow: 1; max-width: 300px;" class="form-control">
-        <button onclick="createNewFile()">Thêm file</button>
+        <button onclick="excelCreateNewFile()">Tạo file mới</button>
+        <button class="btn-outline" onclick="document.getElementById('load_file_input').click()">Nạp file có sẵn (.xlsx)</button>
+        <input type="file" id="load_file_input" accept=".xlsx" style="display: none;" onchange="excelLoadExistingFile(this)">
       </div>
 
       <div id="active_file_display" style="display: none; margin-top: 15px; align-items: center; gap: 10px;">
         <div class="excel-active-file-meta" style="flex-grow: 1;">
           <label class="excel-active-file-label">File đang thao tác:</label>
-          <select id="active_filename" onchange="switchFile()" class="form-select"
-            style="max-width: 300px; display: inline-block;"></select>
+          <span id="active_filename_label" style="font-weight: 600; color: var(--accent2); font-size: 0.95rem;"></span>
+          <span id="data_count_badge" style="margin-left: 10px; font-size: 0.78rem; padding: 3px 10px; border-radius: 20px; background: rgba(59, 130, 246, 0.15); color: var(--accent);"></span>
         </div>
-        <button class="btn-outline btn-small" onclick="downloadFile()" id="btn_download">
-          Tải file hiện tại
-        </button>
-        <button class="btn-outline btn-small" onclick="downloadAllFiles()" id="btn_download_all">
-          Tải tất cả (ZIP)
-        </button>
       </div>
     </div>
 
@@ -39,17 +32,21 @@
       <h3 class="excel-step-title">Bước 2: Nhập dữ liệu</h3>
 
       <div class="form-row">
-        <div class="form-col form-col-wide">
-          <label>Năm (tên sheet Excel)</label>
-          <select id="sheet_name"></select>
+        <div class="form-col">
+          <label>Năm</label>
+          <input type="number" id="input_year" min="2020" max="2040" value="2025">
         </div>
         <div class="form-col">
           <label>Tháng (1-12)</label>
-          <input type="number" id="month" min="1" max="12" value="1">
+          <input type="number" id="input_month" min="1" max="12" value="1">
         </div>
         <div class="form-col">
           <label>Kỳ (1-3)</label>
-          <input type="number" id="period" min="1" max="3" value="1">
+          <input type="number" id="input_period" min="1" max="3" value="1">
+        </div>
+        <div class="form-col">
+          <label>Thuế VAT (%)</label>
+          <input type="number" id="input_tax" min="0" max="100" step="any" value="0" placeholder="VD: 8 hoặc 10">
         </div>
       </div>
 
@@ -75,7 +72,7 @@
           <tr>
             <th></th>
             <th>Đơn giá</th>
-            <th>Tiêu thụ</th>
+            <th>Tiêu thụ (kWh)</th>
           </tr>
           <tr>
             <td class="label-cell">Bình thường:</td>
@@ -96,35 +93,54 @@
       </div>
 
       <div class="form-row excel-actions">
-        <button onclick="submitData()" class="btn-block" id="btn_submit">Ghi dữ liệu vào Excel</button>
+        <button onclick="excelSubmitData()" class="btn-block" id="btn_submit">Ghi dữ liệu</button>
       </div>
 
       <div id="message"></div>
     </div>
 
-    <!-- 3. Lịch Sử Nhập Liệu -->
-    <div class="card">
-      <h3 class="excel-step-title">Bước 3: Lịch sử trong phiên làm việc</h3>
+    <!-- 3. Bảng Dữ Liệu -->
+    <div class="card" id="data_table_section">
+      <h3 class="excel-step-title">Bước 3: Dữ liệu đã nhập</h3>
       <div class="table-scroll">
-        <table class="history-table" id="history_table">
+        <table class="history-table" id="data_table">
           <thead>
             <tr>
-              <th>Thời gian</th>
-              <th>Tệp</th>
+              <th>Năm</th>
               <th>Tháng</th>
               <th>Kỳ</th>
-              <th>BT (Giá-SL)</th>
-              <th>CĐ (Giá-SL)</th>
-              <th>TĐ (Giá-SL)</th>
+              <th>Thuế (%)</th>
+              <th>ĐG BT</th>
+              <th>SL BT</th>
+              <th>ĐG CĐ</th>
+              <th>SL CĐ</th>
+              <th>ĐG TĐ</th>
+              <th>SL TĐ</th>
+              <th>Ghi chú</th>
+              <th></th>
             </tr>
           </thead>
-          <tbody id="history_body">
+          <tbody id="data_table_body">
             <tr>
-              <td colspan="7" class="empty-state">Chưa có kết quả nào được ghi trong phiên này.</td>
+              <td colspan="12" class="empty-state">Chưa có dữ liệu. Tạo file mới hoặc nạp file có sẵn để bắt đầu.</td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- 4. Export & Download -->
+    <div class="card" id="export_section" style="opacity: 0.5; pointer-events: none;">
+      <h3 class="excel-step-title">Bước 4: Lưu & Xuất báo cáo</h3>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="excelSaveDataFile()" class="btn-outline">
+          💾 Lưu file dữ liệu (.xlsx)
+        </button>
+        <button onclick="excelExportReport()">
+          📊 Xuất bảng tiêu thụ 12 tháng
+        </button>
+      </div>
+      <div id="export_message" style="margin-top: 12px;"></div>
     </div>
 
   </div>
