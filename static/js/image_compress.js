@@ -26,10 +26,12 @@
     const btn = document.getElementById('btn-compress-process');
     if (label) {
       if (compressSelectedFiles.length === 0) {
-        label.textContent = 'Chưa chọn ảnh';
+        label.textContent = 'Chưa chọn tệp';
       } else {
         const totalSize = compressSelectedFiles.reduce((sum, f) => sum + f.size, 0);
-        label.textContent = `Đã chọn: ${compressSelectedFiles.length} ảnh (${formatFileSize(totalSize)})`;
+        const hasZip = compressSelectedFiles.some(f => f.name.match(/\.zip$/i));
+        const unitText = hasZip ? 'tệp (gồm ZIP/ảnh)' : 'ảnh';
+        label.textContent = `Đã chọn: ${compressSelectedFiles.length} ${unitText} (${formatFileSize(totalSize)})`;
       }
     }
     if (btn && !document.getElementById('compress-spinner').style.display.includes('inline-block')) {
@@ -44,6 +46,7 @@
     listEl.innerHTML = '';
     
     compressSelectedFiles.forEach((file, index) => {
+      const isZip = file.name.match(/\.zip$/i) || file.type.includes('zip');
       const item = document.createElement('div');
       item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem;';
       
@@ -51,8 +54,8 @@
       info.style.cssText = 'display: flex; gap: 8px; align-items: center; overflow: hidden;';
       
       const icon = document.createElement('i');
-      icon.className = 'bi bi-image';
-      icon.style.color = 'var(--text-muted)';
+      icon.className = isZip ? 'bi bi-file-earmark-zip' : 'bi bi-image';
+      icon.style.color = isZip ? 'var(--accent)' : 'var(--text-muted)';
       
       const name = document.createElement('span');
       name.textContent = file.name;
@@ -201,8 +204,10 @@
         
         let added = false;
         for (let i = 0; i < files.length; i++) {
-          if (files[i].type.startsWith('image/') || files[i].name.match(/\.(heic|heif)$/i)) {
-            compressSelectedFiles.push(files[i]);
+          const file = files[i];
+          const isZip = file.name.match(/\.zip$/i) || file.type.includes('zip');
+          if (file.type.startsWith('image/') || file.name.match(/\.(heic|heif)$/i) || isZip) {
+            compressSelectedFiles.push(file);
             added = true;
           }
         }
@@ -211,7 +216,7 @@
           hideCompressError();
           updateCompressFileList();
         } else {
-          showCompressError('Vui lòng kéo thả các file hình ảnh hợp lệ.');
+          showCompressError('Vui lòng kéo thả các file hình ảnh hoặc file ZIP hợp lệ.');
         }
       });
     }

@@ -20,7 +20,7 @@
         <i class="bi bi-images" style="color: var(--accent2)"></i> Chọn hình ảnh cần nén
       </h3>
 
-      <input type="file" id="compress-file-input" accept="image/*,.heic,.heif" multiple style="display:none">
+      <input type="file" id="compress-file-input" accept="image/*,.heic,.heif,.zip" multiple style="display:none">
 
       <div id="compress-drop-area"
         style="border: 2px dashed rgba(109, 40, 217, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1rem; background: var(--upload-bg); transition: all 0.2s;"
@@ -28,9 +28,9 @@
         ondragleave="this.style.borderColor='rgba(109, 40, 217, 0.45)';"
         onclick="document.getElementById('compress-file-input').click()">
         <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">🖼️</div>
-        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Chọn hoặc kéo thả hình ảnh vào đây
+        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Chọn hoặc kéo thả hình ảnh / file ZIP vào đây
         </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Hỗ trợ: JPG, PNG, WEBP, HEIC, TIFF, BMP — Có thể chọn nhiều file</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Hỗ trợ: JPG, PNG, WEBP, HEIC, TIFF, BMP, ZIP — Có thể chọn nhiều file hoặc file ZIP</div>
       </div>
 
       <!-- File list area -->
@@ -128,12 +128,12 @@
         💡 Thông tin về công cụ nén ảnh
       </h3>
       <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
-        <li><strong>Định dạng:</strong> Tất cả ảnh được chuẩn hóa về JPG.</li>
+        <li><strong>Định dạng:</strong> Tất cả ảnh được chuẩn hóa về JPG. Hỗ trợ cả file nén .ZIP chứa nhiều ảnh.</li>
         <li><strong>Chất lượng:</strong> Slider cho phép điều chỉnh từ 10% đến 100%.</li>
         <li><strong>Kích thước:</strong> Ảnh lớn tự động thu nhỏ, giữ nguyên tỷ lệ.</li>
         <li><strong>Metadata:</strong> Tùy chọn xóa GPS, thông tin camera, ngày chụp...</li>
         <li><strong>Bảo toàn:</strong> File gốc không bị thay đổi, kết quả lưu riêng trong file ZIP.</li>
-        <li><strong>Hàng loạt:</strong> Có thể chọn và xử lý nhiều ảnh cùng lúc.</li>
+        <li><strong>Hàng loạt & ZIP:</strong> Có thể chọn nhiều ảnh hoặc tải lên trực tiếp file ZIP để nén toàn bộ.</li>
       </ul>
     </div>
 
