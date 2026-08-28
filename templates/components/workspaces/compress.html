@@ -1,0 +1,141 @@
+<!-- ══════════════════ IMAGE COMPRESS WORKSPACE ══════════════════ -->
+<div id="workspace-compress" class="workspace" style="display:none;">
+  <div id="app-container" style="padding: 1.5rem;">
+
+    <div class="card excel-hero"
+      style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2
+        style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚡ Nén & chuyển đổi hình ảnh</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Công cụ nén và chuyển đổi hàng loạt hình ảnh sang định dạng JPG tối ưu dung lượng, phục vụ chèn ảnh vào tài liệu Word, Excel, PowerPoint. Hỗ trợ JPG, PNG, WEBP, HEIC, TIFF, BMP.
+      </p>
+    </div>
+
+    <!-- Vùng tải file & cài đặt -->
+    <div class="chart-card"
+      style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-images" style="color: var(--accent2)"></i> Chọn hình ảnh cần nén
+      </h3>
+
+      <input type="file" id="compress-file-input" accept="image/*,.heic,.heif" multiple style="display:none">
+
+      <div id="compress-drop-area"
+        style="border: 2px dashed rgba(109, 40, 217, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1rem; background: var(--upload-bg); transition: all 0.2s;"
+        ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+        ondragleave="this.style.borderColor='rgba(109, 40, 217, 0.45)';"
+        onclick="document.getElementById('compress-file-input').click()">
+        <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">🖼️</div>
+        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Chọn hoặc kéo thả hình ảnh vào đây
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Hỗ trợ: JPG, PNG, WEBP, HEIC, TIFF, BMP — Có thể chọn nhiều file</div>
+      </div>
+
+      <!-- File list area -->
+      <div id="compress-file-list" style="margin-bottom: 1.5rem; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+      </div>
+
+      <!-- Cài đặt -->
+      <div
+        style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Chất lượng JPEG -->
+        <div>
+          <label for="compress-quality" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">
+            Chất lượng JPEG: <span id="compress-quality-value" style="color: var(--accent2);">80%</span>
+          </label>
+          <input type="range" id="compress-quality" min="10" max="100" value="80" step="5" style="width: 100%; max-width: 400px; accent-color: var(--accent);">
+        </div>
+
+        <!-- Kích thước tối đa -->
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">
+            Kích thước tối đa (px)
+          </label>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <input type="number" id="compress-max-width" placeholder="Chiều rộng" value="1920" style="width: 120px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none;">
+            <span style="color: var(--text-muted);">x</span>
+            <input type="number" id="compress-max-height" placeholder="Chiều cao" value="1080" style="width: 120px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; outline: none;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-left: 8px;">* Ảnh lớn hơn sẽ được thu nhỏ giữ nguyên tỷ lệ. Đặt 0 để không giới hạn.</div>
+          </div>
+        </div>
+
+        <!-- Toggles -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer;">
+            <input type="checkbox" id="compress-strip-meta" checked style="accent-color: var(--accent);"> Xóa thông tin EXIF & Metadata
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer;">
+            <input type="checkbox" id="compress-auto-orient" checked style="accent-color: var(--accent);"> Tự động điều chỉnh hướng ảnh
+          </label>
+        </div>
+      </div>
+
+      <!-- Khu vực điều khiển & hiển thị trạng thái -->
+      <div
+        style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
+        <button type="button" class="btn" id="btn-compress-process"
+          style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+          disabled>
+          <span id="compress-spinner"
+            style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+          <span id="compress-btn-text">🚀 Bắt đầu nén ảnh</span>
+        </button>
+
+        <span id="compress-file-label" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Chưa chọn ảnh</span>
+        <span id="compress-status" style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;"></span>
+      </div>
+
+      <!-- Cảnh báo lỗi -->
+      <div id="compress-error" class="kew-upload-feedback is-error"
+        style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+      </div>
+
+      <!-- Thanh tiến trình -->
+      <div id="compress-progress-container"
+        style="display:none; margin-top: 1.5rem; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; background: var(--surface2)">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px;">
+          <span id="compress-progress-step" style="color:var(--text-muted)">Đang chuẩn bị...</span>
+          <span id="compress-progress-percent" style="font-weight:600; color:var(--accent2)">0%</span>
+        </div>
+        <div
+          style="width:100%; height:8px; background:var(--grid); border-radius:4px; overflow:hidden; border:1px solid var(--border)">
+          <div id="compress-progress-bar"
+            style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.2s ease;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Thống kê kết quả nén -->
+      <div id="compress-stats-container" style="display:none; margin-top: 1.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-top: 0; margin-bottom: 1rem;">📊 Kết quả nén ảnh</h4>
+        <div id="compress-stats-content" style="font-size: 0.85rem; color: var(--text); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <!-- JS will populate -->
+        </div>
+        <div id="compress-stats-errors" style="display:none; margin-top: 1rem; font-size: 0.8rem; color: var(--state-error-text); max-height: 100px; overflow-y: auto; padding-top: 8px; border-top: 1px solid var(--border);">
+          <!-- Error messages will appear here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Hướng dẫn sử dụng chi tiết -->
+    <div class="chart-card"
+      style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+        💡 Thông tin về công cụ nén ảnh
+      </h3>
+      <ul style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 0; padding-left: 20px;">
+        <li><strong>Định dạng:</strong> Tất cả ảnh được chuẩn hóa về JPG.</li>
+        <li><strong>Chất lượng:</strong> Slider cho phép điều chỉnh từ 10% đến 100%.</li>
+        <li><strong>Kích thước:</strong> Ảnh lớn tự động thu nhỏ, giữ nguyên tỷ lệ.</li>
+        <li><strong>Metadata:</strong> Tùy chọn xóa GPS, thông tin camera, ngày chụp...</li>
+        <li><strong>Bảo toàn:</strong> File gốc không bị thay đổi, kết quả lưu riêng trong file ZIP.</li>
+        <li><strong>Hàng loạt:</strong> Có thể chọn và xử lý nhiều ảnh cùng lúc.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
