@@ -30,7 +30,8 @@ def _env_int(name, default):
 
 app = Flask(__name__)
 app.json.ensure_ascii = False
-app.config["MAX_CONTENT_LENGTH"] = _env_int("MAX_UPLOAD_MB", 512) * 1024 * 1024
+max_upload_mb = _env_int("MAX_UPLOAD_MB", 0)
+app.config["MAX_CONTENT_LENGTH"] = (max_upload_mb * 1024 * 1024) if max_upload_mb > 0 else None
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 # Register Blueprints for specialized toolset
@@ -55,10 +56,16 @@ def handle_request_entity_too_large(_exc):
     Returns:
         Response: Thông báo lỗi dạng JSON hoặc text với mã trạng thái 413.
     """
-    max_upload_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+    max_len = app.config.get("MAX_CONTENT_LENGTH")
+    if max_len:
+        limit_mb = max_len // (1024 * 1024)
+        msg = f"File upload vượt quá giới hạn {limit_mb} MB của server."
+    else:
+        msg = "File upload vượt quá dung lượng cho phép của server."
+
     if request.path.startswith("/api/"):
-        return jsonify({"error": f"File upload vượt quá giới hạn {max_upload_mb} MB của server."}), 413
-    return f"File upload vượt quá giới hạn {max_upload_mb} MB của server.", 413
+        return jsonify({"error": msg}), 413
+    return msg, 413
 
 @app.route('/')
 @app.route('/kew')
