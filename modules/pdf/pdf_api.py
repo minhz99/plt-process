@@ -15,11 +15,20 @@ pdf_bp = Blueprint('pdf_bp', __name__)
 def get_pdf_page_count(filepath):
     """
     Đọc số lượng trang của tệp PDF với giải pháp fallback đa tầng:
-    1. Sử dụng thư viện pypdf (Python).
-    2. Sử dụng công cụ pdfinfo (nếu được cài đặt).
-    3. Sử dụng Ghostscript (gs).
+    1. Sử dụng pypdfium2 (nhanh và chuẩn xác nhất).
+    2. Sử dụng thư viện pypdf.
+    3. Sử dụng pdfplumber.
+    4. Sử dụng công cụ pdfinfo / Ghostscript (nếu được cài đặt).
     """
-    # 1. Thử dùng pypdf
+    # 1. Thử dùng pypdfium2
+    try:
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(filepath)
+        return len(pdf)
+    except Exception as e:
+        current_app.logger.warning("pypdfium2 page count failed: %s", e)
+
+    # 2. Thử dùng pypdf
     try:
         from pypdf import PdfReader
         reader = PdfReader(filepath)
@@ -27,7 +36,15 @@ def get_pdf_page_count(filepath):
     except Exception as e:
         current_app.logger.warning("pypdf page count failed: %s", e)
 
-    # 2. Thử dùng pdfinfo
+    # 3. Thử dùng pdfplumber
+    try:
+        import pdfplumber
+        with pdfplumber.open(filepath) as pdf:
+            return len(pdf.pages)
+    except Exception as e:
+        current_app.logger.warning("pdfplumber page count failed: %s", e)
+
+    # 4. Thử dùng pdfinfo
     for cmd_path in ["pdfinfo", "/opt/homebrew/bin/pdfinfo", "/usr/local/bin/pdfinfo"]:
         try:
             res = subprocess.run([cmd_path, filepath.replace('\\', '/')], capture_output=True, text=True, check=True)
@@ -37,7 +54,7 @@ def get_pdf_page_count(filepath):
         except Exception:
             pass
 
-    # 3. Thử dùng gs
+    # 5. Thử dùng gs
     for gs_path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
             filepath_gs = filepath.replace('\\', '/')
@@ -57,13 +74,80 @@ def get_pdf_page_count(filepath):
 
     return None
 
-def check_pdf_pages_color(filepath):
+def analyze_image_color(img):
     """
-    Sử dụng Ghostscript với thiết bị inkcov để phân tích độ phủ mực CMYK của từng trang.
-    Trả về danh sách boolean: True nếu trang đó có màu, False nếu là trắng đen (grayscale).
-    Chỉ số của danh sách khớp với trang (1-indexed).
+    Phân tích một ảnh PIL để xác định xem trang có chứa màu sắc hay không (dựa trên độ lệch kênh RGB).
+    
+    Args:
+        img (PIL.Image): Ảnh trang PDF cần kiểm tra.
+        
+    Returns:
+        bool: True nếu trang có màu sắc, False nếu là grayscale/trắng đen.
     """
-    gs_executable = "gs"
+    arr = np.array(img.convert('RGB'), dtype=np.int32)
+    r = arr[:, :, 0]
+    g = arr[:, :, 1]
+    b = arr[:, :, 2]
+    
+    max_c = np.maximum(np.maximum(r, g), b)
+    min_c = np.minimum(np.minimum(r, g), b)
+    diff = max_c - min_c
+    
+    # Loại trừ nền giấy trắng tinh (min_c >= 250) và mực đen/rất tối (max_c <= 25)
+    valid_mask = (max_c > 25) & (min_c < 250)
+    chromatic_count = int(np.sum(valid_mask & (diff >= 18)))
+    vivid_count = int(np.sum(valid_mask & (diff >= 28)))
+    
+    # Đếm số pixel có mực in (độ sáng < 240)
+    brightness = (r + g + b) // 3
+    printed_count = int(np.sum(brightness < 240))
+    
+    # Tiêu chí nhận diện màu sắc:
+    # 1. Có ít nhất 15 pixel màu sắc nét (vivid - bắt được cả các chữ/con dấu/icon màu nhỏ).
+    # 2. Hoặc có ít nhất 40 pixel có sắc độ lệch kênh màu.
+    # 3. Hoặc tỷ lệ pixel màu so với nội dung in đạt >= 0.1% (kèm tối thiểu 10 pixel).
+    is_color = (
+        (vivid_count >= 15) or 
+        (chromatic_count >= 40) or 
+        (printed_count > 0 and chromatic_count >= 10 and (chromatic_count / printed_count) >= 0.001)
+    )
+    return is_color
+
+def detect_pdf_page_colors_pdfium(filepath):
+    """
+    Sử dụng engine pypdfium2 (Google PDFium) để dựng hình và phân tích màu sắc trực tiếp trong bộ nhớ.
+    Trả về dict {page_num (1-indexed): bool}.
+    """
+    import pypdfium2 as pdfium
+    pdf = pdfium.PdfDocument(filepath)
+    pages_color = {}
+    
+    for i, page in enumerate(pdf):
+        p_num = i + 1
+        # Render với tỉ lệ 1.2x (~86 DPI) vừa đảm bảo độ chi tiết cho text nhỏ vừa tối ưu tốc độ
+        img = page.render(scale=1.2).to_pil()
+        pages_color[p_num] = analyze_image_color(img)
+        
+    return pages_color
+
+def detect_pdf_page_colors_pdfplumber(filepath):
+    """
+    Phương thức dự phòng 1: Sử dụng pdfplumber để dựng hình từng trang và phân tích màu.
+    """
+    import pdfplumber
+    pages_color = {}
+    with pdfplumber.open(filepath) as pdf:
+        for i, page in enumerate(pdf.pages):
+            p_num = i + 1
+            img = page.to_image(resolution=86).original
+            pages_color[p_num] = analyze_image_color(img)
+    return pages_color
+
+def check_pdf_pages_color_gs(filepath):
+    """
+    Phương thức dự phòng 2: Sử dụng Ghostscript với thiết bị inkcov để phân tích CMYK.
+    """
+    gs_executable = None
     for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
         try:
             subprocess.run([path, "--version"], capture_output=True, check=True)
@@ -71,6 +155,9 @@ def check_pdf_pages_color(filepath):
             break
         except Exception:
             continue
+
+    if not gs_executable:
+        return None
 
     cmd = [
         gs_executable,
@@ -92,150 +179,57 @@ def check_pdf_pages_color(filepath):
             match = pattern.match(line)
             if match:
                 c, m, y, k = map(float, match.groups())
-                # Dùng ngưỡng nhỏ 0.00001 để tránh các sai lệch nhiễu nhỏ khi chuyển đổi hệ màu
                 is_color = (c > 0.00001) or (m > 0.00001) or (y > 0.00001)
                 pages_color[page_num] = is_color
                 page_num += 1
                 
         return pages_color
     except Exception as e:
-        current_app.logger.error("Failed to detect PDF page colors: %s", e)
+        current_app.logger.warning("Ghostscript inkcov color check failed: %s", e)
         return None
 
-def check_pdf_pages_color_visually(filepath, work_dir, split_mode='normal'):
+def detect_pdf_page_colors(filepath):
     """
-    Renders PDF pages to PNG at 72 DPI and counts chromatic pixels.
-    Returns a dictionary mapping page number (1-indexed) to boolean (True if page has color).
+    Bộ nhận diện màu sắc thông minh đa tầng:
+    1. Ưu tiên pypdfium2 (nhanh, chuẩn xác, độc lập không phụ thuộc phần mềm ngoài).
+    2. Dự phòng 1: pdfplumber.
+    3. Dự phòng 2: Ghostscript (nếu máy có cài).
     """
-    gs_executable = "gs"
-    for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
-        try:
-            subprocess.run([path, "--version"], capture_output=True, check=True)
-            gs_executable = path
-            break
-        except Exception:
-            continue
-
-    render_dir = os.path.join(work_dir, "render")
-    os.makedirs(render_dir, exist_ok=True)
-    
-    cmd = [
-        gs_executable,
-        "-dNOPAUSE",
-        "-dBATCH",
-        "-sDEVICE=png16m",
-        "-r72",  # Use 72 DPI for better small text color retention
-        f"-sOutputFile={render_dir.replace('\\', '/')}/page_%d.png",
-        filepath.replace('\\', '/')
-    ]
-    
+    # 1. pypdfium2
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
-        files = os.listdir(render_dir)
-        
-        pages_color = {}
-        for f in files:
-            if not f.startswith("page_") or not f.endswith(".png"):
-                continue
-            try:
-                p_num = int(f.split('_')[1].split('.')[0])
-                img_path = os.path.join(render_dir, f)
-                with Image.open(img_path) as img:
-                    arr = np.array(img)
-                
-                # Check pixel channel differences
-                r = arr[:, :, 0].astype(int)
-                g = arr[:, :, 1].astype(int)
-                b = arr[:, :, 2].astype(int)
-                
-                diff_rg = np.abs(r - g)
-                diff_gb = np.abs(g - b)
-                diff_br = np.abs(b - r)
-                
-                # Count pixels where channel difference is > 10
-                max_diff = np.max([diff_rg, diff_gb, diff_br], axis=0)
-                colored_pixels = np.sum(max_diff > 10)
-                total_pixels = r.size
-                pct = (colored_pixels / total_pixels) * 100
-                
-                # Count printed pixels (brightness < 240)
-                brightness = (r + g + b) // 3
-                printed_pixels = np.sum(brightness < 240)
-                colored_ratio_to_printed = (colored_pixels / max(1, printed_pixels)) * 100
-                
-                if split_mode == 'smart':
-                    # Kiểu 2: Tách lọc dấu đỏ/vạch màu
-                    # Trang có màu nếu:
-                    # 1. Có màu rõ rệt (> 0.05% diện tích)
-                    # 2. VÀ:
-                    #    - Diện tích màu lớn (> 2.5% diện tích toàn trang)
-                    #    - HOẶC tỷ lệ màu so với nội dung in cao (>= 20% - nghĩa là màu chữ/nội dung chính chứ không phải dấu đỏ/vạch chỉ dẫn đơn lẻ)
-                    is_color = (pct > 0.05) and (pct > 2.5 or colored_ratio_to_printed >= 20.0)
-                else:
-                    # Kiểu 1: Tách thông thường
-                    is_color = pct > 0.05
-                    
-                pages_color[p_num] = is_color
-            except Exception as pe:
-                current_app.logger.error("Failed parsing rendered page %s: %s", f, pe)
-                
-        return pages_color
+        colors = detect_pdf_page_colors_pdfium(filepath)
+        if colors:
+            return colors
     except Exception as e:
-        current_app.logger.error("Failed visual PDF page color detection: %s", e)
-        return None
-    finally:
-        shutil.rmtree(render_dir, ignore_errors=True)
+        current_app.logger.warning("pypdfium2 color detection failed: %s", e)
 
-def run_gs(input_path, output_path, first_page=None, last_page=None, to_gray=False):
-    """
-    Chạy lệnh Ghostscript để trích xuất trang và tùy chọn chuyển sang trắng đen (grayscale).
-    """
-    gs_executable = "gs"
-    for path in ["gs", "gswin64c", "gswin32c", "/usr/local/bin/gs", "/opt/homebrew/bin/gs"]:
-        try:
-            subprocess.run([path, "--version"], capture_output=True, check=True)
-            gs_executable = path
-            break
-        except Exception:
-            continue
-            
-    cmd = [
-        gs_executable,
-        "-sDEVICE=pdfwrite",
-        "-dNOPAUSE",
-        "-dBATCH",
-    ]
-    if to_gray:
-        cmd.extend([
-            "-sColorConversionStrategy=Gray",
-            "-dProcessColorModel=/DeviceGray",
-        ])
-    if first_page is not None:
-        cmd.append(f"-dFirstPage={first_page}")
-    if last_page is not None:
-        cmd.append(f"-dLastPage={last_page}")
-        
-    cmd.extend([
-        f"-sOutputFile={output_path.replace('\\', '/')}",
-        input_path.replace('\\', '/')
-    ])
-    
+    # 2. pdfplumber
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return res
-    except subprocess.CalledProcessError as e:
-        current_app.logger.error("Ghostscript failed. cmd=%s, stderr=%s, stdout=%s", cmd, e.stderr, e.stdout)
-        raise RuntimeError(f"Lỗi xử lý PDF qua Ghostscript: {e.stderr or e.stdout or str(e)}")
+        colors = detect_pdf_page_colors_pdfplumber(filepath)
+        if colors:
+            return colors
+    except Exception as e:
+        current_app.logger.warning("pdfplumber color detection failed: %s", e)
+
+    # 3. Ghostscript
+    try:
+        colors = check_pdf_pages_color_gs(filepath)
+        if colors:
+            return colors
+    except Exception as e:
+        current_app.logger.warning("Ghostscript color detection failed: %s", e)
+
+    return None
 
 def parse_page_exceptions(ex_str):
     """
-    Parses a string of page numbers or page ranges (e.g. '5, 9, 10, 81-83')
-    into a set of integer page numbers.
+    Phân tích chuỗi số trang hoặc dải trang (ví dụ: '5, 9, 10, 81-83')
+    thành một set các số nguyên đại diện cho trang (1-indexed).
     """
     pages = set()
     if not ex_str:
         return pages
-    # Replace common separators with comma
+    # Thay thế các dấu phân cách phổ biến bằng dấu phẩy
     ex_str = ex_str.replace(';', ',').replace(' ', ',')
     parts = ex_str.split(',')
     for part in parts:
@@ -259,9 +253,9 @@ def parse_page_exceptions(ex_str):
 def split_pdf():
     """
     Endpoint tải lên tệp PDF, thực hiện phân tách các trang dựa trên màu sắc:
-    - Bìa riêng: trang đầu tiên (trang 1)
-    - Tệp màu: chứa các trang còn lại có màu (C, M, Y > 0)
-    - Tệp không màu: chứa các trang còn lại không có màu (chỉ có K), ép trắng đen.
+    - Bìa riêng: trang đầu tiên (trang 1) nếu bật tách bìa
+    - Tệp màu: chứa các trang nội dung có màu sắc
+    - Tệp không màu: chứa các trang nội dung hoàn toàn trắng đen (grayscale)
     Tất cả các tệp sinh ra được đóng gói thành tệp ZIP tải về.
     """
     if 'file' not in request.files:
@@ -317,13 +311,8 @@ def split_pdf():
         gray_exceptions = parse_page_exceptions(gray_exceptions_str)
         color_exceptions = parse_page_exceptions(color_exceptions_str)
         
-        # Kiểm tra màu sắc từng trang theo phương pháp dựng hình trực quan ('normal' mode)
-        pages_color = check_pdf_pages_color_visually(original_path, work_dir, 'normal')
-        
-        # Fallback về phương pháp cũ (inkcov) nếu kiểm tra trực quan thất bại
-        if not pages_color:
-            current_app.logger.warning("Visual color check failed, falling back to inkcov.")
-            pages_color = check_pdf_pages_color(original_path)
+        # Nhận diện màu sắc từng trang bằng engine đa tầng
+        pages_color = detect_pdf_page_colors(original_path)
             
         if not pages_color:
             return jsonify({"error": "Không thể phân tích thông tin màu sắc của file PDF."}), 400
