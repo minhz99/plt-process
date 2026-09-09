@@ -11,6 +11,8 @@ from modules.video.video_api import video_bp
 from modules.ocr.ocr_api import ocr_bp
 from modules.compress.compress_api import compress_bp
 from modules.qr.qr_api import qr_bp
+from modules.translate.translate_api import translate_bp
+from modules.office.office_api import office_bp
 
 def _env_int(name, default):
     """
@@ -44,6 +46,8 @@ app.register_blueprint(video_bp, url_prefix='/api/video')
 app.register_blueprint(ocr_bp, url_prefix='/api/ocr')
 app.register_blueprint(compress_bp, url_prefix='/api/compress')
 app.register_blueprint(qr_bp, url_prefix='/api/qr')
+app.register_blueprint(translate_bp, url_prefix='/api/translate')
+app.register_blueprint(office_bp, url_prefix='/api/office')
 
 
 
@@ -79,6 +83,10 @@ def handle_request_entity_too_large(_exc):
 @app.route('/ocr')
 @app.route('/compress')
 @app.route('/qr')
+@app.route('/office')
+@app.route('/office-zip')
+@app.route('/translate')
+@app.route('/word-translate')
 def index():
     """Render the main dashboard UI application."""
     return render_template('dashboard.html')

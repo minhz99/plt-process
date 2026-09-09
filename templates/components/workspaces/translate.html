@@ -1,0 +1,263 @@
+<!-- ══════════════════ WORD TRANSLATE WORKSPACE ══════════════════ -->
+<div id="workspace-translate" class="workspace" style="display:none;">
+  <div id="app-container" style="padding: 1.5rem;">
+
+    <!-- Hero Card -->
+    <div class="card excel-hero"
+      style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2
+        style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚡ Dịch thuật tài liệu Word</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Dịch toàn bộ nội dung tài liệu Word (.docx, .doc) mà <strong>không làm thay đổi hay xô lệch định dạng</strong> (giữ nguyên font chữ, in đậm, in nghiêng, màu sắc, bảng biểu, hình ảnh, header/footer). Hỗ trợ dịch tự động bằng Google Dịch hoặc tự dịch/biên tập song ngữ trực tiếp.
+      </p>
+    </div>
+
+    <!-- Cài đặt ngôn ngữ -->
+    <div class="chart-card"
+      style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1;">
+          <!-- Ngôn ngữ nguồn -->
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Ngôn ngữ nguồn:</label>
+            <select id="trans-src-lang"
+              style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; min-width: 170px;">
+              <option value="auto" selected>✨ Tự động nhận diện</option>
+              <option value="en">🇺🇸 Tiếng Anh (English)</option>
+              <option value="zh-CN">🇨🇳 Tiếng Trung (Giản thể)</option>
+              <option value="zh-TW">🇨🇳 Tiếng Trung (Phồn thể)</option>
+              <option value="ja">🇯🇵 Tiếng Nhật (Japanese)</option>
+              <option value="ko">🇰🇷 Tiếng Hàn (Korean)</option>
+              <option value="fr">🇫🇷 Tiếng Pháp (French)</option>
+              <option value="de">🇩🇪 Tiếng Đức (German)</option>
+              <option value="ru">🇷🇺 Tiếng Nga (Russian)</option>
+              <option value="es">🇪🇸 Tiếng Tây Ban Nha</option>
+              <option value="th">🇹🇭 Tiếng Thái (Thai)</option>
+              <option value="vi">🇻🇳 Tiếng Việt</option>
+            </select>
+          </div>
+
+          <!-- Nút đổi chiều -->
+          <button type="button" class="btn btn-sm" onclick="swapTranslateLanguages()"
+            style="margin-top: 18px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 12px;" title="Hoán đổi ngôn ngữ">
+            <i class="bi bi-arrow-left-right"></i>
+          </button>
+
+          <!-- Ngôn ngữ đích -->
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Ngôn ngữ đích:</label>
+            <select id="trans-tgt-lang"
+              style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; min-width: 170px;">
+              <option value="vi" selected>🇻🇳 Tiếng Việt (Vietnamese)</option>
+              <option value="en">🇺🇸 Tiếng Anh (English)</option>
+              <option value="zh-CN">🇨🇳 Tiếng Trung (Giản thể)</option>
+              <option value="ja">🇯🇵 Tiếng Nhật (Japanese)</option>
+              <option value="ko">🇰🇷 Tiếng Hàn (Korean)</option>
+              <option value="fr">🇫🇷 Tiếng Pháp (French)</option>
+              <option value="de">🇩🇪 Tiếng Đức (German)</option>
+              <option value="ru">🇷🇺 Tiếng Nga (Russian)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="font-size: 0.78rem; color: var(--text-muted); background: var(--surface2); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);">
+          💡 <strong>Cơ chế:</strong> Giữ nguyên bố cục gốc, chỉ thay thế văn bản.
+        </div>
+      </div>
+    </div>
+
+    <!-- Vùng tải tệp Word -->
+    <div class="chart-card"
+      style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-file-earmark-word" style="color: #3b82f6"></i> Chọn tài liệu Word cần dịch
+      </h3>
+
+      <input type="file" id="trans-file-input" accept=".docx,.doc,.docm" style="display:none">
+
+      <div id="trans-dropzone"
+        style="border: 2px dashed rgba(59, 130, 246, 0.45); border-radius: 12px; padding: 2.2rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1rem; background: var(--upload-bg); transition: all 0.2s;"
+        ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+        ondragleave="this.style.borderColor='rgba(59, 130, 246, 0.45)';"
+        onclick="document.getElementById('trans-file-input').click()">
+        <div style="font-size: 2.4rem; margin-bottom: 0.5rem;">📄</div>
+        <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Kéo thả file Word vào đây hoặc bấm để chọn</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Hỗ trợ: .docx, .doc (Word 97-2003), .docm</div>
+      </div>
+
+      <!-- File info badge -->
+      <div id="trans-selected-file" style="display:none; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.2rem;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="color:#3b82f6; font-size:1.3rem;"><i class="bi bi-file-earmark-word-fill"></i></span>
+          <div>
+            <div id="trans-filename" style="font-weight:600; color:var(--text); font-size:0.88rem;"></div>
+            <div id="trans-filesize" style="color:var(--text-muted); font-size:0.75rem;"></div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm text-danger" onclick="clearSelectedWordFile()" style="background:transparent; border:none; font-size:1.1rem;" title="Bỏ chọn tệp">
+          <i class="bi bi-x-circle"></i>
+        </button>
+      </div>
+
+      <!-- Mode Switcher Navigation -->
+      <div class="d-flex gap-2 mb-3" style="background: var(--surface2); padding: 5px; border-radius: 10px; border: 1px solid var(--border); width: fit-content;">
+        <button type="button" class="btn btn-sm px-3 py-2 fw-semibold" id="btn-trans-mode-auto" onclick="switchTranslateTab('auto')"
+          style="border-radius: 7px; border: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; background: var(--accent); color: white;">
+          <i class="bi bi-robot"></i> 1. Google Dịch tự động
+        </button>
+        <button type="button" class="btn btn-sm px-3 py-2 fw-semibold" id="btn-trans-mode-manual" onclick="switchTranslateTab('manual')"
+          style="border-radius: 7px; border: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; background: transparent; color: var(--text-muted);">
+          <i class="bi bi-pencil-square"></i> 2. Tự dịch / Biên tập song ngữ
+        </button>
+      </div>
+
+      <!-- ══════════════ TAB 1: AUTO GOOGLE TRANSLATE ══════════════ -->
+      <div id="trans-pane-auto">
+        <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.2rem;">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+            🤖 Chế độ dịch tự động toàn tài liệu
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.2rem; line-height: 1.5;">
+            Hệ thống sẽ tự động quét toàn bộ tiêu đề, đoạn văn và ô bảng biểu trong file Word, dịch bằng Google Dịch và tái tạo file Word hoàn chỉnh giữ nguyên 100% định dạng.
+          </p>
+
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn" id="btn-trans-run-auto" onclick="runAutoWordTranslation()"
+              style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+              disabled>
+              <span id="trans-spinner-auto" style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+              <span id="trans-btn-text-auto">🚀 Dịch toàn bộ & Tải file Word</span>
+            </button>
+            <span id="trans-status-auto" style="font-size: 0.85rem; color: var(--text-muted);">Chưa chọn tệp</span>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div id="trans-progress-container" style="display:none; margin-bottom: 1.2rem; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; background: var(--surface2);">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px;">
+            <span id="trans-progress-text" style="color:var(--text-muted)">Đang dịch tài liệu...</span>
+            <span id="trans-progress-percent" style="font-weight:600; color:var(--accent2)">Vui lòng chờ</span>
+          </div>
+          <div style="width:100%; height:6px; background:var(--grid); border-radius:3px; overflow:hidden;">
+            <div id="trans-progress-bar" style="width:100%; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); animation: pulse 1.5s infinite;"></div>
+          </div>
+        </div>
+
+        <!-- Success stats -->
+        <div id="trans-success-auto" style="display:none; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 1rem; color: var(--state-success-text);">
+          <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.88rem; margin-bottom:4px;">
+            <i class="bi bi-check-circle-fill"></i> Dịch thành công tài liệu Word!
+          </div>
+          <div id="trans-success-auto-detail" style="font-size:0.82rem; color:var(--text);">
+            File Word đã được tải về máy tính với toàn bộ định dạng gốc được bảo toàn.
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB 2: MANUAL BILINGUAL EDITOR ══════════════ -->
+      <div id="trans-pane-manual" style="display:none;">
+        <div style="background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 4px;">
+                ✍️ Trích xuất & Tự biên tập song ngữ
+              </div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">
+                Trích xuất toàn bộ câu chữ ra bảng để tự sửa hoặc nhờ Google Dịch gợi ý trước khi tạo file Word.
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm" id="btn-trans-extract" onclick="extractSegmentsFromWord()"
+              style="background: var(--accent); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600;" disabled>
+              <i class="bi bi-list-columns-reverse"></i> Trích xuất văn bản sang bảng
+            </button>
+          </div>
+        </div>
+
+        <!-- Bảng song ngữ -->
+        <div id="trans-table-container" style="display:none;">
+          <!-- Toolbar thao tác nhanh -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; background: var(--surface2); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="font-size: 0.82rem; color: var(--text); font-weight: 600;">
+              Tổng số đoạn: <span id="trans-segment-count" style="color: var(--accent2);">0</span>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-sm" onclick="autoFillSuggestions()"
+                style="background: rgba(109, 40, 217, 0.2); border: 1px solid var(--accent); color: var(--text); border-radius: 6px; font-size: 0.78rem; font-weight: 600;">
+                <i class="bi bi-magic"></i> 🤖 Gợi ý bằng GG Dịch
+              </button>
+              <button type="button" class="btn btn-sm" onclick="exportBilingualCSV()"
+                style="background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-size: 0.78rem;">
+                <i class="bi bi-download"></i> Xuất CSV
+              </button>
+              <label class="btn btn-sm mb-0"
+                style="background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-size: 0.78rem; cursor: pointer;">
+                <i class="bi bi-upload"></i> Nhập CSV
+                <input type="file" id="trans-import-csv" accept=".csv" style="display:none" onchange="importBilingualCSV(event)">
+              </label>
+              <button type="button" class="btn btn-sm" id="btn-trans-apply" onclick="applyManualTranslations()"
+                style="background: linear-gradient(135deg, var(--accent3), #059669); border: none; color: white; border-radius: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px;">
+                <i class="bi bi-file-earmark-check"></i> 🚀 Tạo & Tải file Word đã dịch
+              </button>
+            </div>
+          </div>
+
+          <!-- Bảng chi tiết -->
+          <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+            <table class="table table-bordered mb-0" style="font-size: 0.82rem; color: var(--text); background: var(--surface);">
+              <thead style="position: sticky; top: 0; background: var(--surface2); z-index: 1;">
+                <tr>
+                  <th style="width: 50px; text-align: center;">STT</th>
+                  <th style="width: 48%;">Văn bản gốc</th>
+                  <th style="width: 48%;">Bản dịch (cho phép chỉnh sửa)</th>
+                </tr>
+              </thead>
+              <tbody id="trans-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error box -->
+      <div id="trans-error" class="kew-upload-feedback is-error"
+        style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+      </div>
+
+    </div>
+
+    <!-- Hướng dẫn & lưu ý -->
+    <div class="chart-card"
+      style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+        💡 Thông tin & Nguyên lý bảo toàn định dạng
+      </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent); margin-bottom: 4px;">🎯 Nguyên lý Bơm chữ (Text Injection)</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Hệ thống không chuyển đổi cấu trúc file mà dùng trực tiếp file Word gốc làm khung sườn, chỉ thay thế văn bản bên trong. Do đó <strong>toàn bộ bảng biểu, căn lề, font chữ, hình ảnh</strong> được giữ nguyên 100%.
+          </div>
+        </div>
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">⚡ Khử trùng lặp & Tối ưu tốc độ</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Các tiêu đề lặp lại (như tên cột bảng, đề mục chung) chỉ được dịch 1 lần duy nhất, giúp tốc độ dịch cực nhanh và không bị giới hạn số lần gọi Google Translate.
+          </div>
+        </div>
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent4); margin-bottom: 4px;">📝 Biên tập & Dịch thủ công</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Bạn có thể dùng nút <strong>Gợi ý bằng GG Dịch</strong> để hệ thống dịch trước toàn bộ, sau đó tự điều chỉnh lại các thuật ngữ chuyên ngành trước khi xuất file Word hoàn chỉnh.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,216 @@
+<!-- ══════════════════ OFFICE ⇄ ZIP WORKSPACE ══════════════════ -->
+<div id="workspace-office" class="workspace" style="display:none;">
+  <div id="app-container" style="padding: 1.5rem;">
+
+    <!-- Hero Card -->
+    <div class="card excel-hero"
+      style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2
+        style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚡ Chuyển đổi Office ⇄ ZIP</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Công cụ chuyển đổi hai chiều giữa tài liệu Microsoft Word (.docx), Excel (.xlsx), PowerPoint (.pptx) và định dạng lưu trữ ZIP. Tự động nhận diện định dạng gốc, chuẩn hóa cấu trúc lồng thư mục khi nén bằng Windows và hỗ trợ trích xuất toàn bộ ảnh media chất lượng gốc.
+      </p>
+    </div>
+
+    <!-- Mode Switcher Navigation -->
+    <div class="d-flex gap-2 mb-3" style="background: var(--surface2); padding: 6px; border-radius: 12px; border: 1px solid var(--border); width: fit-content; max-width: 100%;">
+      <button type="button" class="btn btn-sm px-3 py-2 fw-semibold active-tab-btn" id="btn-office-mode-to-zip" onclick="switchOfficeMode('to-zip')"
+        style="border-radius: 8px; border: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; background: var(--accent); color: white;">
+        <i class="bi bi-file-earmark-arrow-up"></i> Office ➔ ZIP
+      </button>
+      <button type="button" class="btn btn-sm px-3 py-2 fw-semibold" id="btn-office-mode-to-office" onclick="switchOfficeMode('to-office')"
+        style="border-radius: 8px; border: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: all 0.2s; background: transparent; color: var(--text-muted);">
+        <i class="bi bi-file-earmark-arrow-down"></i> ZIP ➔ Office
+      </button>
+    </div>
+
+    <!-- ══════════════ TAB 1: OFFICE ➔ ZIP ══════════════ -->
+    <div id="office-pane-to-zip">
+      <div class="chart-card"
+        style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+        <h3
+          style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-file-earmark-text" style="color: var(--accent2)"></i> Chọn tệp Word / Excel / PowerPoint
+        </h3>
+
+        <input type="file" id="office-to-zip-input"
+          accept=".docx,.docm,.dotx,.dotm,.xlsx,.xlsm,.xltx,.xltm,.xlsb,.pptx,.pptm,.potx,.ppsx,.doc,.dot,.xls,.xlt,.ppt,.pot,.pps"
+          multiple style="display:none">
+
+        <div id="office-to-zip-dropzone"
+          style="border: 2px dashed rgba(109, 40, 217, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1rem; background: var(--upload-bg); transition: all 0.2s;"
+          ondragover="event.preventDefault(); this.style.borderColor='var(--accent)';"
+          ondragleave="this.style.borderColor='rgba(109, 40, 217, 0.45)';"
+          onclick="document.getElementById('office-to-zip-input').click()">
+          <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">📑</div>
+          <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Kéo thả tệp Office vào đây hoặc bấm để chọn</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+            Hỗ trợ Word (.docx, .doc), Excel (.xlsx, .xls), PowerPoint (.pptx, .ppt)... — Có thể chọn nhiều tệp
+          </div>
+        </div>
+
+        <!-- File List -->
+        <div id="office-to-zip-file-list" style="margin-bottom: 1rem; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+        </div>
+
+        <!-- Options -->
+        <div style="border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text); cursor: pointer;">
+            <input type="checkbox" id="office-opt-extract-media" style="accent-color: var(--accent); width: 16px; height: 16px;">
+            <span><strong>Chỉ trích xuất riêng hình ảnh / media</strong> (Trích xuất toàn bộ ảnh gốc PNG, JPG... nhúng trong tài liệu)</span>
+          </label>
+        </div>
+
+        <!-- Controls -->
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
+          <button type="button" class="btn" id="btn-office-convert-to-zip"
+            style="background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+            disabled>
+            <span id="office-spinner-to-zip" style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+            <span id="office-btn-text-to-zip">🚀 Bắt đầu chuyển sang ZIP</span>
+          </button>
+
+          <button type="button" class="btn btn-sm" id="btn-office-clear-to-zip" onclick="clearOfficeToZipList()"
+            style="background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; display: none;">
+            <i class="bi bi-trash"></i> Xóa danh sách
+          </button>
+
+          <span id="office-status-to-zip" style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;">Chưa chọn tệp</span>
+        </div>
+
+        <!-- Error Feedback -->
+        <div id="office-error-to-zip" class="kew-upload-feedback is-error"
+          style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+        </div>
+
+        <!-- Result Stats -->
+        <div id="office-stats-to-zip" style="display:none; margin-top: 1.2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem;">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-check-circle-fill" style="color: var(--accent3);"></i> Chuyển đổi thành công!
+          </div>
+          <div id="office-stats-to-zip-text" style="font-size: 0.82rem; color: var(--text-muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ TAB 2: ZIP ➔ OFFICE ══════════════ -->
+    <div id="office-pane-to-office" style="display:none;">
+      <div class="chart-card"
+        style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+        <h3
+          style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-file-earmark-zip" style="color: var(--accent4)"></i> Chọn tệp ZIP cần chuyển sang Office
+        </h3>
+
+        <input type="file" id="office-to-doc-input" accept=".zip" multiple style="display:none">
+
+        <div id="office-to-doc-dropzone"
+          style="border: 2px dashed rgba(245, 158, 11, 0.45); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; margin-bottom: 1rem; background: var(--upload-bg); transition: all 0.2s;"
+          ondragover="event.preventDefault(); this.style.borderColor='var(--accent4)';"
+          ondragleave="this.style.borderColor='rgba(245, 158, 11, 0.45)';"
+          onclick="document.getElementById('office-to-doc-input').click()">
+          <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">📦</div>
+          <div style="font-weight: 600; color: var(--text); font-size: 1rem;">Kéo thả tệp ZIP vào đây hoặc bấm để chọn</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+            Hỗ trợ: Tệp .zip đã nén từ Word/Excel/PowerPoint hoặc tệp nén thư mục tài liệu OpenXML
+          </div>
+        </div>
+
+        <!-- File List -->
+        <div id="office-to-doc-file-list" style="margin-bottom: 1rem; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+        </div>
+
+        <!-- Conversion Settings -->
+        <div style="border-top: 1px solid var(--border); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+              Định dạng Office đầu ra:
+            </label>
+            <select id="office-target-format"
+              style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; min-width: 260px;">
+              <option value="auto">✨ Tự động nhận diện (Khuyên dùng)</option>
+              <option value="docx">📄 Microsoft Word (.docx)</option>
+              <option value="docm">📄 Microsoft Word Macro (.docm)</option>
+              <option value="doc">📄 Microsoft Word 97-2003 (.doc)</option>
+              <option value="xlsx">📊 Microsoft Excel (.xlsx)</option>
+              <option value="xlsm">📊 Microsoft Excel Macro (.xlsm)</option>
+              <option value="xls">📊 Microsoft Excel 97-2003 (.xls)</option>
+              <option value="pptx">📑 Microsoft PowerPoint (.pptx)</option>
+              <option value="pptm">📑 Microsoft PowerPoint Macro (.pptm)</option>
+              <option value="ppt">📑 Microsoft PowerPoint 97-2003 (.ppt)</option>
+            </select>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+              Hệ thống sẽ tự động quét cấu trúc <code>word/</code>, <code>xl/</code>, <code>ppt/</code> để phát hiện chính xác loại tài liệu gốc.
+            </div>
+          </div>
+
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text); cursor: pointer;">
+            <input type="checkbox" id="office-opt-auto-flatten" checked style="accent-color: var(--accent); width: 16px; height: 16px;">
+            <span><strong>Tự động làm phẳng & sửa lỗi thư mục lồng</strong> (Khắc phục lỗi file bị hỏng khi dùng tính năng nén chuột phải của Windows)</span>
+          </label>
+        </div>
+
+        <!-- Controls -->
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 1.2rem; border-top: 1px solid var(--border); padding-top: 1.2rem;">
+          <button type="button" class="btn" id="btn-office-convert-to-doc"
+            style="background: linear-gradient(135deg, var(--accent4), #d97706); border: none; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+            disabled>
+            <span id="office-spinner-to-doc" style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+            <span id="office-btn-text-to-doc">🚀 Chuyển sang tài liệu Office</span>
+          </button>
+
+          <button type="button" class="btn btn-sm" id="btn-office-clear-to-doc" onclick="clearOfficeToDocList()"
+            style="background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 16px; border-radius: 8px; display: none;">
+            <i class="bi bi-trash"></i> Xóa danh sách
+          </button>
+
+          <span id="office-status-to-doc" style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;">Chưa chọn tệp</span>
+        </div>
+
+        <!-- Error Feedback -->
+        <div id="office-error-to-doc" class="kew-upload-feedback is-error"
+          style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+        </div>
+
+        <!-- Result Stats -->
+        <div id="office-stats-to-doc" style="display:none; margin-top: 1.2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem;">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-check-circle-fill" style="color: var(--accent3);"></i> Chuyển đổi sang Office thành công!
+          </div>
+          <div id="office-stats-to-doc-text" style="font-size: 0.82rem; color: var(--text-muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hướng dẫn & mẹo hữu ích -->
+    <div class="chart-card"
+      style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+      <h3
+        style="font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+        💡 Hướng dẫn & Mẹo hữu ích
+      </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent2); margin-bottom: 4px;">🖼️ Trích xuất ảnh gốc chất lượng cao</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Khi chèn ảnh vào Word/Excel/PowerPoint, ảnh gốc được lưu trữ trong thư mục <code>media/</code> mà không bị nén mờ. Chọn <strong>Chỉ trích xuất riêng hình ảnh</strong> để lấy toàn bộ ảnh gốc nhanh chóng.
+          </div>
+        </div>
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">🔓 Mở khóa mật khẩu trang tính Excel</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Chuyển file Excel sang ZIP, mở file <code>xl/worksheets/sheet1.xml</code>, tìm và xóa thẻ <code>&lt;sheetProtection ... /&gt;</code>, sau đó chuyển ngược lại sang Excel để mở khóa sheet bị đặt mật khẩu.
+          </div>
+        </div>
+        <div style="background: var(--surface2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 0.82rem; font-weight: 600; color: var(--accent4); margin-bottom: 4px;">🛠️ Sửa lỗi nén Windows (Corrupt Document)</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+            Khi nén một thư mục tài liệu trên Windows, Windows tạo một thư mục cha bao ngoài khiến Word/Excel báo file bị hỏng. Tính năng <strong>Tự động làm phẳng cấu trúc</strong> sẽ tự phát hiện và sửa hoàn toàn lỗi này.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
