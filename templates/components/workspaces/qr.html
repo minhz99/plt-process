@@ -1,0 +1,489 @@
+<!-- ══════════════════ QR CODE GENERATOR WORKSPACE ══════════════════ -->
+<div id="workspace-qr" class="workspace" style="display:none;">
+  <div style="padding: 1.5rem;">
+
+    <!-- Hero card -->
+    <div class="card excel-hero"
+      style="background: var(--upload-card); border-color: rgba(59, 130, 246, 0.35); box-shadow: var(--elev-shadow); margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border);">
+      <h2
+        style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ⚡ Tạo mã QR</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Công cụ tạo mã QR đa năng: URL, văn bản, email, điện thoại, WiFi, danh bạ vCard, SMS. Hỗ trợ tuỳ chỉnh màu sắc, gradient, chèn logo/hình mờ với nhiều kiểu khung, nhãn chữ, và tạo hàng loạt.
+      </p>
+    </div>
+
+    <!-- Main content: 2 columns -->
+    <div style="display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start;">
+
+      <!-- ═══ LEFT COLUMN: Settings ═══ -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- Chọn loại nội dung -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+          <h3
+            style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-card-list" style="color: var(--accent2)"></i> Loại nội dung
+          </h3>
+
+          <div id="qr-type-tabs"
+            style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem;">
+            <button type="button" class="qr-type-btn active" data-type="url"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              🔗 URL</button>
+            <button type="button" class="qr-type-btn" data-type="text"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              📝 Văn bản</button>
+            <button type="button" class="qr-type-btn" data-type="email"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              ✉️ Email</button>
+            <button type="button" class="qr-type-btn" data-type="phone"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              📞 Điện thoại</button>
+            <button type="button" class="qr-type-btn" data-type="wifi"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              📶 WiFi</button>
+            <button type="button" class="qr-type-btn" data-type="vcard"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              👤 Danh bạ</button>
+            <button type="button" class="qr-type-btn" data-type="sms"
+              style="padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;">
+              💬 SMS</button>
+          </div>
+
+          <!-- Dynamic form fields -->
+          <div id="qr-fields">
+            <!-- URL fields (default) -->
+            <div id="qr-fields-url" class="qr-field-group">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Địa chỉ URL</label>
+              <input type="url" id="qr-data-url" placeholder="https://example.com" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+            </div>
+
+            <!-- Text fields -->
+            <div id="qr-fields-text" class="qr-field-group" style="display: none;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Nội dung văn bản</label>
+              <textarea id="qr-data-text" rows="3" placeholder="Nhập nội dung văn bản..." class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Email fields -->
+            <div id="qr-fields-email" class="qr-field-group" style="display: none;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Địa chỉ email</label>
+              <input type="email" id="qr-data-email" placeholder="name@example.com" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; margin-bottom: 10px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Tiêu đề (tùy chọn)</label>
+              <input type="text" id="qr-data-email-subject" placeholder="Tiêu đề email" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; margin-bottom: 10px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Nội dung (tùy chọn)</label>
+              <textarea id="qr-data-email-body" rows="2" placeholder="Nội dung email..." class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; resize: vertical;"></textarea>
+            </div>
+
+            <!-- Phone fields -->
+            <div id="qr-fields-phone" class="qr-field-group" style="display: none;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Số điện thoại</label>
+              <input type="tel" id="qr-data-phone" placeholder="+84 123 456 789" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+            </div>
+
+            <!-- WiFi fields -->
+            <div id="qr-fields-wifi" class="qr-field-group" style="display: none;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Tên mạng WiFi (SSID)</label>
+              <input type="text" id="qr-data-wifi-ssid" placeholder="Tên mạng WiFi" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; margin-bottom: 10px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Mật khẩu</label>
+              <div style="position: relative;">
+                <input type="password" id="qr-data-wifi-password" placeholder="Mật khẩu WiFi" class="qr-input"
+                  style="width: 100%; padding: 10px 14px; padding-right: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; margin-bottom: 10px;">
+                <button type="button" id="qr-wifi-toggle-pw" onclick="qrToggleWifiPassword()"
+                  style="position: absolute; right: 10px; top: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 2px;">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Bảo mật</label>
+                  <select id="qr-data-wifi-encryption" class="qr-input"
+                    style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                    <option value="WPA">WPA/WPA2</option>
+                    <option value="WEP">WEP</option>
+                    <option value="nopass">Không mật khẩu</option>
+                  </select>
+                </div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer; margin-top: 20px;">
+                  <input type="checkbox" id="qr-data-wifi-hidden" style="accent-color: var(--accent);"> Mạng ẩn
+                </label>
+              </div>
+            </div>
+
+            <!-- vCard fields -->
+            <div id="qr-fields-vcard" class="qr-field-group" style="display: none;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Họ và tên *</label>
+                  <input type="text" id="qr-data-vcard-name" placeholder="Nguyễn Văn A" class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Số điện thoại</label>
+                  <input type="tel" id="qr-data-vcard-phone" placeholder="+84 123 456 789" class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Email</label>
+                  <input type="email" id="qr-data-vcard-email" placeholder="email@example.com" class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Công ty</label>
+                  <input type="text" id="qr-data-vcard-org" placeholder="Tên công ty" class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Chức vụ</label>
+                  <input type="text" id="qr-data-vcard-title" placeholder="Chức vụ" class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Website</label>
+                  <input type="url" id="qr-data-vcard-url" placeholder="https://..." class="qr-input"
+                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                </div>
+              </div>
+              <div style="margin-top: 10px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Địa chỉ</label>
+                <input type="text" id="qr-data-vcard-address" placeholder="Địa chỉ" class="qr-input"
+                  style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+              </div>
+            </div>
+
+            <!-- SMS fields -->
+            <div id="qr-fields-sms" class="qr-field-group" style="display: none;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Số điện thoại</label>
+              <input type="tel" id="qr-data-sms-phone" placeholder="+84 123 456 789" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; margin-bottom: 10px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Nội dung tin nhắn (tùy chọn)</label>
+              <textarea id="qr-data-sms-body" rows="2" placeholder="Nội dung SMS..." class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; resize: vertical;"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tuỳ chỉnh giao diện -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+          <h3
+            style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-palette" style="color: var(--accent2)"></i> Tuỳ chỉnh giao diện
+          </h3>
+
+          <!-- Preset màu nhanh -->
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">Bộ màu mẫu</label>
+            <div id="qr-presets" style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button type="button" onclick="qrApplyPreset('#000000','#ffffff')" title="Đen - Trắng"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #000000 50%, #ffffff 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+              <button type="button" onclick="qrApplyPreset('#1e40af','#dbeafe')" title="Xanh dương"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #1e40af 50%, #dbeafe 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+              <button type="button" onclick="qrApplyPreset('#991b1b','#fef2f2')" title="Đỏ"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #991b1b 50%, #fef2f2 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+              <button type="button" onclick="qrApplyPreset('#065f46','#ecfdf5')" title="Xanh lục"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #065f46 50%, #ecfdf5 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+              <button type="button" onclick="qrApplyPreset('#6d28d9','#f5f3ff')" title="Tím"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #6d28d9 50%, #f5f3ff 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+              <button type="button" onclick="qrApplyPreset('#92400e','#fffbeb')" title="Vàng cam"
+                style="width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; background: linear-gradient(135deg, #92400e 50%, #fffbeb 50%); transition: transform 0.1s;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"></button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <!-- Màu QR -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Màu mã QR</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="qr-fg-color" value="#000000" class="qr-input"
+                  style="width: 42px; height: 42px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 2px; background: var(--surface2);">
+                <input type="text" id="qr-fg-color-text" value="#000000" maxlength="7" class="qr-input"
+                  style="width: 90px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-family: monospace; outline: none;">
+              </div>
+            </div>
+            <!-- Màu nền -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Màu nền</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="qr-bg-color" value="#ffffff" class="qr-input"
+                  style="width: 42px; height: 42px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 2px; background: var(--surface2);">
+                <input type="text" id="qr-bg-color-text" value="#ffffff" maxlength="7" class="qr-input"
+                  style="width: 90px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-family: monospace; outline: none;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Gradient toggle -->
+          <div style="margin-top: 16px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer; margin-bottom: 8px;">
+              <input type="checkbox" id="qr-gradient-toggle" style="accent-color: var(--accent);"> Bật màu gradient
+            </label>
+            <div id="qr-gradient-area" style="display: none;">
+              <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Màu gradient thứ 2 (chuyển từ trên xuống)</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="qr-fg-color2" value="#ec4899" class="qr-input"
+                  style="width: 42px; height: 42px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 2px; background: var(--surface2);">
+                <input type="text" id="qr-fg-color2-text" value="#ec4899" maxlength="7" class="qr-input"
+                  style="width: 90px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.8rem; font-family: monospace; outline: none;">
+                <div style="flex: 1; height: 24px; border-radius: 6px; border: 1px solid var(--border);"
+                  id="qr-gradient-preview-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <!-- Kích thước -->
+            <div>
+              <label for="qr-size"
+                style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+                Kích thước: <span id="qr-size-value" style="color: var(--accent2);">400px</span>
+              </label>
+              <input type="range" id="qr-size" min="100" max="1500" value="400" step="50" class="qr-input"
+                style="width: 100%; accent-color: var(--accent);">
+            </div>
+            <!-- Mức sửa lỗi -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Mức sửa lỗi</label>
+              <select id="qr-error-correction" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+                <option value="L">L — 7% (nhỏ gọn nhất)</option>
+                <option value="M">M — 15%</option>
+                <option value="Q">Q — 25%</option>
+                <option value="H" selected>H — 30% (tốt nhất, nên dùng khi có logo)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Nền trong suốt + Nhãn chữ -->
+          <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer;">
+              <input type="checkbox" id="qr-transparent-bg" style="accent-color: var(--accent);"> Nền trong suốt (transparent PNG)
+            </label>
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Nhãn chữ dưới QR (tùy chọn)</label>
+              <input type="text" id="qr-label-text" placeholder="VD: Quét để truy cập website" class="qr-input"
+                style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none;">
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Chèn logo / hình mờ (NÂNG CAO) ═══ -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+          <h3
+            style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-image" style="color: var(--accent2)"></i> Chèn logo / hình mờ
+          </h3>
+          <input type="file" id="qr-logo-input" accept="image/*" style="display: none;">
+
+          <!-- Upload area -->
+          <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+            <div id="qr-logo-preview"
+              style="width: 64px; height: 64px; border: 2px dashed var(--border); border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; flex-shrink: 0; background: var(--surface2); transition: border-color 0.15s;"
+              onclick="document.getElementById('qr-logo-input').click()">
+              <span id="qr-logo-placeholder" style="color: var(--text-muted); font-size: 1.5rem;">+</span>
+              <img id="qr-logo-img" src="" alt="Logo"
+                style="display: none; width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <div style="flex: 1;">
+              <button type="button" onclick="document.getElementById('qr-logo-input').click()"
+                style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.82rem; font-weight: 600; cursor: pointer;">
+                📁 Chọn logo
+              </button>
+              <button type="button" id="qr-logo-remove" onclick="qrRemoveLogo()"
+                style="display: none; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.4); background: rgba(127,29,29,0.24); color: var(--state-error-text); font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-left: 8px;">
+                ✕ Xoá logo
+              </button>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+                Hỗ trợ: PNG, JPG, WEBP — Logo hiển thị ở giữa mã QR
+              </div>
+            </div>
+          </div>
+
+          <!-- Logo options (hiện khi có logo) -->
+          <div id="qr-logo-options" style="display: none; border-top: 1px solid var(--border); padding-top: 16px; display: none; flex-direction: column; gap: 14px;">
+
+            <!-- Kiểu khung -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Kiểu khung logo</label>
+              <div id="qr-logo-frame-tabs" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <button type="button" class="qr-frame-btn" data-frame="none" onclick="qrSetLogoFrame('none')"
+                  style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                  Không khung</button>
+                <button type="button" class="qr-frame-btn active" data-frame="rounded" onclick="qrSetLogoFrame('rounded')"
+                  style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: rgba(109,40,217,0.15); color: var(--accent); font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                  Bo tròn</button>
+                <button type="button" class="qr-frame-btn" data-frame="circle" onclick="qrSetLogoFrame('circle')"
+                  style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                  Hình tròn</button>
+                <button type="button" class="qr-frame-btn" data-frame="square" onclick="qrSetLogoFrame('square')"
+                  style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                  Hình vuông</button>
+                <button type="button" class="qr-frame-btn" data-frame="shadow" onclick="qrSetLogoFrame('shadow')"
+                  style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                  Bóng đổ</button>
+              </div>
+            </div>
+
+            <!-- Opacity -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+                Độ mờ (opacity): <span id="qr-logo-opacity-value" style="color: var(--accent2);">100%</span>
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 400; margin-left: 6px;">— Giảm để tạo hiệu ứng dấu chìm / watermark</span>
+              </label>
+              <input type="range" id="qr-logo-opacity" min="10" max="100" value="100" step="5"
+                style="width: 100%; max-width: 400px; accent-color: var(--accent);">
+            </div>
+
+            <!-- Kích thước logo -->
+            <div>
+              <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">
+                Kích thước logo: <span id="qr-logo-scale-value" style="color: var(--accent2);">25%</span>
+              </label>
+              <input type="range" id="qr-logo-scale" min="10" max="35" value="25" step="1"
+                style="width: 100%; max-width: 400px; accent-color: var(--accent);">
+            </div>
+
+            <!-- Màu nền khung + transparent -->
+            <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+              <div>
+                <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px;">Màu nền khung</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="color" id="qr-logo-bg-color" value="#ffffff"
+                    style="width: 36px; height: 36px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; padding: 2px; background: var(--surface2);">
+                  <input type="text" id="qr-logo-bg-color-text" value="#ffffff" maxlength="7"
+                    style="width: 80px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.78rem; font-family: monospace; outline: none;">
+                </div>
+              </div>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text); cursor: pointer; padding-bottom: 4px;">
+                <input type="checkbox" id="qr-logo-bg-transparent" style="accent-color: var(--accent);"> Khung trong suốt
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tạo hàng loạt -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+          <h3
+            style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-list-ol" style="color: var(--accent2)"></i> Tạo hàng loạt
+          </h3>
+          <label
+            style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer; margin-bottom: 10px;">
+            <input type="checkbox" id="qr-batch-toggle" style="accent-color: var(--accent);"> Bật chế độ tạo hàng loạt
+          </label>
+          <div id="qr-batch-area" style="display: none;">
+            <textarea id="qr-batch-data" rows="6"
+              placeholder="Nhập mỗi dòng một nội dung QR, ví dụ:&#10;https://google.com&#10;https://facebook.com&#10;https://youtube.com"
+              style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.85rem; outline: none; resize: vertical; font-family: monospace;"></textarea>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
+              Mỗi dòng = 1 mã QR. Sử dụng chung cài đặt màu sắc, kích thước, mức sửa lỗi phía trên. Kết quả tải về dưới dạng file ZIP.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ RIGHT COLUMN: Preview & Actions ═══ -->
+      <div style="position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- Preview -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; text-align: center;">
+          <h3
+            style="font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="bi bi-qr-code" style="color: var(--accent2)"></i> Xem trước
+          </h3>
+          <div id="qr-preview-container"
+            style="display: flex; align-items: center; justify-content: center; min-height: 260px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); padding: 20px; position: relative; background-image: linear-gradient(45deg, rgba(128,128,128,0.1) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,0.1) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,0.1) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,0.1) 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px;">
+            <div id="qr-preview-placeholder" style="color: var(--text-muted); font-size: 0.85rem;">
+              Nhập nội dung để xem trước mã QR
+            </div>
+            <img id="qr-preview-img" src="" alt="QR Preview"
+              style="display: none; max-width: 100%; max-height: 320px; border-radius: 8px;">
+            <div id="qr-preview-spinner"
+              style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+              <div
+                style="width: 28px; height: 28px; border: 3px solid var(--border); border-radius: 50%; border-top-color: var(--accent); animation: spin 0.8s linear infinite;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="chart-card"
+          style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Download PNG -->
+            <button type="button" id="btn-qr-download-png" onclick="qrDownload('png')" disabled
+              style="width: 100%; padding: 12px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s;">
+              <span id="qr-download-spinner"
+                style="display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:white; animation:spin 0.8s linear infinite;"></span>
+              <i class="bi bi-download"></i> Tải về PNG
+            </button>
+            <!-- Download SVG -->
+            <button type="button" id="btn-qr-download-svg" onclick="qrDownload('svg')" disabled
+              style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.88rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s;">
+              <i class="bi bi-filetype-svg"></i> Tải về SVG
+            </button>
+            <!-- Copy to clipboard -->
+            <button type="button" id="btn-qr-copy" onclick="qrCopyToClipboard()" disabled
+              style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--accent3); background: rgba(16,185,129,0.1); color: var(--accent3); font-size: 0.88rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s;">
+              <i class="bi bi-clipboard" id="qr-copy-icon"></i> <span id="qr-copy-text">Sao chép vào clipboard</span>
+            </button>
+            <!-- Batch download -->
+            <button type="button" id="btn-qr-batch-download" onclick="qrBatchDownload()"
+              style="display: none; width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(109,40,217,0.15); color: var(--accent); font-size: 0.88rem; font-weight: 700; cursor: pointer; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s;">
+              <i class="bi bi-file-earmark-zip"></i> Tải hàng loạt (ZIP)
+            </button>
+          </div>
+
+          <!-- Error -->
+          <div id="qr-error"
+            style="display:none; margin-top: 1rem; padding: 10px 12px; border-radius: 10px; font-size: 0.8rem; border: 1px solid rgba(248, 113, 113, 0.4); background: rgba(127, 29, 29, 0.24); color: var(--state-error-text);">
+          </div>
+
+          <!-- Batch progress -->
+          <div id="qr-batch-progress"
+            style="display:none; margin-top: 1rem; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; background: var(--surface2);">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px;">
+              <span id="qr-batch-step" style="color:var(--text-muted)">Đang tạo...</span>
+              <span id="qr-batch-percent" style="font-weight:600; color:var(--accent2)">0%</span>
+            </div>
+            <div
+              style="width:100%; height:8px; background:var(--grid); border-radius:4px; overflow:hidden; border:1px solid var(--border)">
+              <div id="qr-batch-bar"
+                style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.2s ease;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick info -->
+        <div
+          style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.6; padding: 0 4px;">
+          💡 <strong>Mẹo:</strong><br>
+          • Chọn mức sửa lỗi <strong>H (30%)</strong> khi chèn logo<br>
+          • Giảm <strong>opacity logo</strong> xuống 20-40% để tạo hiệu ứng <strong>dấu chìm (watermark)</strong><br>
+          • Bật <strong>gradient</strong> để tạo hiệu ứng chuyển màu đẹp mắt<br>
+          • Dùng <strong>nền trong suốt</strong> khi chèn QR vào thiết kế
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

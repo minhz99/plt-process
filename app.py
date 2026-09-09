@@ -10,6 +10,7 @@ from modules.pdf.pdf_api import pdf_bp
 from modules.video.video_api import video_bp
 from modules.ocr.ocr_api import ocr_bp
 from modules.compress.compress_api import compress_bp
+from modules.qr.qr_api import qr_bp
 
 def _env_int(name, default):
     """
@@ -42,6 +43,7 @@ app.register_blueprint(pdf_bp, url_prefix='/api/pdf')
 app.register_blueprint(video_bp, url_prefix='/api/video')
 app.register_blueprint(ocr_bp, url_prefix='/api/ocr')
 app.register_blueprint(compress_bp, url_prefix='/api/compress')
+app.register_blueprint(qr_bp, url_prefix='/api/qr')
 
 
 
@@ -76,6 +78,7 @@ def handle_request_entity_too_large(_exc):
 @app.route('/chart')
 @app.route('/ocr')
 @app.route('/compress')
+@app.route('/qr')
 def index():
     """Render the main dashboard UI application."""
     return render_template('dashboard.html')

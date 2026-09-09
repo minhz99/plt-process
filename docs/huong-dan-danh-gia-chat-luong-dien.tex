@@ -106,7 +106,7 @@
 
 Trong công tác quản lý vận hành hệ thống điện công nghiệp và tòa nhà thương mại, việc đánh giá chất lượng điện năng không chỉ dừng lại ở việc tổng hợp số liệu đo thô mà đòi hỏi một \textbf{phương pháp luận chẩn đoán logic}, có khả năng phát hiện sớm các nguy cơ sự cố (như nổ tụ bù do sóng hài, phát nhiệt trung tính do lệch pha, sụt áp làm ngắt rơ-le biến tần) và chuẩn hóa đoạn văn nhận xét đánh giá theo đúng văn phong báo cáo kỹ thuật.
 
-Tài liệu này trình bày thuần túy dưới dạng **thuyết minh hướng dẫn kỹ thuật**, tập trung vào cơ sở lý thuyết, công thức toán học, quy tắc dung sai thích ứng, phương pháp chấm điểm phạt tích lũy LoiDem, cùng nguyên lý cấu trúc câu chẩn đoán chuyên nghiệp nhằm giúp kỹ sư dễ dàng áp dụng vào thực tế kiểm toán và lập báo cáo kỹ thuật.
+Tài liệu này trình bày thuần túy dưới dạng \textbf{thuyết minh hướng dẫn kỹ thuật}, tập trung vào cơ sở lý thuyết, công thức toán học, quy tắc dung sai thích ứng, phương pháp chấm điểm phạt tích lũy LoiDem, cùng nguyên lý cấu trúc câu chẩn đoán chuyên nghiệp nhằm giúp kỹ sư dễ dàng áp dụng vào thực tế kiểm toán và lập báo cáo kỹ thuật.
 
 \section{Tổng Quan Quy Trình Đánh Giá Chất Lượng Điện Năng}
 
@@ -421,19 +421,19 @@ Quy trình chẩn đoán điểm phạt tích lũy LoiDem được thực hiện
 
 \begin{enumerate}
   \item \textbf{Đánh giá Hệ số công suất $\cos\phi$:}
-  Kiểm tra giá trị tuyệt đối $|\cos\phi|$. Nếu $|\cos\phi| < 0{,}70$, cộng ngay **+2 điểm phạt** (vi phạm nghiêm trọng nguy cơ phạt tiền kVARh cao). Nếu $0{,}70 \le |\cos\phi| < \text{Ngưỡng}$ ($0{,}90$ cho MBA, $0{,}80$ cho tải khác), cộng **+1 điểm phạt** cảnh báo.
+  Kiểm tra giá trị tuyệt đối $|\cos\phi|$. Nếu $|\cos\phi| < 0{,}70$, cộng ngay \textbf{+2 điểm phạt} (vi phạm nghiêm trọng nguy cơ phạt tiền kVARh cao). Nếu $0{,}70 \le |\cos\phi| < \text{Ngưỡng}$ ($0{,}90$ cho MBA, $0{,}80$ cho tải khác), cộng \textbf{+1 điểm phạt} cảnh báo.
 
   \item \textbf{Đánh giá Trôi điện áp $\delta U$:}
-  So sánh độ lệch điện áp cực tiểu và cực đại so với dải danh định. Nếu điện áp trôi vượt ngoài khoảng $\pm 10{,}0\%$, cộng **+2 điểm phạt**. Nếu dao động trong khoảng $\pm 5{,}0\% \to \pm 10{,}0\%$, cộng **+1 điểm phạt**.
+  So sánh độ lệch điện áp cực tiểu và cực đại so với dải danh định. Nếu điện áp trôi vượt ngoài khoảng $\pm 10{,}0\%$, cộng \textbf{+2 điểm phạt}. Nếu dao động trong khoảng $\pm 5{,}0\% \to \pm 10{,}0\%$, cộng \textbf{+1 điểm phạt}.
 
   \item \textbf{Đánh giá Mất cân bằng dòng điện $\Delta I$:}
-  Xác định ngưỡng dung sai thích ứng theo nhóm tải. Nếu $\Delta I$ vượt ngưỡng cao ($20\%$ cho tải thường, $25\%$ cho tải đặc thù), cộng **+2 điểm phạt**. Nếu nằm trong dải trung bình đến cao, cộng **+1 điểm phạt**.
+  Xác định ngưỡng dung sai thích ứng theo nhóm tải. Nếu $\Delta I$ vượt ngưỡng cao ($20\%$ cho tải thường, $25\%$ cho tải đặc thù), cộng \textbf{+2 điểm phạt}. Nếu nằm trong dải trung bình đến cao, cộng \textbf{+1 điểm phạt}.
 
   \item \textbf{Đánh giá Sóng hài ($THD_V$ và $TDD_I$):}
-  Đánh giá biến dạng áp và dòng điện. Nếu $THD_V > 12{,}0\%$, cộng **+2 điểm phạt** (nguy cơ cộng hưởng nổ tụ bù). Với sóng hài dòng $TDD_I$, so sánh với ngưỡng nắn dung sai của loại tải để cộng điểm phạt tương ứng +1 hoặc +2.
+  Đánh giá biến dạng áp và dòng điện. Nếu $THD_V > 12{,}0\%$, cộng \textbf{+2 điểm phạt} (nguy cơ cộng hưởng nổ tụ bù). Với sóng hài dòng $TDD_I$, so sánh với ngưỡng nắn dung sai của loại tải để cộng điểm phạt tương ứng +1 hoặc +2.
 
   \item \textbf{Tổng hợp xếp loại cuối cùng:}
-  Tích lũy toàn bộ các điểm phạt trên để tính tổng điểm `LoiDem`. Điểm tổng từ 0 đến 2 kết luận chất lượng **Tốt**; từ 3 đến 4 kết luận **Tương đối tốt**; từ 5 điểm trở lên kết luận **Chưa thực sự tốt**.
+  Tích lũy toàn bộ các điểm phạt trên để tính tổng điểm \texttt{LoiDem}. Điểm tổng từ 0 đến 2 kết luận chất lượng \textbf{Tốt}; từ 3 đến 4 kết luận \textbf{Tương đối tốt}; từ 5 điểm trở lên kết luận \textbf{Chưa thực sự tốt}.
 \end{enumerate}
 
 \clearpage
@@ -733,5 +733,238 @@ Dựa trên các chỉ tiêu vi phạm điểm phạt trong LoiDem, ma trận đ
   \item \textbf{Lắp đặt tủ tụ bù tự động APFC:} Nâng hệ số $\cos\phi$ từ $0{,}66$ lên $\ge 0{,}90$ để tránh phạt tiền điện kVARh và giảm dòng điện tổng.
   \item \textbf{Cân bằng pha:} Kiểm tra đấu nối 3 pha và đảo dây các phụ tải 1 pha để giảm $\Delta I$ từ $23{,}5\%$ xuống $< 10\%$.
 \end{enumerate}
+
+---
+
+\subsection{\texorpdfstring{Ví Dụ 5: Hệ Thống Chiếu Sáng LED Nhà Xưởng --- Xếp Loại Tốt}{Ví Dụ 5: Hệ Thống Chiếu Sáng LED Nhà Xưởng --- Xếp Loại Tốt}}
+
+\begin{itemize}
+  \item \textbf{Thông số đo đạc:} $P = 18{,}5\,\mathrm{kW}$, $P_{\text{đm}} = 24\,\mathrm{kW}$, $\cos\phi = 0{,}95$, $U_{\min} = 378\,\mathrm{V}$, $U_{\max} = 384\,\mathrm{V}$ ($\delta U = -0{,}5\% \div +1{,}1\%$), $\Delta I = 16{,}8\%$, $\Delta U = 1{,}6\%$, $THD_V = 3{,}7\%$, $TDD_I = 38{,}4\%$.
+  \item \textbf{Phân tích điểm phạt LoiDem:}
+  \begin{itemize}
+    \item Thuộc nhóm Chiếu sáng LED (tải đặc thù 1 pha) $\Rightarrow$ Ngưỡng $\Delta I$ trung bình $= 15\%$, Ngưỡng cao $= 25\%$; $TDD_{\mathrm{lim}} = 12{,}0\%$, Hệ số trung bình $= 1{,}5$, Hệ số cao $= 2{,}5$.
+    \item $\cos\phi = 0{,}95 \ge 0{,}80 \Rightarrow 0$ điểm.
+    \item $\delta U = (-0{,}5\% \div 1{,}1\%) \in [-5\%, +5\%] \Rightarrow 0$ điểm.
+    \item $\Delta I = 16{,}8\% > 15\%$ nhưng $\le 25\% \Rightarrow$ \textbf{+1 điểm} (lệch pha nhẹ do phân tuyến 1 pha).
+    \item $THD_V = 3{,}7\% \le 8\% \Rightarrow 0$ điểm.
+    \item $TDD_I = 38{,}4\% > 1{,}5 \times 12\% = 18{,}0\%$ nhưng $\le 2{,}5 \times 12\% = 30{,}0\%$? Kiểm tra: $38{,}4\% > 30{,}0\% \Rightarrow$ \textbf{+2 điểm} (sóng hài dòng LED driver cao).
+    \item $\Delta U = 1{,}6\% \le 3\% \Rightarrow 0$ điểm.
+    \item Mang tải $= 18{,}5 / 24 = 77{,}1\% \le 105\% \Rightarrow 0$ điểm.
+  \end{itemize}
+  \item \textbf{Kết luận:} Điểm LoiDem = 3 $\Rightarrow$ Xếp loại \textbf{\color{warningyellow}Tương đối tốt}.
+  \item \textbf{Đoạn nhận xét hoàn chỉnh chuẩn báo cáo kỹ thuật:}
+\end{itemize}
+
+\begin{quote}\itshape
+``Công suất tiêu thụ của hệ thống chiếu sáng đạt 18,5 kW (tương đương 77,08\% công suất thiết kế $P_{\text{đm}} = 24\,\mathrm{kW}$). Dữ liệu đo kiểm cho thấy Hệ thống chiếu sáng LED nhà xưởng hoạt động với chất lượng điện ở mức tương đối tốt. Biểu đồ dòng điện tiêu thụ tương đối phẳng, phản ánh đặc tính tải thuần trở của đèn LED khi vận hành ổn định liên tục. Hệ số công suất $\cos\phi$ ở mức 0,95. Điện áp dao động từ $378 \div 384\,\mathrm{V}$, độ lệch chuẩn $\delta U = (-0{,}5\% \div 1{,}1\%)$, đạt tiêu chuẩn ($-5{,}0\% \le \delta U \le 5{,}0\%$). Tổng biến dạng sóng hài điện áp và độ lệch pha điện áp ở mức cho phép ($THD_{V,\max} = 3{,}7\% < 8{,}0\%$; $\Delta U = 1{,}6\% < 3{,}0\%$); tuy nhiên, độ lệch pha dòng điện và tổng biến dạng sóng hài dòng điện đều vượt ngưỡng kiểm soát ($\Delta I = 16{,}8\% > 15{,}0\%$; $TDD_{\max} = 38{,}4\% > 30{,}0\%$). Sóng hài dòng điện bậc 3, 5, 7 đặc trưng của LED driver điện tử và sự phân bổ tuyến đèn 1 pha chưa cân đối giữa các pha là nguyên nhân chính hình thành hai vấn đề trên.''
+\end{quote}
+
+\textbf{Đề xuất giải pháp khắc phục:}
+\begin{enumerate}
+  \item Cân bằng lại sơ đồ đấu dây tuyến đèn: phân bổ đều số bóng đèn lên 3 pha $A$, $B$, $C$ để hạ $\Delta I \le 15\%$.
+  \item Xem xét lắp cuộn kháng lọc sóng hài (Line Reactor) tại đầu cấp tủ điện chiếu sáng hoặc nâng cấp LED driver sang loại Power Factor $\ge 0{,}90$ và $THD_I \le 20\%$.
+  \item Theo dõi nhiệt độ dây trung tính định kỳ; nếu phát hiện dây N nóng bất thường cần tăng tiết diện dây trung tính lên $1{,}5$ lần so với dây pha.
+\end{enumerate}
+
+---
+
+\subsection{Tổng Hợp So Sánh 5 Ví Dụ Case Studies}
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.4cm}
+                >{\centering\arraybackslash}p{2.2cm}
+                >{\centering\arraybackslash}p{1.8cm}
+                >{\centering\arraybackslash}p{1.8cm}
+                >{\centering\arraybackslash}p{2.0cm}
+                >{\raggedright\arraybackslash}p{3.5cm}}
+\toprule
+\rowcolor{primary}
+\color{white}\textbf{Thiết bị / Điểm đo} &
+\color{white}\textbf{Loại tải} &
+\color{white}\textbf{Điểm LoiDem} &
+\color{white}\textbf{Xếp loại} &
+\color{white}\textbf{Chỉ tiêu vi phạm chính} &
+\color{white}\textbf{Giải pháp ưu tiên} \\
+\midrule
+MBA1 (1600 kVA) & Máy biến áp & 0 & \textbf{\color{darkgreen}Tốt} & --- & Không cần can thiệp \\
+\rowcolor{lightgray}
+Máy nén khí VSD (75 kW) & VSD/Nén khí & 1 & \textbf{\color{darkgreen}Tốt} & $TDD_I$ cảnh báo & Theo dõi sóng hài dòng \\
+Chuyền may Servo (Xưởng 2) & Servo 1 pha & 4 & \textbf{\color{warningyellow}Tương đối tốt} & $\cos\phi$, $\Delta I$, $TDD_I$ & Bù $\cos\phi$, đảo pha, lọc hài \\
+\rowcolor{lightgray}
+Tủ ĐC cơ khí (90 kW) & Động cơ cũ & 8 & \textbf{\color{accent}Chưa thực sự tốt} & Quá tải, $\cos\phi$, $\Delta I$, $\delta U$ & Sa thải tải, APFC, cân bằng pha \\
+Chiếu sáng LED nhà xưởng & LED đèn & 3 & \textbf{\color{warningyellow}Tương đối tốt} & $\Delta I$, $TDD_I$ & Cân bằng tuyến 1 pha, lọc hài \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\clearpage
+\section{Phụ Lục Kỹ Thuật}
+
+\subsection{Phụ Lục A: Bảng Tra Cứu Nhanh Ngưỡng Dung Sai Thích Ứng Theo Loại Tải}
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.6cm}
+                >{\centering\arraybackslash}p{1.6cm}
+                >{\centering\arraybackslash}p{1.5cm}
+                >{\centering\arraybackslash}p{1.5cm}
+                >{\centering\arraybackslash}p{1.5cm}
+                >{\centering\arraybackslash}p{1.5cm}
+                >{\centering\arraybackslash}p{1.5cm}
+                >{\centering\arraybackslash}p{1.5cm}}
+\toprule
+\rowcolor{primary}
+\color{white}\textbf{Nhóm tải} &
+\color{white}\textbf{Ngưỡng $\cos\phi$} &
+\color{white}\textbf{$\delta U$ cho phép} &
+\color{white}\textbf{$\Delta I$ trung bình} &
+\color{white}\textbf{$\Delta I$ cao} &
+\color{white}\textbf{$TDD_{\mathrm{lim}}$} &
+\color{white}\textbf{Hệ số mid} &
+\color{white}\textbf{Hệ số high} \\
+\midrule
+Máy biến áp (MBA) & $\ge 0{,}90$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}0$ & $2{,}0$ \\
+\rowcolor{lightgray}
+Biến tần VFD/VSD & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+Servo 1 pha (Máy may) & $\ge 0{,}80$ & $\pm5\%$ & $15\%$ & $25\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+\rowcolor{lightgray}
+Chiếu sáng LED & $\ge 0{,}80$ & $\pm5\%$ & $15\%$ & $25\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+Chiller / HVAC & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+\rowcolor{lightgray}
+UPS / Data Center & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+Inverter điện mặt trời & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+\rowcolor{lightgray}
+Máy hàn / Lò công nghiệp & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $12\%$ & $1{,}5$ & $2{,}5$ \\
+Phụ tải thông thường ($\le50\,\mathrm{kW}$) & $\ge 0{,}80$ & $\pm5\%$ & $10\%$ & $20\%$ & $20\%$ & $1{,}0$ & $2{,}0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Phụ Lục B: Danh Mục Tiêu Chuẩn Kỹ Thuật Tham Chiếu}
+
+\begin{description}[style=nextline,leftmargin=1.5em,labelindent=0pt,itemsep=0.6em]
+  \item[\textbf{TCVN 9608:2013}]
+  Tiêu chuẩn chất lượng điện năng --- Điện áp, tần số và hệ số công suất trong hệ thống điện phân phối hạ áp tại Việt Nam. Quy định dải điện áp danh định $220/380\,\mathrm{V}$ và dung sai $\pm5\%$ trong điều kiện vận hành bình thường.
+
+  \item[\textbf{IEEE 519-2022}]
+  Tiêu chuẩn thực hành khuyến nghị và yêu cầu về biến dạng sóng hài trong hệ thống điện xoay chiều (IEEE Recommended Practice and Requirements for Harmonic Control in Electric Power Systems). Quy định giới hạn $THD_V \le 8{,}0\%$ tại điểm kết nối chung (PCC) hạ áp và $TDD_I$ theo tỷ lệ $I_{sc}/I_L$.
+
+  \item[\textbf{NEMA MG-1}]
+  Tiêu chuẩn động cơ điện NEMA (National Electrical Manufacturers Association): quy định mất cân bằng điện áp $\Delta U \le 1\%$ để bảo đảm vận hành an toàn; mỗi $1\%$ mất cân bằng áp gây dòng thứ tự ngược $I_2$ chiếm $6\% \div 10\%$ dòng định mức.
+
+  \item[\textbf{IEC 61000-4-7 / IEC 61000-4-30}]
+  Tiêu chuẩn phương pháp đo và đánh giá sóng hài, flicker và chất lượng điện năng theo IEC. IEC 61000-4-30 phân loại thiết bị đo thành lớp A (độ chính xác cao, yêu cầu tuân thủ hợp đồng) và lớp S (khảo sát thống kê).
+
+  \item[\textbf{Thông tư 39/2015/TT-BCT}]
+  Quy định hệ thống điện phân phối Việt Nam: dải điện áp vận hành bình thường $\pm5\%$ danh định, điện áp cực đoan $\pm10\%$ không quá $1\,\mathrm{min}$ liên tục.
+
+  \item[\textbf{Thông tư 15/2014/TT-BCT}]
+  Quy định về đo đếm điện năng trong hệ thống điện, trong đó có quy định về hệ số công suất: khách hàng dùng điện phải duy trì $\cos\phi \ge 0{,}90$ tại điểm đo đếm, nếu vi phạm sẽ bị phạt tiền điện theo tỷ lệ kVARh tiêu thụ vượt định mức.
+
+  \item[\textbf{AS/NZS 61000.3.6}]
+  Tiêu chuẩn Úc/New Zealand về giới hạn phát thải sóng hài cho khách hàng công nghiệp cỡ trung và lớn. Bổ sung phương pháp phân bổ giới hạn sóng hài dựa trên công suất đặt (Allocated emission level).
+\end{description}
+
+\subsection{Phụ Lục C: Công Thức Tính Nhanh Dung Lượng Bù Công Suất Phản Kháng}
+
+Khi hệ số công suất hiện tại $\cos\phi_1$ cần nâng lên mức mục tiêu $\cos\phi_2$, dung lượng tụ bù cần bổ sung tính theo:
+
+\begin{equation}
+  Q_C\,[\mathrm{kVAr}] = P\,[\mathrm{kW}] \times \left(\tan\phi_1 - \tan\phi_2\right)
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+  \item $\tan\phi_1 = \dfrac{\sqrt{1 - \cos^2\phi_1}}{\cos\phi_1}$ \quad (Góc pha trước khi bù)
+  \item $\tan\phi_2 = \dfrac{\sqrt{1 - \cos^2\phi_2}}{\cos\phi_2}$ \quad (Góc pha mục tiêu sau bù)
+\end{itemize}
+
+\begin{techbox}[title=Ví Dụ Tính Bù Tụ Thực Tế]
+Tủ động cơ: $P = 110\,\mathrm{kW}$, $\cos\phi_1 = 0{,}66$, mục tiêu $\cos\phi_2 = 0{,}90$.
+\[
+  \tan\phi_1 = \frac{\sqrt{1 - 0{,}66^2}}{0{,}66} = \frac{0{,}7513}{0{,}66} \approx 1{,}138; \qquad
+  \tan\phi_2 = \frac{\sqrt{1 - 0{,}90^2}}{0{,}90} = \frac{0{,}4359}{0{,}90} \approx 0{,}484
+\]
+\[
+  Q_C = 110 \times (1{,}138 - 0{,}484) = 110 \times 0{,}654 \approx \mathbf{71{,}9\,\mathrm{kVAr}}
+\]
+Cần lắp đặt tủ tụ bù tự động APFC công suất \textbf{72 kVAr} kết hợp cuộn kháng lọc sóng hài $7\%$.
+\end{techbox}
+
+\subsection{Phụ Lục D: Bảng Mẫu Nhận Xét Theo Xếp Loại và Loại Tải}
+
+Bảng dưới đây cung cấp các cụm từ mở đầu chuẩn cho từng mức xếp loại khi soạn đoạn văn nhận xét:
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{>{\centering\arraybackslash}p{2.5cm}
+                              >{\raggedright\arraybackslash}X
+                              >{\raggedright\arraybackslash}X}
+\toprule
+\rowcolor{primary}
+\color{white}\textbf{Xếp loại} &
+\color{white}\textbf{Cụm từ mở đầu câu nhận xét tổng quan} &
+\color{white}\textbf{Câu kết nối phân tích chỉ tiêu vi phạm} \\
+\midrule
+\textbf{\color{darkgreen}Tốt} &
+``\ldots hoạt động với chất lượng điện ở mức \textbf{tốt}\ldots'' &
+``Tất cả các thông số đo đạc đều đạt tiêu chuẩn kỹ thuật.'' \\
+\rowcolor{lightgray}
+\textbf{\color{warningyellow}Tương đối tốt} &
+``\ldots hoạt động với chất lượng điện ở mức \textbf{tương đối tốt}\ldots'' &
+``\ldots ở mức cho phép; \textit{tuy nhiên}, \ldots đều vượt mức cho phép (\ldots).'' \\
+\textbf{\color{accent}Chưa thực sự tốt} &
+``\ldots hoạt động với chất lượng điện ở mức \textbf{chưa thực sự tốt}\ldots'' &
+``\ldots đều vượt mức cho phép (\ldots); cần triển khai giải pháp kỹ thuật khắc phục sớm.'' \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\clearpage
+\section{Kết Luận}
+
+\subsection{Tóm Tắt Phương Pháp Luận LoiDem}
+
+Thuật toán chấm điểm phạt tích lũy LoiDem được thiết kế theo triết lý \textbf{chẩn đoán tích lũy logic}: thay vì chỉ xác nhận từng chỉ tiêu đạt/không đạt một cách độc lập, hệ thống tích hợp \textbf{6 chỉ tiêu kỹ thuật} thành một điểm số duy nhất phản ánh trạng thái vận hành tổng thể của thiết bị/điểm đo. Điều này cho phép:
+
+\begin{itemize}
+  \item \textbf{Phát hiện sớm rủi ro tổ hợp:} Một thiết bị có thể có mỗi chỉ tiêu riêng lẻ vẫn ở mức cảnh báo nhẹ, nhưng khi tổng hợp lại cho thấy mức độ rủi ro kỹ thuật tổng thể đã đủ để cần can thiệp.
+  \item \textbf{Dung sai thích ứng theo công nghệ:} Các nhóm phụ tải phi tuyến (VFD, LED, Servo) được áp dụng ngưỡng nới rộng phù hợp với bản chất kỹ thuật của chúng, tránh cảnh báo sai (false positive) và đảm bảo tính công bằng kỹ thuật trong đánh giá.
+  \item \textbf{Chuẩn hóa ngôn ngữ báo cáo:} Phương pháp ghép câu đa chỉ tiêu và khử lặp từ mạo đầu đảm bảo tính chuyên nghiệp và nhất quán trong văn phong báo cáo kiểm toán năng lượng.
+\end{itemize}
+
+\subsection{Lưu Ý Khi Áp Dụng Trong Thực Tế}
+
+\begin{warningbox}[title=Các Điểm Cần Lưu Ý Khi Triển Khai Đánh Giá Thực Địa]
+\begin{enumerate}
+  \item \textbf{Xác nhận điện áp danh định trước khi tính $\delta U$:} Kiểm tra xem trạm biến áp đang dùng $V_{\mathrm{ref}} = 380\,\mathrm{V}$ hay $400\,\mathrm{V}$ (phổ biến theo tiêu chuẩn IEC mới) để tránh sai lệch hệ thống khi tính độ lệch điện áp.
+  \item \textbf{Phân biệt $THD$ và $TDD$:} $THD_I$ (Total Harmonic Distortion) tính theo dòng cơ bản $I_1$ thường cao hơn $TDD_I$ (Total Demand Distortion) tính theo dòng định mức $I_L$. Thuật toán LoiDem sử dụng $TDD_I$ theo IEEE 519 để tránh vi phạm ảo khi thiết bị vận hành nhẹ tải.
+  \item \textbf{Dữ liệu đo tối thiểu:} Thời gian đo kiểm khuyến nghị tối thiểu \textbf{7 ngày} hoặc \textbf{3 ca sản xuất đại diện} để thu được chu kỳ tải đặc trưng đầy đủ, phản ánh đúng thực trạng vận hành của thiết bị.
+  \item \textbf{Đồng bộ giờ thiết bị đo:} Đảm bảo đồng bộ thời gian (NTP hoặc GPS) giữa các điểm đo song song để phân tích nhân quả giữa các sự kiện điện áp tại các nút khác nhau trong hệ thống.
+  \item \textbf{Kiểm tra phân cực CT:} Trước khi tin tưởng số liệu $\cos\phi < 0$ (tải bù thừa công suất phản kháng như inverter PV hòa lưới), kiểm tra chiều đấu nối biến dòng (CT) để loại trừ sai số đo đầu vào.
+\end{enumerate}
+\end{warningbox}
+
+\subsection{Định Hướng Phát Triển Tiếp Theo}
+
+Tài liệu này mô tả phiên bản \textbf{2.5} của phương pháp LoiDem. Các hướng phát triển tiếp theo bao gồm:
+
+\begin{enumerate}
+  \item \textbf{Tích hợp chỉ tiêu Flicker ($P_{st}$, $P_{lt}$):} Bổ sung đánh giá dao động điện áp nhanh (Voltage Fluctuation) theo IEC 61000-3-3/3-5, đặc biệt quan trọng cho môi trường có máy hàn hồ quang và lò điện trở.
+  \item \textbf{Tích hợp chỉ tiêu Dip/Swell/Interruption:} Phân tích các sự kiện ngắn hạn (Short-duration RMS variations) theo IEC 61000-4-30 lớp A để đánh giá độ tin cậy nguồn điện.
+  \item \textbf{Phân tích sóng hài theo bậc (Individual Harmonic):} Mở rộng đánh giá cho từng bậc sóng hài riêng lẻ (bậc 3, 5, 7, 11, 13\ldots) thay vì chỉ dùng $THD/TDD$ tổng hợp, phục vụ chẩn đoán nguồn phát sóng hài chuyên sâu.
+  \item \textbf{Xuất báo cáo tự động:} Kết nối thuật toán LoiDem với module sinh tài liệu PDF tự động từ dữ liệu đo kiểm thô (XLSX/CSV) của thiết bị Kyoritsu KEW 6305/6315 thông qua phần mềm xử lý dữ liệu đo kiểm điện năng chuyên dụng.
+\end{enumerate}
+
+\vspace{1.5em}
+\begin{center}
+\rule{0.5\textwidth}{0.8pt}\\[0.5em]
+{\small\sffamily\itshape Tài liệu kỹ thuật --- Phiên bản 2.5 --- Cập nhật: 09/2026\\
+Dành cho nội bộ Kỹ sư Đo kiểm \& Kiểm toán Năng lượng}
+\end{center}
 
 \end{document}
