@@ -2750,10 +2750,9 @@ def safe_extract_zip(
     """
     Giải nén file ZIP an toàn và tương thích đa bảng mã (UTF-8, CP1258, CP1252, CP437):
     - Thử metadata_encoding='utf-8' trước để ưu tiên chuẩn tên file tiếng Việt UTF-8.
-    - Nếu gặp lỗi giải mã UTF-8 (ví dụ: 'utf-8' codec can't decode byte 0xa0 in position 20: invalid start byte),
-      tự động fallback sang mở mặc định (CP437, luôn mở được mọi byte) và phục hồi tên tiếng Việt
-      thông minh cho từng phần tử (ưu tiên UTF-8 -> CP1258 -> CP1252 -> giữ nguyên), ngăn chặn
-      hoàn toàn lỗi UnicodeDecodeError.
+    - Nếu gặp lỗi giải mã UTF-8, tự động fallback sang CP437 mặc định và phục hồi
+      tên tiếng Việt thông minh cho từng entry (UTF-8 → CP1258 → CP1252 → giữ nguyên).
+    - Hỗ trợ ZIP hỗn hợp: một số entry có UTF-8 flag, một số dùng CP1258/CP1252 raw bytes.
     """
     extract_path = Path(extract_dir)
     extract_path.mkdir(parents=True, exist_ok=True)
@@ -2771,6 +2770,28 @@ def safe_extract_zip(
     else:
         raise TypeError(f"Nguồn ZIP không hợp lệ: {type(zip_source)}")
 
+    def _decode_name(member: zipfile.ZipInfo) -> str:
+        """Giải mã tên entry đúng encoding.
+
+        Entry có flag UTF-8 (bit 11): tên đã được Python decode đúng → giữ nguyên.
+        Entry không có flag: Python decode bằng CP437 (mặc định). Ta encode ngược
+        về raw bytes rồi thử UTF-8 → CP1258 → CP1252 → giữ nguyên.
+        """
+        if member.flag_bits & 0x800:
+            return member.filename
+        # Encode ngược từ CP437-decoded string về raw bytes
+        try:
+            raw = member.filename.encode("cp437")
+        except UnicodeEncodeError:
+            # Tên không encode được sang CP437 → đã là Unicode thực, giữ nguyên
+            return member.filename
+        for enc in ("utf-8", "cp1258", "cp1252"):
+            try:
+                return raw.decode(enc)
+            except (UnicodeDecodeError, UnicodeError):
+                pass
+        return member.filename
+
     # 1. Thử mở và giải nén trực tiếp với UTF-8 (chuẩn cho zip mới)
     try:
         bio.seek(0)
@@ -2780,25 +2801,33 @@ def safe_extract_zip(
     except (UnicodeDecodeError, UnicodeError, TypeError):
         pass
 
-    # 2. Fallback: Mở mặc định với CP437 (luôn giải mã được mọi byte không lỗi)
-    # và phục hồi tên tiếng Việt UTF-8/CP1258/CP1252 cho từng file/thư mục
+    # 2. Thử CP1258 (tiếng Việt Windows) — metadata_encoding chỉ áp dụng cho entry
+    #    không có UTF-8 flag (bit 11 = 0), nên entry có flag UTF-8 vẫn decode đúng.
+    try:
+        bio.seek(0)
+        with zipfile.ZipFile(bio, "r", metadata_encoding="cp1258") as zf:
+            zf.extractall(extract_path)
+            return
+    except (UnicodeDecodeError, UnicodeError, TypeError, Exception):
+        pass
+
+    # 3. Thử CP1252 (Latin-1 Windows)
+    try:
+        bio.seek(0)
+        with zipfile.ZipFile(bio, "r", metadata_encoding="cp1252") as zf:
+            zf.extractall(extract_path)
+            return
+    except (UnicodeDecodeError, UnicodeError, TypeError, Exception):
+        pass
+
+    # 4. Fallback cuối: Mở mặc định với CP437 và phục hồi tên tiếng Việt cho từng entry
     bio.seek(0)
     with zipfile.ZipFile(bio, "r") as zf:
         for member in zf.infolist():
-            if not (member.flag_bits & 0x800):
-                orig_name = member.filename
-                try:
-                    raw = orig_name.encode("cp437")
-                    member.filename = raw.decode("utf-8")
-                except (UnicodeEncodeError, UnicodeDecodeError):
-                    try:
-                        member.filename = raw.decode("cp1258")
-                    except (UnicodeEncodeError, UnicodeDecodeError):
-                        try:
-                            member.filename = raw.decode("cp1252")
-                        except (UnicodeEncodeError, UnicodeDecodeError):
-                            pass
+            member.filename = _decode_name(member)
             zf.extract(member, extract_path)
+
+
 
 
 def build_word_report_from_zip(
