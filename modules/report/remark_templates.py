@@ -47,12 +47,11 @@ def get_harm_both_ok_templates(harm_ok_vals: str) -> list[str]:
 def get_cause_vfd_templates(td_s: str, lim_s: str) -> list[str]:
     """Mẫu câu nguyên nhân sóng hài cho nhóm Biến tần (VFD)."""
     return [
-        "Sóng hài dòng điện ở mức cao là đặc tính kỹ thuật đặc trưng của bộ chỉnh lưu phi tuyến trong biến tần.",
         "Sóng hài dòng điện tăng cao do hệ thống sử dụng bộ biến tần điều khiển tốc độ động cơ.",
-        "Sóng hài dòng điện vượt mức cho phép xuất phát từ nguyên lý hoạt động phi tuyến của bộ biến tần.",
-        "Hiện tượng biến dạng sóng hài dòng điện xuất phát từ đặc tính đóng ngắt bằng bán dẫn công suất trong biến tần.",
-        "Biến tần sử dụng mạch chỉnh lưu 6 xung tạo ra các thành phần sóng hài làm dòng điện biến dạng.",
-        "Quá trình biến đổi tần số bằng linh kiện bán dẫn công suất tạo ra các sóng hài dòng điện đặc trưng.",
+        "Sóng hài dòng điện ở mức cao là đặc tính kỹ thuật đặc trưng của biến tần khi điều khiển tốc độ động cơ.",
+        "Nguyên nhân sóng hài dòng điện cao xuất phát từ biến tần sử dụng trong hệ thống.",
+        "Biến tần sử dụng mạch chỉnh lưu tạo ra các thành phần sóng hài làm dòng điện biến dạng.",
+        "Sóng hài dòng điện là đặc tính kỹ thuật phổ biến khi hệ thống sử dụng biến tần để điều khiển tốc độ.",
     ]
 
 
@@ -60,10 +59,9 @@ def get_cause_vsd_templates(td_s: str, lim_s: str) -> list[str]:
     """Mẫu câu nguyên nhân sóng hài cho nhóm Máy nén khí VSD."""
     return [
         "Nguyên nhân sóng hài dòng điện xuất phát từ bộ biến tần VSD tích hợp trong máy nén khí.",
-        "Biến dạng sóng hài dòng điện do đặc tính đóng ngắt phi tuyến của bộ điều khiển VSD máy nén.",
         "Khối biến tần VSD của máy nén khí sinh ra sóng hài dòng điện trong quá trình điều chỉnh tốc độ motor.",
         "Sóng hài dòng điện tăng cao là đặc tính kỹ thuật phổ biến ở các hệ thống máy nén khí sử dụng biến tần VSD.",
-        "Bộ biến tần VSD tích hợp trong máy nén khí, dù mang lại hiệu quả năng lượng cao, đồng thời tạo ra sóng hài dòng điện do bản chất chuyển mạch tần số.",
+        "Bộ biến tần VSD tích hợp trong máy nén khí tạo ra sóng hài dòng điện do nguyên lý chuyển mạch tần số.",
         "Đặc tính vận hành của máy nén khí biến tần, khi bộ điều khiển VSD điều chỉnh liên tục tốc độ động cơ là nguyên nhân chính phát sinh sóng hài dòng điện.",
     ]
 
@@ -73,7 +71,6 @@ def get_cause_servo_both_templates(di_s: str, td_s: str, lim_s: str) -> list[str
     return [
         "Độ lệch pha dòng điện và sóng hài tăng cao do phân bổ các tải 1 pha chưa đều, kết hợp với các bộ điều khiển servo phát sinh sóng hài.",
         "Mất cân bằng dòng giữa các pha và sóng hài dòng điện xuất phát từ đặc tính đóng ngắt không đồng bộ của các động cơ servo trong thiết bị.",
-        "Sự kết hợp giữa phụ tải đơn pha phân bổ chưa cân đối và đặc tính bán dẫn phi tuyến của bộ điều khiển servo tạo ra hai vấn đề chất lượng điện.",
         "Nguyên nhân đồng thời gây lệch pha và sóng hài tăng cao là do số lượng lớn động cơ servo hoạt động độc lập, không đồng bộ về thời điểm khởi động và tải.",
     ]
 
@@ -94,9 +91,8 @@ def get_cause_servo_harm_templates(td_s: str, lim_s: str) -> list[str]:
     return [
         "Các bộ điều khiển động cơ servo trong thiết bị phát sinh sóng hài dòng điện đặc trưng.",
         "Các khối nguồn và biến tần nhỏ trong thiết bị đóng ngắt liên tục là nguyên nhân tạo ra sóng hài dòng điện.",
-        "Bộ điều khiển servo trong thiết bị là loại tải phi tuyến điển hình, có mạch chỉnh lưu tích hợp tạo ra các sóng hài dòng điện bậc lẻ.",
         "Hàng loạt động cơ servo vận hành đồng thời với tần suất đóng ngắt cao tích lũy sóng hài dòng điện lên lưới điện cấp cho thiết bị.",
-        "Đặc tính phi tuyến của bộ nguồn xung và mạch điều khiển servo là nguồn phát sinh chính gây ra mức sóng hài dòng điện.",
+        "Bộ nguồn xung tích hợp trong bộ điều khiển servo là nguyên nhân chính phát sinh sóng hài dòng điện.",
     ]
 
 
@@ -105,7 +101,7 @@ def get_cause_lighting_both_templates(di_s: str, td_s: str, lim_s: str) -> list[
     return [
         "Sóng hài dòng điện xuất phát từ bộ nguồn xung (LED driver) chiếu sáng, đồng thời độ lệch pha dòng điện do phân bổ phụ tải không đều giữa các tuyến.",
         "Hệ thống chiếu sáng LED tích tụ lượng sóng hài dòng điện, đặc biệt là sóng hài bậc 3, và gây mất cân bằng dòng giữa các pha.",
-        "LED driver là tải phi tuyến phát sinh sóng hài dòng điện bậc 3, 5, 7, kết hợp với việc phân bổ phụ tải chiếu sáng đơn pha chưa cân đối.",
+        "LED driver phát sinh sóng hài dòng điện, kết hợp với việc phân bổ phụ tải chiếu sáng đơn pha chưa cân đối làm tăng độ lệch pha.",
     ]
 
 
@@ -113,10 +109,9 @@ def get_cause_lighting_harm_templates(td_s: str, lim_s: str) -> list[str]:
     """Mẫu câu nguyên nhân sóng hài cho nhóm Hệ thống chiếu sáng."""
     return [
         "Tổng biến dạng sóng hài dòng điện xuất phát từ đặc tính của bộ nguồn xung như LED driver hoặc ballast điện tử trong hệ thống chiếu sáng.",
-        "Hệ thống chiếu sáng LED là loại tải phi tuyến điển hình, tích tụ lượng sóng hài dòng điện bậc lẻ.",
+        "Sóng hài dòng điện tăng cao do LED driver trong hệ thống chiếu sáng sinh ra thành phần sóng hài bậc lẻ.",
         "LED driver sử dụng mạch chỉnh lưu tích hợp tụ lọc, tạo ra dòng điện có dạng xung nhọn với hàm lượng sóng hài dòng điện bậc 3, 5, 7 cao.",
-        "Nguồn điện tử như LED driver hoặc ballast điện tử trong hệ thống chiếu sáng vốn là các bộ nguồn xung phi tuyến sinh ra sóng hài dòng điện.",
-        "Đặc tính phi tuyến vốn có của mạch chỉnh lưu trong LED driver là nguồn gốc chính gây nên tổng biến dạng sóng hài dòng điện.",
+        "Nguyên nhân sóng hài dòng điện cao là do LED driver trong hệ thống chiếu sáng phát sinh các thành phần sóng hài đặc trưng.",
     ]
 
 
@@ -151,11 +146,11 @@ def get_cause_inv_templates() -> list[str]:
 
 
 def get_cause_gen_harm_templates() -> list[str]:
-    """Mẫu câu nguyên nhân sóng hài chung cho thiết bị phi tuyến."""
+    """Mẫu câu nguyên nhân sóng hài chung cho thiết bị sử dụng biến tần hoặc nguồn xung."""
     return [
-        "Nguyên nhân sóng hài cao xuất phát từ việc sử dụng các thiết bị phi tuyến trong hệ thống.",
-        "Tổng biến dạng sóng hài dòng điện cao là đặc tính kỹ thuật của các bộ biến đổi công suất điện tử.",
-        "Các thiết bị điện tử công suất như nguồn xung, bộ chỉnh lưu hay biến tần là tải phi tuyến điển hình, sinh ra sóng hài dòng điện trên lưới điện.",
+        "Nguyên nhân sóng hài dòng điện cao xuất phát từ biến tần hoặc bộ nguồn xung tích hợp trong hệ thống.",
+        "Sóng hài dòng điện tăng cao là đặc tính kỹ thuật của hệ thống sử dụng biến tần hoặc bộ nguồn chuyển mạch.",
+        "Sóng hài dòng điện phát sinh do hệ thống sử dụng biến tần hoặc nguồn xung trong quá trình vận hành.",
     ]
 
 
@@ -182,15 +177,15 @@ def get_cause_solar_templates(td_s: str, lim_s: str) -> list[str]:
     return [
         "Sóng hài dòng điện do đặc tính đóng ngắt tần số cao của bộ Inverter hòa lưới, đặc biệt khi hệ thống vận hành ở dải công suất phát nhẹ.",
         "Sóng hài dòng điện xuất phát từ quá trình biến đổi điện một chiều (DC) từ pin mặt trời sang điện xoay chiều (AC) của Inverter hòa lưới.",
-        "Đặc tính phi tuyến của mạch cầu biến tần hòa lưới Điện mặt trời là nguyên nhân chính gây ra sóng hài dòng điện.",
+        "Nguyên nhân sóng hài dòng điện cao là do bộ Inverter hòa lưới Điện mặt trời tạo ra thành phần sóng hài trong quá trình chuyển đổi điện.",
     ]
 
 
 def get_cause_welding_both_templates(di_s: str, td_s: str, lim_s: str) -> list[str]:
     """Mẫu câu nguyên nhân vừa lệch pha vừa sóng hài cao cho nhóm Máy hàn / Lò công nghiệp."""
     return [
-        "Độ lệch pha dòng điện do phân bổ phụ tải máy hàn/lò đơn pha không đều giữa các pha, kết hợp với mạch chỉnh lưu phi tuyến phát sinh sóng hài.",
-        "Sự kết hợp giữa phụ tải xung kích đơn pha đấu nối lệch pha và đặc tính đóng ngắt bán dẫn của bộ nguồn hàn gây ra đồng thời hai vấn đề chất lượng điện.",
+        "Độ lệch pha dòng điện do phân bổ phụ tải máy hàn/lò đơn pha không đều giữa các pha, kết hợp với bộ nguồn hàn phát sinh sóng hài dòng điện.",
+        "Sự kết hợp giữa phụ tải xung kích đơn pha đấu nối lệch pha và đặc tính đóng ngắt của bộ nguồn hàn gây ra đồng thời hai vấn đề chất lượng điện.",
     ]
 
 
@@ -499,7 +494,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện cấp cho hệ thống đèn chiếu sáng vận hành ổn định theo thời gian hoạt động của khu vực.",
             "Biểu đồ dòng điện của hệ thống chiếu sáng duy trì mức ổn định cao trong giờ vận hành.",
             "Đặc tính ổn định của đồ thị dòng điện hệ thống chiếu sáng phản ánh chế độ vận hành liên tục, đèn bật/tắt theo giờ hành chính cố định.",
-            "Dòng điện hệ thống chiếu sáng gần như không thay đổi trong giờ vận hành, chỉ có bước nhảy nhỏ khi bật/tắt từng khu vực theo ca.",
+            "Dòng điện hệ thống chiếu sáng gần như không thay đổi trong giờ vận hành, chỉ có sự thay đổi nhỏ khi bật/tắt từng khu vực theo ca.",
             "Dòng điện tiêu thụ gần như không đổi trong suốt khung giờ chiếu sáng, phản ánh đặc tính tải tuyến tính, ổn định.",
             "Công suất tiêu thụ tức thời của hệ thống duy trì mức rất ổn định, chỉ thay đổi nhỏ khi chuyển đổi ca chiếu sáng.",
         ]
@@ -558,7 +553,6 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
         "ổn định": [
             "Biểu đồ dòng điện tiêu thụ tại thiết bị ổn định trong thời gian đo kiểm.",
             "Biểu đồ dòng điện cấp cho thiết bị duy trì ổn định trong suốt quá trình khảo sát.",
-            "Biểu đồ dòng điện của thiết bị thể hiện tính ổn định trong vận hành.",
             "Dòng điện tiêu thụ duy trì ổn định, không ghi nhận sự kiện quá tải hay sụt áp bất thường trong thời gian khảo sát.",
             "Dòng điện tiêu thụ không có biến động đáng kể trong suốt thời gian khảo sát.",
             "Công suất tiêu thụ tức thời tại thiết bị duy trì ở mức ổn định, không xuất hiện biến động đột biến trong thời gian khảo sát.",
@@ -612,7 +606,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
         "dao động liên tục với biên độ lớn": [
             "Biểu đồ dòng điện tiêu thụ dao động liên tục với biên độ lớn trong suốt thời gian đo kiểm.",
             "Đồ thị dòng điện biến động mạnh với biên độ dao động rộng, phản ánh đặc tính tải không ổn định của thiết bị.",
-            "Biểu đồ dòng điện ghi nhận các bước nhảy công suất lớn và liên tục theo từng chu kỳ vận hành sản xuất.",
+            "Biểu đồ dòng điện ghi nhận sự biến động lớn và liên tục theo từng chu kỳ vận hành sản xuất.",
             "Dòng điện tiêu thụ dao động với biên độ lớn quanh mức trung bình, thể hiện sự thay đổi tải đột ngột thường xuyên.",
             "Công suất tiêu thụ tức thời dao động mạnh với biên độ lớn, thể hiện sự thay đổi tải đột ngột thường xuyên.",
         ],
@@ -626,26 +620,26 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Biểu đồ dòng điện tiêu thụ cho thấy thiết bị vận hành theo chế độ Load/Unload.",
             "Đồ thị dòng điện đo được biến đổi theo chu kỳ Load/Unload.",
             "Thiết bị hoạt động theo chế độ Load/Unload, đồ thị dòng điện thể hiện rõ chu kỳ đóng/ngắt tải.",
-            "Dòng điện tiêu thụ dao động tuần hoàn theo chu kỳ Load/Unload của máy nén, với biên độ bước nhảy lớn và thời gian lặp đều đặn.",
+            "Dòng điện tiêu thụ dao động tuần hoàn theo chu kỳ Load/Unload của máy nén, với biên độ dao động lớn và thời gian lặp đều đặn.",
             "Dòng điện biến thiên theo từng chu kỳ tải/không tải đặc trưng của chế độ vận hành Load/Unload.",
         ],
         "cao đột biến và có tính chu kỳ": [
             "Tại thời điểm khảo sát, đồ thị dòng điện đo được có những thời điểm cao đột biến và có tính chu kỳ.",
             "Biểu đồ dòng điện ghi nhận các đỉnh nhọn tăng cao đột biến với tần suất lặp lại có tính chu kỳ trong suốt thời gian khảo sát.",
-            "Đồ thị dòng điện xuất hiện các bước nhảy công suất cao đột biến theo chu kỳ vận hành của phụ tải.",
+            "Đồ thị dòng điện xuất hiện các xung dòng cao đột biến theo chu kỳ vận hành của phụ tải.",
             "Dòng điện tiêu thụ duy trì ở mức trung bình và xuất hiện các xung dòng cao đột biến lặp lại định kỳ theo thời gian.",
             "Biểu đồ dòng điện đo được ghi nhận các đỉnh tải tăng cao đột biến có tính chu kỳ, thể hiện sự khởi động/vận hành tuần hoàn của thiết bị công suất lớn.",
             "Đặc tính dòng điện tiêu thụ biến động với các đỉnh nhọn xuất hiện có tính chu kỳ, tương ứng với chu kỳ thao tác/khởi động máy.",
         ],
         "xuất hiện các đỉnh nhọn cao đột biến": [
-            "Biểu đồ dòng điện ghi nhận sự xuất hiện của các đỉnh nhọn công suất cao đột biến tại một số thời điểm đo kiểm.",
-            "Đồ thị dòng điện tiêu thụ xuất hiện các bước nhảy tăng cao đột biến so với mức trung bình.",
+            "Biểu đồ dòng điện ghi nhận sự xuất hiện của các đỉnh nhọn dòng điện cao đột biến tại một số thời điểm đo kiểm.",
+            "Đồ thị dòng điện tiêu thụ xuất hiện các xung dòng tăng cao đột biến so với mức trung bình.",
             "Dòng điện tiêu thụ tổng thể duy trì ổn định, tuy nhiên ghi nhận các đỉnh nhọn dòng điện tăng đột biến rải rác.",
         ],
         "biến đổi theo bậc tải": [
             "Biểu đồ dòng điện tiêu thụ biến đổi theo từng bậc tải, phản ánh quá trình tự động bật/tắt các cụm thiết bị phụ thuộc theo nhu cầu vận hành thực tế.",
-            "Đồ thị dòng điện thể hiện đặc tính biến đổi theo bậc tải, chuyển nấc rõ rệt giữa các cấp công suất vận hành.",
-            "Dòng điện tiêu thụ biến đổi theo từng nấc tải công suất, phản ánh chế độ đóng/ngắt các khối phụ tải trong hệ thống.",
+            "Đồ thị dòng điện thể hiện đặc tính biến đổi theo bậc tải, chuyển nấc rõ rệt giữa các cấp tải vận hành.",
+            "Dòng điện tiêu thụ biến đổi theo từng nấc tải, phản ánh chế độ đóng/ngắt các khối phụ tải trong hệ thống.",
         ],
         "dòng đỉnh nhọn khi khởi động": [
             "Biểu đồ dòng điện ghi nhận các đỉnh nhọn vọt cao ngắn hạn tại thời điểm khởi động thiết bị, sau đó duy trì ổn định ở mức tải vận hành bình thường.",
@@ -653,7 +647,7 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
             "Dòng điện tiêu thụ tổng thể duy trì ổn định, ngoại trừ sự xuất hiện của dòng đỉnh nhọn tại thời điểm khởi động phụ tải nặng.",
         ],
         "biến đổi mượt mà theo tần số": [
-            "Dòng điện tiêu thụ biến đổi mượt mà và tỷ lệ thuận với tần số điều khiển biến tần, bám sát nhu cầu phụ tải thực tế mà không gây bước nhảy đột ngột.",
+            "Dòng điện tiêu thụ biến đổi mượt mà và tỷ lệ thuận với tần số điều khiển biến tần, bám sát nhu cầu phụ tải thực tế mà không gây biến động đột ngột.",
             "Biểu đồ dòng điện phản ánh đặc tính điều tốc mượt mà theo tần số, dòng điện tăng/giảm tuyến tính theo nhu cầu vận hành.",
             "Đồ thị dòng điện biến đổi mượt mà bám sát phụ tải, thể hiện hiệu quả của hệ thống điều khiển biến tần linh hoạt.",
         ],
@@ -684,6 +678,14 @@ def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:
     _wave_dev_map["đột biến theo chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
     _wave_dev_map["đỉnh nhọn chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
     _wave_dev_map["tải xung chu kỳ"] = _wave_dev_map["cao đột biến và có tính chu kỳ"]
+
+    # Alias cho các giá trị trả về từ hàm phân loại tự động (_estimate_current_char_from_df)
+    # mà chưa có key riêng trong map → map sang template gần nhất về ý nghĩa
+    _wave_dev_map["load/unload"] = _wave_dev_map["biến đổi theo chu kỳ load/unload"]
+    _wave_dev_map["biên độ nhỏ"] = _wave_dev_map["biến đổi liên tục với biên độ nhỏ"]
+    _wave_dev_map["biến đổi nhẹ"] = _wave_dev_map["ổn định nhưng có sự biến đổi trong quá trình đo"]
+    _wave_dev_map["dao động nhẹ"] = _wave_dev_map["dao động liên tục quanh ngưỡng nhất định"]
+    _wave_dev_map["biến đổi liên tục theo tải"] = _wave_dev_map["biến đổi liên tục"]
 
     _wave_key_dev = wave.lower().strip()
     if _wave_key_dev in _wave_dev_map:

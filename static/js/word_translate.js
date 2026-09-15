@@ -137,6 +137,8 @@ function clearSelectedWordFile() {
     document.getElementById('trans-status-auto').innerText = 'Chưa chọn tệp';
 
     document.getElementById('trans-table-container').style.display = 'none';
+    const banner = document.getElementById('trans-numeric-banner');
+    if (banner) banner.style.display = 'none';
     document.getElementById('trans-success-auto').style.display = 'none';
     document.getElementById('trans-progress-container').style.display = 'none';
     hideTranslateError();
@@ -267,34 +269,201 @@ async function extractSegmentsFromWord() {
 function renderBilingualTable(segments) {
     const container = document.getElementById('trans-table-container');
     const tbody = document.getElementById('trans-tbody');
-    const countSpan = document.getElementById('trans-segment-count');
+    const textCountSpan = document.getElementById('trans-text-count');
+    const rawCountSpan = document.getElementById('trans-total-raw-count');
+    const numBadge = document.getElementById('trans-numeric-badge');
+    const banner = document.getElementById('trans-numeric-banner');
+    const bannerNumSpan = document.getElementById('trans-banner-num-count');
 
     if (!container || !tbody) return;
 
-    countSpan.innerText = segments.length;
     tbody.innerHTML = '';
 
-    if (segments.length === 0) {
+    if (!segments || segments.length === 0) {
+        if (textCountSpan) textCountSpan.innerText = '0';
+        if (rawCountSpan) rawCountSpan.innerText = '0';
+        if (numBadge) numBadge.innerText = '0';
         tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Tài liệu không chứa văn bản nào để trích xuất.</td></tr>`;
         container.style.display = 'block';
         return;
     }
 
-    segments.forEach((seg, idx) => {
+    if (rawCountSpan) rawCountSpan.innerText = segments.length;
+
+    // Kiểm tra các tuỳ chọn toggle
+    const isDedup = (document.getElementById('trans-dedup-toggle') || document.getElementById('trans-dedup-pre'))?.checked ?? true;
+    const allowChk = document.getElementById('trans-allow-numeric') || document.getElementById('trans-allow-numeric-pre');
+    const isAllowedNumeric = allowChk ? allowChk.checked : false;
+
+    // Chuẩn bị danh sách hiển thị
+    let displayList = [];
+    if (isDedup) {
+        const textMap = new Map();
+        segments.forEach((seg) => {
+            const key = seg.text.trim();
+            if (!textMap.has(key)) {
+                const item = {
+                    displayId: displayList.length + 1,
+                    primaryId: seg.id,
+                    ids: [seg.id],
+                    text: seg.text,
+                    count: seg.count || 1,
+                    translatable: seg.translatable,
+                    translated: seg.translated || ''
+                };
+                textMap.set(key, item);
+                displayList.push(item);
+            } else {
+                const existing = textMap.get(key);
+                existing.ids.push(seg.id);
+                if (existing.ids.length > existing.count) {
+                    existing.count = existing.ids.length;
+                }
+                if (seg.translated && !existing.translated) {
+                    existing.translated = seg.translated;
+                }
+            }
+        });
+    } else {
+        displayList = segments.map((seg, idx) => ({
+            displayId: idx + 1,
+            primaryId: seg.id,
+            ids: [seg.id],
+            text: seg.text,
+            count: 1,
+            translatable: seg.translatable,
+            translated: seg.translated || ''
+        }));
+    }
+
+    let textCount = 0;
+    let numericCount = 0;
+
+    displayList.forEach((item) => {
         const tr = document.createElement('tr');
+        const isNumeric = item.translatable === false;
+        if (isNumeric) {
+            tr.classList.add('is-numeric-row');
+            numericCount += (isDedup ? item.count : 1);
+            if (!item.translated) {
+                item.translated = item.text;
+            }
+            if (!isAllowedNumeric) {
+                tr.style.display = 'none';
+            }
+        } else {
+            textCount += 1;
+        }
+
+        const tagBadge = isNumeric 
+            ? `<div style="margin-top:4px;"><span style="font-size:0.68rem; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:1px 6px;"><i class="bi bi-hash"></i> Số / Ký hiệu</span></div>`
+            : '';
+
+        const repeatBadge = (isDedup && item.count > 1)
+            ? `<div style="margin-top:4px;"><span style="font-size:0.68rem; color:#8b5cf6; background:rgba(139, 92, 246, 0.12); border:1px solid rgba(139, 92, 246, 0.3); border-radius:4px; padding:1px 6px;" title="Xuất hiện ${item.count} lần trong tài liệu"><i class="bi bi-layers"></i> x${item.count} chỗ</span></div>`
+            : '';
+
         tr.innerHTML = `
-            <td style="text-align: center; vertical-align: top; color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
-            <td style="vertical-align: top; line-height: 1.5; color: var(--text); background: var(--surface2);">${escapeHtml(seg.text)}</td>
+            <td style="text-align: center; vertical-align: top; color: var(--text-muted); font-weight: 600;">
+                ${item.displayId}
+                ${repeatBadge}
+                ${tagBadge}
+            </td>
+            <td style="vertical-align: top; line-height: 1.5; color: var(--text); background: var(--surface2);">${escapeHtml(item.text)}</td>
             <td style="vertical-align: top;">
-                <textarea class="form-control trans-input-row" id="trans-input-${seg.id}" data-id="${seg.id}"
+                <textarea class="form-control trans-input-row" id="trans-input-${item.primaryId}" data-id="${item.primaryId}"
+                    data-text="${escapeHtml(item.text)}" data-ids="${item.ids.join(',')}"
+                    oninput="handleTranslationInput(this)"
                     rows="2" style="font-size: 0.82rem; background: var(--surface); color: var(--text); border: 1px solid var(--border);"
-                    placeholder="Nhập bản dịch tại đây...">${escapeHtml(seg.translated || '')}</textarea>
+                    placeholder="${isNumeric ? 'Giữ nguyên gốc' : 'Nhập bản dịch tại đây...'}">${escapeHtml(item.translated || '')}</textarea>
             </td>
         `;
         tbody.appendChild(tr);
     });
 
+    if (textCountSpan) textCountSpan.innerText = isDedup ? displayList.filter(x => x.translatable).length : textCount;
+    if (numBadge) numBadge.innerText = numericCount;
+    if (bannerNumSpan) bannerNumSpan.innerText = numericCount;
+
+    if (banner) {
+        banner.style.display = (!isAllowedNumeric && numericCount > 0) ? 'flex' : 'none';
+    }
+
     container.style.display = 'block';
+}
+
+function syncInputsToMemory() {
+    if (!extractedSegments || extractedSegments.length === 0) return;
+    document.querySelectorAll('.trans-input-row').forEach(textarea => {
+        const rawText = textarea.getAttribute('data-text');
+        const idsAttr = textarea.getAttribute('data-ids');
+        const val = textarea.value;
+        if (idsAttr) {
+            const ids = idsAttr.split(',').map(x => parseInt(x.trim(), 10));
+            extractedSegments.forEach(seg => {
+                if (ids.includes(seg.id)) {
+                    seg.translated = val;
+                }
+            });
+        } else if (rawText) {
+            extractedSegments.forEach(seg => {
+                if (seg.text === rawText) {
+                    seg.translated = val;
+                }
+            });
+        }
+    });
+}
+
+function handleTranslationInput(textarea) {
+    const rawText = textarea.getAttribute('data-text');
+    const idsAttr = textarea.getAttribute('data-ids');
+    const val = textarea.value;
+
+    if (idsAttr) {
+        const ids = idsAttr.split(',').map(x => parseInt(x.trim(), 10));
+        extractedSegments.forEach(seg => {
+            if (ids.includes(seg.id)) {
+                seg.translated = val;
+            }
+        });
+    } else if (rawText) {
+        extractedSegments.forEach(seg => {
+            if (seg.text === rawText) {
+                seg.translated = val;
+            }
+        });
+    }
+}
+
+function syncDedupToggle(sourceEl) {
+    const isDedup = sourceEl ? sourceEl.checked : true;
+    const preChk = document.getElementById('trans-dedup-pre');
+    const tbChk = document.getElementById('trans-dedup-toggle');
+    if (preChk) preChk.checked = isDedup;
+    if (tbChk) tbChk.checked = isDedup;
+
+    syncInputsToMemory();
+    renderBilingualTable(extractedSegments);
+}
+
+function syncNumericToggle(sourceEl) {
+    const isAllowed = sourceEl ? sourceEl.checked : false;
+    const preChk = document.getElementById('trans-allow-numeric-pre');
+    const tbChk = document.getElementById('trans-allow-numeric');
+    if (preChk) preChk.checked = isAllowed;
+    if (tbChk) tbChk.checked = isAllowed;
+
+    syncInputsToMemory();
+    renderBilingualTable(extractedSegments);
+}
+
+function enableNumericRows() {
+    const tbChk = document.getElementById('trans-allow-numeric');
+    if (tbChk) {
+        tbChk.checked = true;
+        syncNumericToggle(tbChk);
+    }
 }
 
 async function autoFillSuggestions() {
@@ -303,14 +472,30 @@ async function autoFillSuggestions() {
     const srcLang = document.getElementById('trans-src-lang').value;
     const tgtLang = document.getElementById('trans-tgt-lang').value;
 
-    const textsToTranslate = extractedSegments.map(s => s.text);
+    // Lọc danh sách câu văn bản duy nhất cần dịch (bỏ qua số và ký hiệu)
+    const uniqueTextsToTranslate = [];
+    const seenTexts = new Set();
+
+    extractedSegments.forEach((seg) => {
+        if (seg.translatable === false) {
+            seg.translated = seg.text;
+        } else {
+            const t = seg.text.trim();
+            if (t && !seenTexts.has(t)) {
+                seenTexts.add(t);
+                uniqueTextsToTranslate.push(seg.text);
+            }
+        }
+    });
+
+    if (uniqueTextsToTranslate.length === 0) return;
 
     try {
         const response = await fetch('/api/translate/suggest', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                texts: textsToTranslate,
+                texts: uniqueTextsToTranslate,
                 src_lang: srcLang,
                 tgt_lang: tgtLang
             })
@@ -324,13 +509,26 @@ async function autoFillSuggestions() {
         const data = await response.json();
         const translations = data.translations || [];
 
-        translations.forEach((transText, idx) => {
-            if (idx < extractedSegments.length) {
-                extractedSegments[idx].translated = transText;
-                const inputEl = document.getElementById(`trans-input-${extractedSegments[idx].id}`);
-                if (inputEl) {
-                    inputEl.value = transText;
-                }
+        // Tạo map từ văn bản gốc -> bản dịch
+        const resultMap = new Map();
+        uniqueTextsToTranslate.forEach((orig, i) => {
+            if (translations[i]) {
+                resultMap.set(orig.trim(), translations[i]);
+            }
+        });
+
+        // Áp dụng cho tất cả segment và textarea
+        extractedSegments.forEach(seg => {
+            const t = seg.text.trim();
+            if (resultMap.has(t)) {
+                seg.translated = resultMap.get(t);
+            }
+        });
+
+        document.querySelectorAll('.trans-input-row').forEach(textarea => {
+            const raw = textarea.getAttribute('data-text');
+            if (raw && resultMap.has(raw.trim())) {
+                textarea.value = resultMap.get(raw.trim());
             }
         });
 
@@ -342,18 +540,37 @@ async function autoFillSuggestions() {
 function exportBilingualCSV() {
     if (!extractedSegments || extractedSegments.length === 0) return;
 
+    syncInputsToMemory();
+
+    const isDedup = (document.getElementById('trans-dedup-toggle') || document.getElementById('trans-dedup-pre'))?.checked ?? true;
+
     // Tạo CSV có UTF-8 BOM để Excel hiển thị đúng tiếng Việt
-    let csvContent = '\uFEFF"STT","Van_Ban_Goc","Ban_Dich"\n';
+    let csvContent = '\uFEFF"STT","Van_Ban_Goc","Ban_Dich","So_Lan"\n';
 
-    extractedSegments.forEach((seg, idx) => {
-        const inputEl = document.getElementById(`trans-input-${seg.id}`);
-        const currentTrans = inputEl ? inputEl.value : (seg.translated || '');
+    if (isDedup) {
+        const textMap = new Map();
+        extractedSegments.forEach(seg => {
+            const k = seg.text.trim();
+            if (!textMap.has(k)) {
+                textMap.set(k, { text: seg.text, trans: seg.translated || '', count: 1 });
+            } else {
+                textMap.get(k).count++;
+            }
+        });
 
-        const safeOrig = seg.text.replace(/"/g, '""');
-        const safeTrans = currentTrans.replace(/"/g, '""');
-
-        csvContent += `"${idx + 1}","${safeOrig}","${safeTrans}"\n`;
-    });
+        let idx = 1;
+        textMap.forEach((val) => {
+            const safeOrig = val.text.replace(/"/g, '""');
+            const safeTrans = val.trans.replace(/"/g, '""');
+            csvContent += `"${idx++}","${safeOrig}","${safeTrans}","${val.count}"\n`;
+        });
+    } else {
+        extractedSegments.forEach((seg, idx) => {
+            const safeOrig = seg.text.replace(/"/g, '""');
+            const safeTrans = (seg.translated || '').replace(/"/g, '""');
+            csvContent += `"${idx + 1}","${safeOrig}","${safeTrans}","1"\n`;
+        });
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const filename = `${selectedWordFile ? selectedWordFile.name.replace(/\.[^/.]+$/, "") : 'document'}_song_ngu.csv`;
@@ -378,25 +595,28 @@ function importBilingualCSV(event) {
             // Phân tích dòng CSV cơ bản
             const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
             if (matches && matches.length >= 3) {
+                const origVal = matches[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim();
                 const transVal = matches[2].replace(/^"|"$/g, '').replace(/""/g, '"');
-                const segIdx = i - 1;
-                if (segIdx < extractedSegments.length) {
-                    extractedSegments[segIdx].translated = transVal;
-                    const inputEl = document.getElementById(`trans-input-${extractedSegments[segIdx].id}`);
-                    if (inputEl) {
-                        inputEl.value = transVal;
+
+                // Khớp theo văn bản gốc
+                extractedSegments.forEach(seg => {
+                    if (seg.text.trim() === origVal) {
+                        seg.translated = transVal;
                         filledCount++;
                     }
-                }
+                });
             }
         }
         event.target.value = '';
+        renderBilingualTable(extractedSegments);
     };
     reader.readAsText(file, 'UTF-8');
 }
 
 async function applyManualTranslations() {
     if (!selectedWordFile || !extractedSegments || extractedSegments.length === 0) return;
+
+    syncInputsToMemory();
 
     const btn = document.getElementById('btn-trans-apply');
     btn.disabled = true;
@@ -406,10 +626,13 @@ async function applyManualTranslations() {
     // Thu thập toàn bộ bản dịch từ các ô textarea
     const translations = [];
     extractedSegments.forEach(seg => {
-        const inputEl = document.getElementById(`trans-input-${seg.id}`);
-        const userText = inputEl ? inputEl.value : (seg.translated || '');
+        let userText = seg.translated || '';
+        if (seg.translatable === false && (!userText || !userText.trim())) {
+            userText = seg.text;
+        }
         translations.push({
             id: seg.id,
+            orig: seg.text,
             text: userText
         });
     });

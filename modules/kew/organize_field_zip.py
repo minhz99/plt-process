@@ -69,6 +69,21 @@ _WIN_RESERVED = {
     *(f"LPT{i}" for i in range(1, 10)),
 }
 
+_S_PREFIX_RE = re.compile(
+    r"^\s*[Ss]\s*\d+\s*[-_–—\s]+\s*",
+    re.UNICODE,
+)
+
+
+def _strip_s_prefix(name: str) -> str:
+    """Loại bỏ tiền tố dạng Sxxxx - hoặc Sxxx- khỏi tên thiết bị."""
+    if not name:
+        return ""
+    name_nfc = unicodedata.normalize("NFC", str(name)).strip()
+    stripped = _S_PREFIX_RE.sub("", name_nfc).strip()
+    return stripped if stripped else name_nfc
+
+
 
 def _norm_key(s: str) -> str:
     """Chuẩn hóa chuỗi để so khớp tên cột.
@@ -926,7 +941,7 @@ def _estimate_current_char_from_df(df: pd.DataFrame) -> str | None:
     if cv <= 0.02:
         return "ổn định"
 
-    # Nấc tải / ổn định có bước nhảy chuyển mức: CV 0.03-0.18 nhưng tỉ lệ bước chênh rất nhỏ (tải giữ phẳng ở các giai đoạn)
+    # Tải phân cấp / ổn định có chuyển mức: CV 0.03-0.18 nhưng tỉ lệ biên độ biến thiên rất nhỏ (tải giữ phẳng ở các giai đoạn)
     if 0.03 <= cv <= 0.18 and step_ratio < 0.25:
         return "ổn định nhưng có biến đổi"
 
@@ -1082,14 +1097,9 @@ def process_field_zip_bytes(
 
     extract = os.path.join(work_dir, "in")
     os.makedirs(extract, exist_ok=True)
-    bio = io.BytesIO(zip_bytes)
-    try:
-        with zipfile.ZipFile(bio, "r", metadata_encoding="utf-8") as zf:
-            zf.extractall(extract)
-    except TypeError:
-        bio.seek(0)
-        with zipfile.ZipFile(bio, "r") as zf:
-            zf.extractall(extract)
+    from modules.report.gen_word import safe_extract_zip
+
+    safe_extract_zip(zip_bytes, extract)
 
     if progress_callback:
         progress_callback(10, "Tìm tệp Excel và phân tích thư mục...")
@@ -1354,7 +1364,7 @@ def create_excel_from_prearranged(
         row = dev.excel_row
         # Điền các cột nhận dạng có sẵn
         ws.cell(row=row, column=header_map["stt"], value=stt)
-        ws.cell(row=row, column=header_map["name"], value=dev.folder_name)
+        ws.cell(row=row, column=header_map["name"], value=_strip_s_prefix(dev.folder_name))
         ws.cell(row=row, column=header_map["img"], value=dev.img_start)
         ws.cell(row=row, column=header_map["imgend"], value=dev.img_end)
         # Điền imgomit nếu có ảnh bị thiếu trong dải (gap giữa img_start và img_end)

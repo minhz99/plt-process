@@ -46,50 +46,62 @@ LANGUAGE_CODES = {
 def _get_document_paragraphs(doc: docx.Document):
     """
     Duyệt toàn bộ các đoạn văn bản trong file Word theo đúng thứ tự tài liệu:
-    1. Header của các Section
-    2. Toàn bộ Body (Paragraphs và các ô trong Tables theo thứ tự hiển thị)
-    3. Footer của các Section
-    Trả về danh sách các đối tượng Paragraph.
+    1. Header của các Section (khử trùng lặp node XML và header lặp lại giữa các section)
+    2. Toàn bộ Body (Paragraphs và các ô trong Tables, khử trùng lặp do merged cells)
+    3. Footer của các Section (khử trùng lặp node XML và footer lặp lại giữa các section)
+    Trả về danh sách các đối tượng Paragraph độc nhất (không trùng lặp node XML).
     """
     elements = []
+    seen_elements = set()
+    seen_hf_text = set()
+
+    def _add_p(p, is_hf=False):
+        if not p:
+            return
+        txt = p.text.strip()
+        if not txt:
+            return
+        if p._p in seen_elements:
+            return
+        if is_hf:
+            norm_hf = " ".join(txt.split())
+            if norm_hf in seen_hf_text:
+                return
+            seen_hf_text.add(norm_hf)
+        seen_elements.add(p._p)
+        elements.append(p)
 
     # 1. Header
     for section in doc.sections:
         for p in section.header.paragraphs:
-            if p.text.strip():
-                elements.append(p)
+            _add_p(p, is_hf=True)
         for tbl in section.header.tables:
             for row in tbl.rows:
                 for cell in row.cells:
                     for p in cell.paragraphs:
-                        if p.text.strip():
-                            elements.append(p)
+                        _add_p(p, is_hf=True)
 
     # 2. Body (Theo đúng thứ tự cây XML body)
     for child in doc.element.body:
         if child.tag.endswith('p'):
             p = Paragraph(child, doc)
-            if p.text.strip():
-                elements.append(p)
+            _add_p(p, is_hf=False)
         elif child.tag.endswith('tbl'):
             t = Table(child, doc)
             for row in t.rows:
                 for cell in row.cells:
                     for p in cell.paragraphs:
-                        if p.text.strip():
-                            elements.append(p)
+                        _add_p(p, is_hf=False)
 
     # 3. Footer
     for section in doc.sections:
         for p in section.footer.paragraphs:
-            if p.text.strip():
-                elements.append(p)
+            _add_p(p, is_hf=True)
         for tbl in section.footer.tables:
             for row in tbl.rows:
                 for cell in row.cells:
                     for p in cell.paragraphs:
-                        if p.text.strip():
-                            elements.append(p)
+                        _add_p(p, is_hf=True)
 
     return elements
 
@@ -109,9 +121,47 @@ def replace_paragraph_text(p: Paragraph, new_text: str):
         r.text = ''
 
 
+import re
+
+def should_translate(text: str) -> bool:
+    """
+    Kiểm tra xem chuỗi văn bản có cần dịch hay không.
+    Các chuỗi chỉ gồm số, ngày tháng, công thức, ký tự đặc biệt, đơn vị đo lường,
+    hoặc không chứa chữ cái sẽ KHÔNG cần dịch và được giữ nguyên 100%.
+    """
+    if not text:
+        return False
+    s = text.strip()
+    if not s:
+        return False
+
+    # 1. Nếu hoàn toàn không chứa bất kỳ chữ cái nào (chỉ có số, ký tự đặc biệt, dấu câu, toán học, ngày tháng)
+    if not any(c.isalpha() for c in s):
+        return False
+
+    # 2. URL, email, đường dẫn tập tin
+    if re.fullmatch(r'(https?://\S+|www\.\S+|[\w\.-]+@[\w\.-]+\.\w+|[a-zA-Z]:\\[\S\\]+)', s):
+        return False
+
+    # 3. Số kèm đơn vị đo lường thông dụng (100km/h, 50kg, $100, 25%, 50Hz, 20°C, v.v.)
+    unit_pattern = (
+        r'[\$€£¥₫]?\s*[\d\.,\s\+\-\±\~/\:]+\s*'
+        r'(km/h|m/s|km|m|cm|mm|kg|g|mg|l|ml|v|w|kw|kwh|hz|khz|mhz|ghz|a|ma|pa|kpa|bar|psi|rpm|fps|kb|mb|gb|tb|%|°c|°f|px|pt|em|rem|m2|m3|cm2)?\s*'
+    )
+    if re.fullmatch(unit_pattern, s, re.IGNORECASE):
+        return False
+
+    # 4. Số La Mã hoặc chỉ mục danh sách đơn lẻ (I, II, III, IV, A., b), 1.1, v.v.)
+    if re.fullmatch(r'[IVXLCDMivxlcdm]+[\.\)\:\-]?\s*', s) or re.fullmatch(r'\(?[a-zA-Z]\)?[\.\:\-]?\s*', s):
+        return False
+
+    return True
+
+
 def translate_sentences_google(texts: list[str], src_lang: str = 'auto', tgt_lang: str = 'vi') -> dict[str, str]:
     """
     Dịch danh sách các câu bằng Google Translate với kỹ thuật khử trùng lặp và phân nhóm thông minh:
+    - Bỏ qua các chuỗi chỉ có số, ký tự đặc biệt, đơn vị đo lường (giữ nguyên gốc).
     - Khử trùng lặp để tiết kiệm tối đa lượt gọi API.
     - Ghép nối các câu ngắn bằng dấu xuống dòng để dịch hàng loạt trong 1 request.
     - Tự động fallback sang từng câu riêng lẻ nếu gộp nhóm không khớp.
@@ -122,20 +172,25 @@ def translate_sentences_google(texts: list[str], src_lang: str = 'auto', tgt_lan
     src = LANGUAGE_CODES.get(src_lang, 'auto')
     tgt = LANGUAGE_CODES.get(tgt_lang, 'vi')
 
-    # Thu thập danh sách duy nhất
+    # Phân loại: chuỗi cần dịch và chuỗi giữ nguyên (số, ký hiệu, đơn vị)
     unique_texts = []
     seen = set()
+    translation_map = {}
+
     for t in texts:
         clean = t.strip()
-        if clean and clean not in seen:
-            seen.add(clean)
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+
+        # Nếu là số hoặc ký hiệu -> Giữ nguyên, không dịch
+        if not should_translate(clean):
+            translation_map[clean] = clean
+        else:
             unique_texts.append(clean)
 
     if not unique_texts:
-        return {}
-
-    translator = GoogleTranslator(source=src, target=tgt)
-    translation_map = {}
+        return translation_map
 
     # Chia nhóm để dịch gộp (mỗi nhóm tối đa 15 câu và không quá 1500 ký tự)
     chunks = []
@@ -222,11 +277,19 @@ def extract_segments():
         doc = docx.Document(io.BytesIO(data))
         paragraphs = _get_document_paragraphs(doc)
 
+        from collections import Counter
+        text_counts = Counter(p.text.strip() for p in paragraphs)
+
         segments = []
         for idx, p in enumerate(paragraphs):
+            raw_text = p.text.strip()
+            is_trans = should_translate(raw_text)
             segments.append({
                 'id': idx,
-                'text': p.text.strip()
+                'text': raw_text,
+                'count': text_counts[raw_text],
+                'translatable': is_trans,
+                'translated': raw_text if not is_trans else ''
             })
 
         return jsonify({
@@ -303,10 +366,45 @@ def translate_auto():
         translation_map = translate_sentences_google(all_texts, src_lang=src_lang, tgt_lang=tgt_lang)
 
         # Bơm văn bản đã dịch vào các Paragraph tương ứng
+        norm_trans_map = {" ".join(k.split()): v for k, v in translation_map.items()}
+        def _get_auto_trans(txt):
+            clean = txt.strip()
+            if clean in translation_map:
+                return translation_map[clean]
+            norm = " ".join(clean.split())
+            if norm in norm_trans_map:
+                return norm_trans_map[norm]
+            return None
+
         for p in paragraphs:
-            orig = p.text.strip()
-            if orig in translation_map:
-                replace_paragraph_text(p, translation_map[orig])
+            trans_val = _get_auto_trans(p.text)
+            if trans_val:
+                replace_paragraph_text(p, trans_val)
+
+        # Đồng bộ toàn bộ Header và Footer trên mọi section có cùng nội dung gốc
+        for s in doc.sections:
+            for p in s.header.paragraphs:
+                trans_val = _get_auto_trans(p.text)
+                if trans_val:
+                    replace_paragraph_text(p, trans_val)
+            for tbl in s.header.tables:
+                for row in tbl.rows:
+                    for cell in row.cells:
+                        for p in cell.paragraphs:
+                            trans_val = _get_auto_trans(p.text)
+                            if trans_val:
+                                replace_paragraph_text(p, trans_val)
+            for p in s.footer.paragraphs:
+                trans_val = _get_auto_trans(p.text)
+                if trans_val:
+                    replace_paragraph_text(p, trans_val)
+            for tbl in s.footer.tables:
+                for row in tbl.rows:
+                    for cell in row.cells:
+                        for p in cell.paragraphs:
+                            trans_val = _get_auto_trans(p.text)
+                            if trans_val:
+                                replace_paragraph_text(p, trans_val)
 
         out_buffer = io.BytesIO()
         doc.save(out_buffer)
@@ -376,18 +474,64 @@ def apply_translations():
         doc = docx.Document(io.BytesIO(data))
         paragraphs = _get_document_paragraphs(doc)
 
-        # translations là mảng [{ id: 0, text: '...' }, ...] hoặc dict { "0": "..." }
+        # translations là mảng [{ id: 0, text: '...', orig: '...' }, ...] hoặc dict { "0": "..." }
         trans_dict = {}
+        text_map = {}
+        norm_text_map = {}
         if isinstance(translations, list):
             for item in translations:
-                trans_dict[int(item['id'])] = item.get('text', '')
+                if 'id' in item:
+                    trans_dict[int(item['id'])] = item.get('text', '')
+                if 'orig' in item and item.get('text', '').strip():
+                    orig_clean = item['orig'].strip()
+                    val = item.get('text', '').strip()
+                    text_map[orig_clean] = val
+                    norm_text_map[" ".join(orig_clean.split())] = val
         elif isinstance(translations, dict):
             for k, v in translations.items():
                 trans_dict[int(k)] = v
 
+        def _get_matched_trans(txt):
+            clean = txt.strip()
+            if clean in text_map:
+                return text_map[clean]
+            norm = " ".join(clean.split())
+            if norm in norm_text_map:
+                return norm_text_map[norm]
+            return None
+
         for idx, p in enumerate(paragraphs):
+            matched = _get_matched_trans(p.text)
             if idx in trans_dict and trans_dict[idx].strip():
                 replace_paragraph_text(p, trans_dict[idx])
+            elif matched:
+                replace_paragraph_text(p, matched)
+
+        # Đồng bộ toàn bộ Header và Footer trên mọi section có cùng nội dung gốc
+        if text_map or norm_text_map:
+            for s in doc.sections:
+                for p in s.header.paragraphs:
+                    val = _get_matched_trans(p.text)
+                    if val:
+                        replace_paragraph_text(p, val)
+                for tbl in s.header.tables:
+                    for row in tbl.rows:
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                val = _get_matched_trans(p.text)
+                                if val:
+                                    replace_paragraph_text(p, val)
+                for p in s.footer.paragraphs:
+                    val = _get_matched_trans(p.text)
+                    if val:
+                        replace_paragraph_text(p, val)
+                for tbl in s.footer.tables:
+                    for row in tbl.rows:
+                        for cell in row.cells:
+                            for p in cell.paragraphs:
+                                val = _get_matched_trans(p.text)
+                                if val:
+                                    replace_paragraph_text(p, val)
 
         out_buffer = io.BytesIO()
         doc.save(out_buffer)

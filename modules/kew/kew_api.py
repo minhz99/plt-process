@@ -438,7 +438,14 @@ def generate_excel_mba():
     API endpoint để sinh báo cáo Excel MBA từ hồ sơ thiết bị (file ZIP).
     Sử dụng template MBA.xlsm với logic copy sheet và bảng tổng hợp.
     """
-    from modules.report.gen_word import _find_project_root, _find_first_excel, read_device_metadata_from_excel, _lookup_device_metadata, _nfc
+    from modules.report.gen_word import (
+        _find_project_root,
+        _find_first_excel,
+        read_device_metadata_from_excel,
+        _lookup_device_metadata,
+        _nfc,
+        safe_extract_zip,
+    )
     from modules.report.gen_excel_mba import generate_mba_excel_from_devices
 
     zf = request.files.get("zip") or request.files.get("file")
@@ -457,9 +464,10 @@ def generate_excel_mba():
     try:
         extract = os.path.join(work, "in")
         os.makedirs(extract, exist_ok=True)
-        bio = io.BytesIO(zip_bytes)
-        with zipfile.ZipFile(bio, "r", metadata_encoding="utf-8") as zf_in:
-            zf_in.extractall(extract)
+        try:
+            safe_extract_zip(zip_bytes, extract)
+        except zipfile.BadZipFile as e:
+            return jsonify({"error": f"File ZIP không hợp lệ: {e}"}), 400
 
         project_root = _find_project_root(Path(extract))
         excel_path = _find_first_excel(Path(extract))

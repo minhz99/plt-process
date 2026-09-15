@@ -58,6 +58,7 @@ __all__ = [
     "DEFAULT_TABLE6_TEMPLATE",
     "generate_table6_docx",
     "generate_table6_from_zip",
+    "safe_extract_zip",
 ]
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -665,24 +666,18 @@ def _merge_auto_and_excel_notes(auto: str, excel_bits: str) -> str:
 def _detect_equipment_category(name: str, kind: str | None = None) -> str:
     """Phân loại nhóm thiết bị để áp dụng logic sinh nhận xét đặc thù.
 
-    Categories:
-    - 'vfd_inverter': Biến tần, VFD, Inverter (bơm biến tần, quạt biến tần...)
-    - 'vsd_compressor': Máy nén khí VSD
-    - 'servo_sewing': Dây chuyền máy may servo, xưởng may, chuyền may
-    - 'lighting': Hệ thống chiếu sáng tòa nhà, bệnh viện, nhà xưởng (đèn LED, tủ CS)
-    - 'chiller_hvac': Hệ thống Chiller / HVAC trung tâm (AHU, FCU, tháp giải nhiệt)
-    - 'ups_datacenter': Bộ lưu điện UPS / Phòng Server / Trung tâm dữ liệu
-    - 'solar_inverter': Inverter Điện mặt trời / Năng lượng tái tạo
-    - 'welding_furnace': Máy hàn công nghiệp / Lò hồ quang / Lò tần số
-    - 'general_compressor': Máy nén khí thường (Load/Unload)
-    - 'mba': Máy biến áp
-    - 'general_device': Thiết bị/tủ điện khác
+    CHỈ nhận diện nhóm thiết bị đặc biệt khi được điền thủ công vào mục type/kind.
+    Nếu không điền gì hoặc điền nhãn chung (device/device4/none), vẫn là 'general_device'
+    (hoàn toàn không tự động đoán từ tên thiết bị).
     """
     k_norm = _norm_kind(kind) if kind else None
 
+    if not k_norm:
+        return "general_device"
+
     if k_norm in ("nontai", "4nontai", "lightload", "4lightload", "motor_nontai", "4motor_nontai"):
         return "motor_nontai"
-    if k_norm in ("building", "4building", "office", "4office", "commercial", "4commercial", "building_1phase", "1pha", "one_phase"):
+    if k_norm in ("building", "4building", "office", "4office", "commercial", "4commercial", "building_1phase", "1pha", "41pha", "one_phase"):
         return "building_commercial"
     if k_norm in ("vfd", "4vfd"):
         return "vfd_inverter"
@@ -700,45 +695,9 @@ def _detect_equipment_category(name: str, kind: str | None = None) -> str:
         return "solar_inverter"
     if k_norm in ("welding", "4welding", "furnace", "4furnace"):
         return "welding_furnace"
-    if k_norm == "mba":
-        return "mba"
-
-    # 2. Phân loại theo từ khóa tên thiết bị nếu nhãn là chung chung (device/device4)
-    if not name:
-        return "general_device"
-    n = unicodedata.normalize("NFKC", str(name)).lower()
-
-    if any(k in n for k in ("tòa nhà", "toa nha", "văn phòng", "van phong", "office", "bệnh viện", "benh vien", "trung tâm thương mại", "tttm", "tầng", "tang", "ổ cắm", "o cam", "tủ tầng", "tu tang", "tủ chiếu sáng & ổ cắm", "tu chieu sang & o cam")):
-        return "building_commercial"
-
-    if any(k in n for k in ("vsd", "biến tần", "bien tan", "inverter")) and any(k in n for k in ("nén", "nen", "compressor", "comp")):
-        return "vsd_compressor"
-
-    if any(k in n for k in ("máy may", "may may", "chuyền may", "chuyen may", "xưởng may", "xuong may", "sewing")) or ("servo" in n and any(k in n for k in ("may", "chuyền", "chuyen"))):
-        return "servo_sewing"
-
-    if any(k in n for k in ("chiếu sáng", "chieu sang", "tủ cs", "tu cs", "lighting", "đèn", "den")):
-        return "lighting"
-
-    if any(k in n for k in ("chiller", "hvac", "ahu", "fcu", "tháp giải nhiệt", "thap giai nhiet", "làm lạnh", "lam lanh")):
-        return "chiller_hvac"
-
-    if any(k in n for k in ("ups", "data center", "datacenter", "phòng server", "phong server", "máy chủ", "may chu", "lưu điện", "luu dien")):
-        return "ups_datacenter"
-
-    if any(k in n for k in ("solar", "điện mặt trời", "dien mat troi", "quang điện", "quang dien", "pv inverter")):
-        return "solar_inverter"
-
-    if any(k in n for k in ("máy hàn", "may han", "lò hàn", "lo han", "lò hồ quang", "lo ho quang", "lò tần số", "lo tan so", "lò cảm ứng", "lo cam ung", "welding", "welder")):
-        return "welding_furnace"
-
-    if any(k in n for k in ("biến tần", "bien tan", "bến tần", "inverter", "vfd")):
-        return "vfd_inverter"
-
-    if any(k in n for k in ("nén", "nen", "compressor", "comp")):
+    if k_norm in ("compressor", "4compressor", "comp", "4comp"):
         return "general_compressor"
-
-    if any(k in n for k in ("mba", "máy biến áp", "may bien ap", "tba", "tr", "mbt")):
+    if k_norm == "mba":
         return "mba"
 
     return "general_device"
@@ -760,20 +719,7 @@ def _is_motor_device(name: str, cat: str) -> bool:
 
 
 def _device_tdd_limit_from_name(name: str) -> float:
-    """Xác định ngưỡng giới hạn TDD dòng điện dựa trên tên/loại thiết bị.
-
-    Args:
-        name: Tên thiết bị để nhận diện loại (máy nén, máy ép...).
-
-    Returns:
-        float: Ngưỡng giới hạn (%) theo tiêu chuẩn nội bộ (thường là 12.0 hoặc 20.0).
-    """
-    cat = _detect_equipment_category(name)
-    if cat in ("vsd_compressor", "vfd_inverter", "general_compressor", "chiller_hvac", "ups_datacenter", "solar_inverter", "welding_furnace"):
-        return 12.0
-    n = _norm(name)
-    if any(k in n for k in ("nén", "nen", "nghiền", "nghien", "máy ép", "may ep", "băng tải", "bang tai")):
-        return 12.0
+    """Trả về ngưỡng giới hạn TDD dòng điện tiêu chuẩn cho thiết bị thường (20.0%)."""
     return 20.0
 
 
@@ -949,7 +895,7 @@ def _compose_short_remark_for_table(
     elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor"):
         tdd_lim = 12.0
     else:
-        tdd_lim = _device_tdd_limit_from_name(name)
+        tdd_lim = 20.0
 
     di_bad = (delta_i is not None and delta_i > 10.0)
     du_bad = (delta_u is not None and delta_u > 5.0)
@@ -987,14 +933,6 @@ def _compose_short_remark_for_table(
 
     reasons_str = "; ".join(bad_reasons)
     return f"Chất lượng điện chưa đạt tối ưu: {reasons_str}."
-
-
-def _has_inverter_hint(n: str) -> bool:
-    """Kiểm tra tên thiết bị có chứa dấu hiệu biến tần hay không."""
-    _nm = unicodedata.normalize("NFKC", str(n)).lower()
-    return any(k in _nm for k in (
-        "biến tần", "bien tan", "inverter", "vfd", "vsd", "chiller", "bơm tuần hoàn",
-    ))
 
 
 def _compose_remarks_from_excel_fields(
@@ -1057,7 +995,7 @@ def _compose_remarks_from_excel_fields(
     elif cat in ("vsd_compressor", "vfd_inverter", "general_compressor", "chiller_hvac", "ups_datacenter", "solar_inverter", "welding_furnace"):
         tdd_lim = 12.0
     else:
-        tdd_lim = _device_tdd_limit_from_name(name)
+        tdd_lim = 20.0
 
     loi_dem = 0
 
@@ -1342,12 +1280,8 @@ def _compose_remarks_from_excel_fields(
 
     else:
         if not tdd_ok:
-            if _has_inverter_hint(name):
-                _causes = remark_templates.get_cause_inv_templates()
-                cause_sent = _pick_tpl(_causes, "cause_inv")
-            else:
-                _causes = remark_templates.get_cause_gen_harm_templates()
-                cause_sent = _pick_tpl(_causes, "cause_gen_harm")
+            _causes = remark_templates.get_cause_gen_harm_templates()
+            cause_sent = _pick_tpl(_causes, "cause_gen_harm")
         elif not di_pass:
             cause_sent = "Nguyên nhân hình thành độ lệch pha cao có thể do sự phân bổ pha cũng như sự hoạt động không đồng đều của các thiết bị điện."
 
@@ -1355,14 +1289,7 @@ def _compose_remarks_from_excel_fields(
     if kind == "mba":
         mba_parts: list[str] = []
 
-        # Câu 1 — % công suất tiêu thụ
-        if p_kw is not None and cos_phi is not None and abs(cos_phi) > 0.01 and pdm_kva is not None and pdm_kva > 0:
-            s_kva = p_kw / abs(cos_phi)
-            load_pct = s_kva / pdm_kva * 100.0
-            _load_mba_phrases = remark_templates.get_load_mba_templates(_pct(load_pct, 2))
-            mba_parts.append(_pick_tpl(_load_mba_phrases, "load_mba"))
-
-        # Câu 2 — Biểu đồ dòng điện
+        # Biểu đồ dòng điện
         _wave_mba_map = remark_templates.get_wave_mba_map(wave)
         _wave_key_mba = wave.lower()
         if _wave_key_mba in _wave_mba_map:
@@ -1371,7 +1298,7 @@ def _compose_remarks_from_excel_fields(
             mba_wave_sent = f"Biểu đồ dòng điện tiêu thụ tại thời điểm đo kiểm {wave}."
         mba_parts.append(mba_wave_sent)
 
-        # Câu 3 — Chất lượng điện + ΔU/ΔI + cosφ
+        # Chất lượng điện + ΔU/ΔI + cosφ
         du_level = "thấp" if (du_num is not None and du_num <= _V_DEV_LIMIT_PCT) else "cao"
         di_level = ("thấp" if di_pass else "cao") if di_num is not None else None
 
@@ -1424,25 +1351,6 @@ def _compose_remarks_from_excel_fields(
     else:
         volt_sent = ""
 
-    # ── Tỷ lệ tiêu thụ so với công suất định mức cho thiết bị ngoài MBA ─────
-    load_sent_dev = ""
-    if pdm_kva is not None and pdm_kva > 0 and p_kw is not None:
-        if cos_phi is not None and abs(cos_phi) > 0.01:
-            load_pct_dev = (p_kw / abs(cos_phi)) / pdm_kva * 100.0
-        else:
-            load_pct_dev = (p_kw / pdm_kva) * 100.0
-
-        pct_s = _pct(load_pct_dev, 2)
-        p_str = _pct(p_kw, 0)
-        pdm_str = f"{pdm_kva:.0f}".replace(".", ",") if pdm_kva.is_integer() else _pct(pdm_kva, 1)
-
-        _load_dev_tpl = remark_templates.get_load_dev_templates(load_pct_dev, pct_s, p_str, pdm_str)
-        load_sent_dev = _pick_tpl(_load_dev_tpl, "load_dev")
-    elif p_kw is not None and p_kw > 0:
-        p_str = _pct(p_kw, 0)
-        _inst_p_tpl = remark_templates.get_inst_power_val_templates(p_str)
-        load_sent_dev = _pick_tpl(_inst_p_tpl, "inst_p_val")
-
     openings = remark_templates.get_device_openings(name_mid, quality)
     chosen_opening = _pick_tpl(openings, "opening_dev")
 
@@ -1456,9 +1364,6 @@ def _compose_remarks_from_excel_fields(
         wave_sent = _pick_tpl(_wave_dev_candidates, f"wave_{cat}")
 
     parts: list[str] = []
-    if load_sent_dev:
-        parts.append(load_sent_dev)
-
     parts.append(chosen_opening)
     parts.append(wave_sent)
     parts.append(pf_sent)
@@ -1496,19 +1401,6 @@ def _compose_remarks_from_excel_fields(
                 cleaned_parts.append(p_str)
             res_str = head + "".join(cleaned_parts)
 
-    is_stable_load = False
-    if current_char:
-        _cc = unicodedata.normalize("NFKC", str(current_char)).lower()
-        if any(s in _cc for s in ("ổn định", "on dinh", "biên độ nhỏ", "bien do nho")):
-            is_stable_load = True
-    elif wave:
-        _wv = unicodedata.normalize("NFKC", str(wave)).lower()
-        if any(s in _wv for s in ("ổn định", "on dinh", "biên độ nhỏ", "bien do nho")):
-            is_stable_load = True
-
-    if is_stable_load:
-        res_str = res_str.replace("công suất tức thời", "công suất").replace("Công suất tức thời", "Công suất")
-
     return res_str
 
 
@@ -1528,14 +1420,14 @@ def _estimate_current_char_from_df(df, name: str = "", kind: str = "") -> str | 
     k = (kind or "").lower()
 
     if df is None or df.empty:
-        # Nếu không có dữ liệu INPS, dựa trên loại thiết bị để đưa ra mặc định hợp lý
-        if any(x in k or x in nm for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter")):
+        # Nếu không có dữ liệu INPS, dựa trên loại thiết bị thủ công (nếu có)
+        if any(x in k for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter")):
             return "biến đổi mượt mà theo tần số"
-        if any(x in k or x in nm for x in ("máy nén", "may nen", "compressor")):
+        if any(x in k for x in ("máy nén", "may nen", "compressor")):
             return "load/unload"
-        if any(x in k or x in nm for x in ("mba", "biến áp", "bien ap", "transformer")):
+        if any(x in k for x in ("mba", "biến áp", "bien ap", "transformer")):
             return "tương đối ổn định"
-        if any(x in k or x in nm for x in ("cs", "lighting", "chiếu sáng", "chieu sang")):
+        if any(x in k for x in ("cs", "lighting", "chiếu sáng", "chieu sang")):
             return "ổn định"
         return "tương đối ổn định"
 
@@ -1575,19 +1467,19 @@ def _estimate_current_char_from_df(df, name: str = "", kind: str = "") -> str | 
     p95 = float(mean_currents.quantile(0.95))
     max_val = float(mean_currents.max())
 
-    # 1. Nhận diện Biến tần / VSD / VFD điều tốc
-    is_vfd_type = any(x in k or x in nm for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter", "điều tốc"))
+    # 1. Nhận diện Biến tần / VSD / VFD điều tốc (chỉ từ mục type)
+    is_vfd_type = any(x in k for x in ("vsd", "vfd", "biến tần", "bien tan", "inverter", "điều tốc"))
     if is_vfd_type and cv >= 0.04:
         return "biến đổi mượt mà theo tần số"
 
-    # 2. Nhận diện Load/Unload (Máy nén khí hoặc phụ tải 2 mức rõ rệt)
+    # 2. Nhận diện Load/Unload (Máy nén khí từ type hoặc từ chuỗi số liệu 2 mức rõ rệt)
     mid_low = p10 + (p90 - p10) * 0.35
     mid_high = p10 + (p90 - p10) * 0.65
     in_middle = mean_currents[(mean_currents > mid_low) & (mean_currents < mid_high)].count()
     total = len(mean_currents)
     mid_ratio = in_middle / total if total > 0 else 0.0
 
-    is_compressor = any(x in k or x in nm for x in ("máy nén", "may nen", "compressor", "load/unload"))
+    is_compressor = any(x in k for x in ("máy nén", "may nen", "compressor", "load/unload"))
     if (is_compressor or mid_ratio < 0.12) and p90 > 0 and (p10 / p90) < 0.70:
         return "load/unload"
 
@@ -2166,11 +2058,9 @@ def merge_mba_device_docx(
 #                Pipeline cho luồng "Xử lý file sơ bộ"
 # ════════════════════════════════════════════════════════════════════
 
-_MBA_NAME_RE = re.compile(r"^(MBA|TR|TBA|T\d|MBT)\b|MÁY BIẾN ÁP|BIẾN ÁP", re.IGNORECASE)
-
 def _guess_kind(name: str) -> SectionKind:
-    """Đoán loại template từ tên thiết bị (chỉ khi không có cột ``type`` từ Excel)."""
-    return "mba" if _MBA_NAME_RE.search(unicodedata.normalize("NFC", name or "")) else "device"
+    """Mặc định là device khi không có thông tin loại thiết bị thủ công."""
+    return "device"
 
 def _resolve_word_section_kind(
     spec: Mapping,
@@ -2180,11 +2070,10 @@ def _resolve_word_section_kind(
 ) -> SectionKind:
     """Chọn ``mba`` / ``device`` / ``device4`` cho báo cáo Word.
 
-    * Nếu mục có khóa ``kind`` (luồng ZIP + Excel): ``mba`` khi cột type nhận
-      diện MBA; ``device4`` khi type là ``"4"``; ô trống / không nhận diện /
+    * Nếu mục có khóa ``kind``: ``mba`` khi cột type nhận diện MBA;
+      ``device4`` khi type là ``"4"`` hoặc nhãn nhóm 4; ô trống / không nhận diện /
       ``device`` → ``device`` (không đoán theo tên).
-    * Nếu không có khóa ``kind`` (quét thư mục thuần): ``default_kind`` hoặc
-      :func:`_guess_kind`.
+    * Nếu không có khóa ``kind``: ``default_kind`` hoặc mặc định ``device`` (không đoán theo tên).
     """
     if "kind" in spec:
         raw = spec["kind"]
@@ -2198,7 +2087,7 @@ def _resolve_word_section_kind(
         return "device"
     if default_kind in ("mba", "device", "device4"):
         return default_kind
-    return _guess_kind(name)
+    return "device"
 
 
 def build_field_word_report(
@@ -2416,7 +2305,7 @@ def _nfc(s: object) -> str:
     return unicodedata.normalize("NFC", str(s).strip())
 
 _S_PREFIX_RE = re.compile(
-    r"^\s*[Ss]\s*\d{1,4}\s*[-–—\s]+\s*",
+    r"^\s*[Ss]\s*\d+\s*[-_–—\s]+\s*",
     re.UNICODE,
 )
 
@@ -2449,6 +2338,11 @@ _DEVICE4_KIND_LABELS = frozenset({
     "4cs", "cs4",
     "4compressor", "compressor4",
     "4nontai", "nontai4", "4lightload", "lightload4",
+    "4chiller", "chiller4", "4hvac", "hvac4",
+    "4ups", "ups4", "4datacenter", "datacenter4",
+    "4solar", "solar4", "4pv", "pv4",
+    "4welding", "welding4", "4furnace", "furnace4", "4han", "han4",
+    "4building", "building4", "4office", "office4", "41pha", "1pha4",
 })
 
 _KIND_LABEL_MAP: dict[str, str] = {
@@ -2490,6 +2384,59 @@ _KIND_LABEL_MAP: dict[str, str] = {
     "lighting4": "4lighting",
     "4cs": "4lighting",
     "cs4": "4lighting",
+
+    "chiller": "chiller",
+    "4chiller": "4chiller",
+    "chiller4": "4chiller",
+    "hvac": "chiller",
+    "4hvac": "4chiller",
+    "hvac4": "4chiller",
+
+    "ups": "ups",
+    "4ups": "4ups",
+    "ups4": "4ups",
+    "datacenter": "ups",
+    "4datacenter": "4ups",
+    "datacenter4": "4ups",
+
+    "solar": "solar",
+    "4solar": "4solar",
+    "solar4": "4solar",
+    "pv": "solar",
+    "4pv": "4solar",
+    "pv4": "4solar",
+
+    "welding": "welding",
+    "4welding": "4welding",
+    "welding4": "4welding",
+    "furnace": "welding",
+    "4furnace": "4welding",
+    "furnace4": "4welding",
+    "han": "welding",
+    "4han": "4welding",
+    "máy hàn": "welding",
+    "may han": "welding",
+    "4mayhan": "4welding",
+
+    "compressor": "compressor",
+    "4compressor": "4compressor",
+    "compressor4": "4compressor",
+    "comp": "compressor",
+    "4comp": "4compressor",
+    "máy nén": "compressor",
+    "may nen": "compressor",
+    "4maynen": "4compressor",
+
+    "building": "building",
+    "4building": "4building",
+    "building4": "4building",
+    "office": "building",
+    "4office": "4building",
+    "office4": "4building",
+    "commercial": "building",
+    "4commercial": "4building",
+    "1pha": "building",
+    "41pha": "4building",
 
     "nontai": "nontai",
     "non_tai": "nontai",
@@ -2795,6 +2742,65 @@ def _find_project_root(extract_root: Path) -> Path:
         else:
             return current
 
+
+def safe_extract_zip(
+    zip_source: bytes | bytearray | io.BytesIO | Path | str,
+    extract_dir: Path | str,
+) -> None:
+    """
+    Giải nén file ZIP an toàn và tương thích đa bảng mã (UTF-8, CP1258, CP1252, CP437):
+    - Thử metadata_encoding='utf-8' trước để ưu tiên chuẩn tên file tiếng Việt UTF-8.
+    - Nếu gặp lỗi giải mã UTF-8 (ví dụ: 'utf-8' codec can't decode byte 0xa0 in position 20: invalid start byte),
+      tự động fallback sang mở mặc định (CP437, luôn mở được mọi byte) và phục hồi tên tiếng Việt
+      thông minh cho từng phần tử (ưu tiên UTF-8 -> CP1258 -> CP1252 -> giữ nguyên), ngăn chặn
+      hoàn toàn lỗi UnicodeDecodeError.
+    """
+    extract_path = Path(extract_dir)
+    extract_path.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(zip_source, (bytes, bytearray)):
+        bio = io.BytesIO(zip_source)
+    elif isinstance(zip_source, io.BytesIO):
+        bio = zip_source
+        bio.seek(0)
+    elif isinstance(zip_source, (str, Path)):
+        with open(zip_source, "rb") as f:
+            bio = io.BytesIO(f.read())
+    elif hasattr(zip_source, "read"):
+        bio = io.BytesIO(zip_source.read())
+    else:
+        raise TypeError(f"Nguồn ZIP không hợp lệ: {type(zip_source)}")
+
+    # 1. Thử mở và giải nén trực tiếp với UTF-8 (chuẩn cho zip mới)
+    try:
+        bio.seek(0)
+        with zipfile.ZipFile(bio, "r", metadata_encoding="utf-8") as zf:
+            zf.extractall(extract_path)
+            return
+    except (UnicodeDecodeError, UnicodeError, TypeError):
+        pass
+
+    # 2. Fallback: Mở mặc định với CP437 (luôn giải mã được mọi byte không lỗi)
+    # và phục hồi tên tiếng Việt UTF-8/CP1258/CP1252 cho từng file/thư mục
+    bio.seek(0)
+    with zipfile.ZipFile(bio, "r") as zf:
+        for member in zf.infolist():
+            if not (member.flag_bits & 0x800):
+                orig_name = member.filename
+                try:
+                    raw = orig_name.encode("cp437")
+                    member.filename = raw.decode("utf-8")
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    try:
+                        member.filename = raw.decode("cp1258")
+                    except (UnicodeEncodeError, UnicodeDecodeError):
+                        try:
+                            member.filename = raw.decode("cp1252")
+                        except (UnicodeEncodeError, UnicodeDecodeError):
+                            pass
+            zf.extract(member, extract_path)
+
+
 def build_word_report_from_zip(
     zip_bytes: bytes,
     output_docx: str | Path,
@@ -2838,15 +2844,8 @@ def build_word_report_from_zip(
     with TemporaryDirectory(prefix="word_report_") as td:
         extract = Path(td) / "in"
         extract.mkdir()
-        bio = io.BytesIO(zip_bytes)
         try:
-            try:
-                zf = zipfile.ZipFile(bio, "r", metadata_encoding="utf-8")
-            except TypeError:
-                bio.seek(0)
-                zf = zipfile.ZipFile(bio, "r")
-            with zf:
-                zf.extractall(extract)
+            safe_extract_zip(zip_bytes, extract)
         except zipfile.BadZipFile as e:
             raise ValueError(f"File ZIP không hợp lệ: {e}") from e
 
@@ -2946,15 +2945,8 @@ def _build_chapter_from_zip(
     with TemporaryDirectory(prefix="word_chap_") as td:
         extract = Path(td) / "in"
         extract.mkdir()
-        bio = io.BytesIO(zip_bytes)
         try:
-            try:
-                zf = zipfile.ZipFile(bio, "r", metadata_encoding="utf-8")
-            except TypeError:
-                bio.seek(0)
-                zf = zipfile.ZipFile(bio, "r")
-            with zf:
-                zf.extractall(extract)
+            safe_extract_zip(zip_bytes, extract)
         except zipfile.BadZipFile as e:
             raise ValueError(f"File ZIP không hợp lệ: {e}") from e
 
@@ -3194,7 +3186,7 @@ def generate_table6_docx(
             )
         danh_sach.append({
             "tt":       idx,
-            "ten":      str(thiet_bi.get("ten") or "").strip(),
+            "ten":      _strip_s_prefix(_nfc(str(thiet_bi.get("ten") or "").strip())),
             "I":        _t6_fmt(thiet_bi.get("I"), 0),
             "delta_I":  _t6_fmt(thiet_bi.get("delta_I"), 1),
             "cos_phi":  _t6_fmt(thiet_bi.get("cos_phi"), 3),
@@ -3232,15 +3224,8 @@ def generate_table6_from_zip(
     with TemporaryDirectory(prefix="table6_") as td:
         extract = Path(td) / "in"
         extract.mkdir()
-        bio = io.BytesIO(zip_bytes)
         try:
-            try:
-                zf = zipfile.ZipFile(bio, "r", metadata_encoding="utf-8")
-            except TypeError:
-                bio.seek(0)
-                zf = zipfile.ZipFile(bio, "r")
-            with zf:
-                zf.extractall(extract)
+            safe_extract_zip(zip_bytes, extract)
         except zipfile.BadZipFile as e:
             raise ValueError(f"File ZIP không hợp lệ: {e}") from e
 
@@ -3248,9 +3233,73 @@ def generate_table6_from_zip(
         devices: list[dict] = []
 
         if excel_path is None:
-            warnings.append(
-                "Không tìm thấy file Excel trong ZIP — bảng tổng hợp sẽ được tạo rỗng."
-            )
+            # Chế độ 2: Đã sắp xếp sẵn (không có Excel) — Quét các thư mục thiết bị trong ZIP
+            project_root = _find_project_root(extract)
+            raw_dirs = [
+                d for d in project_root.iterdir()
+                if d.is_dir() and not d.name.startswith(".") and d.name != "__MACOSX"
+            ]
+            if raw_dirs:
+                from modules.kew.analyse_kew import find_file
+
+                def _dir_sort_key(p: Path) -> tuple[int, str]:
+                    m = re.match(r"^\s*[Ss]\s*(\d+)", p.name)
+                    stt = int(m.group(1)) if m else 10**9
+                    return (stt, p.name.lower())
+
+                sorted_dirs = sorted(raw_dirs, key=_dir_sort_key)
+                for d in sorted_dirs:
+                    clean_name = _strip_s_prefix(_nfc(d.name))
+                    if not clean_name:
+                        continue
+                    inps_path = find_file(str(d), "INPS")
+                    dev_data = {
+                        "ten": clean_name,
+                        "I": None,
+                        "delta_I": None,
+                        "cos_phi": None,
+                        "P": None,
+                        "tdd": None,
+                    }
+                    if inps_path and os.path.isfile(inps_path):
+                        try:
+                            stats = _parse_inps(inps_path)
+                            if stats:
+                                i1 = _pick(stats, "AVG_A1[A]")
+                                i2 = _pick(stats, "AVG_A2[A]")
+                                i3 = _pick(stats, "AVG_A3[A]")
+                                i_candidates = [v for v in (i1.get("max"), i2.get("max"), i3.get("max")) if v is not None]
+                                if i_candidates:
+                                    dev_data["I"] = max(i_candidates)
+
+                                ua_unb = _pick(stats, "AVG_UA[%]", "AVG_AUNB[%]")
+                                if ua_unb.get("max") is not None:
+                                    dev_data["delta_I"] = ua_unb.get("max")
+
+                                pf = _pick_total(stats, "PF", "[_]") or _pick(stats, "AVG_PF[_]")
+                                if pf.get("avg") is not None:
+                                    dev_data["cos_phi"] = pf.get("avg")
+
+                                p_tot = _pick_total(stats, "P", "[W]") or _pick(stats, "AVG_P[W]")
+                                if p_tot.get("avg") is not None:
+                                    dev_data["P"] = p_tot.get("avg") / 1000.0
+
+                                tdd1 = _pick(stats, "AVG_THDAR1[%]", "AVG_ATHD1[%]")
+                                tdd2 = _pick(stats, "AVG_THDAR2[%]", "AVG_ATHD2[%]")
+                                tdd3 = _pick(stats, "AVG_THDAR3[%]", "AVG_ATHD3[%]")
+                                tdd_candidates = [v for v in (tdd1.get("max"), tdd2.get("max"), tdd3.get("max")) if v is not None]
+                                if tdd_candidates:
+                                    dev_data["tdd"] = max(tdd_candidates)
+                        except Exception as e:
+                            warnings.append(f"[{d.name}] Lỗi đọc dữ liệu INPS: {e}")
+                    devices.append(dev_data)
+                warnings.append(
+                    f"Chế độ không có Excel: Đã tự động tạo Bảng 6.3 cho {len(devices)} thiết bị từ các thư mục."
+                )
+            else:
+                warnings.append(
+                    "Không tìm thấy file Excel hoặc thư mục thiết bị hợp lệ trong ZIP — bảng tổng hợp sẽ được tạo rỗng."
+                )
         else:
             try:
                 import pandas as _pd
@@ -3274,7 +3323,7 @@ def generate_table6_from_zip(
                                 isinstance(raw_name, float) and _pd.isna(raw_name)
                             ):
                                 continue
-                            name = _nfc(str(raw_name).strip())
+                            name = _strip_s_prefix(_nfc(str(raw_name).strip()))
                             if not name:
                                 continue
 

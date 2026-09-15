@@ -165,8 +165,18 @@
               <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 4px;">
                 ✍️ Trích xuất & Tự biên tập song ngữ
               </div>
-              <div style="font-size: 0.78rem; color: var(--text-muted);">
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
                 Trích xuất toàn bộ câu chữ ra bảng để tự sửa hoặc nhờ Google Dịch gợi ý trước khi tạo file Word.
+              </div>
+              <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px;">
+                <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text); cursor: pointer; user-select: none;">
+                  <input type="checkbox" id="trans-dedup-pre" onchange="syncDedupToggle(this)" checked style="accent-color: var(--accent); width: 15px; height: 15px; border-radius: 4px;">
+                  <span>Gộp các câu/đoạn giống nhau <span style="color: var(--text-muted); font-size: 0.72rem;">(Dịch 1 lần tự áp dụng cho mọi chỗ trùng)</span></span>
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text); cursor: pointer; user-select: none;">
+                  <input type="checkbox" id="trans-allow-numeric-pre" onchange="syncNumericToggle(this)" style="accent-color: var(--accent); width: 15px; height: 15px; border-radius: 4px;">
+                  <span>Cho phép sửa số & ký hiệu <span style="color: var(--text-muted); font-size: 0.72rem;">(Mặc định tắt để bảng ngắn gọn)</span></span>
+                </label>
               </div>
             </div>
 
@@ -181,8 +191,20 @@
         <div id="trans-table-container" style="display:none;">
           <!-- Toolbar thao tác nhanh -->
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; background: var(--surface2); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);">
-            <div style="font-size: 0.82rem; color: var(--text); font-weight: 600;">
-              Tổng số đoạn: <span id="trans-segment-count" style="color: var(--accent2);">0</span>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div style="font-size: 0.82rem; color: var(--text);">
+                <strong>Hiển thị:</strong> <span id="trans-text-count" style="color: var(--accent2); font-weight: 700;">0</span> đoạn
+                <span style="color: var(--border); margin: 0 4px;">|</span>
+                <span style="color: var(--text-muted);">Tổng gốc:</span> <span id="trans-total-raw-count" style="color: var(--text-muted); font-weight: 600;">0</span>
+              </div>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text); cursor: pointer; margin: 0; background: var(--surface); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); user-select: none;">
+                <input type="checkbox" id="trans-dedup-toggle" onchange="syncDedupToggle(this)" checked style="accent-color: var(--accent); width: 14px; height: 14px;">
+                <span><i class="bi bi-intersect"></i> Gộp câu giống nhau</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text); cursor: pointer; margin: 0; background: var(--surface); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); user-select: none;">
+                <input type="checkbox" id="trans-allow-numeric" onchange="syncNumericToggle(this)" style="accent-color: var(--accent); width: 14px; height: 14px;">
+                <span>Hiện số & ký hiệu (<span id="trans-numeric-badge">0</span>)</span>
+              </label>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -204,6 +226,16 @@
                 <i class="bi bi-file-earmark-check"></i> 🚀 Tạo & Tải file Word đã dịch
               </button>
             </div>
+          </div>
+
+          <!-- Banner thông báo chế độ ẩn số & ký hiệu -->
+          <div id="trans-numeric-banner" style="display:none; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 6px; padding: 7px 12px; margin-bottom: 10px; font-size: 0.76rem; color: var(--text-muted); align-items: center; justify-content: space-between;">
+            <div>
+              <i class="bi bi-info-circle text-primary"></i> Đang ẩn <strong id="trans-banner-num-count" style="color: var(--text);">0</strong> dòng số & ký hiệu để bảng gọn gàng. Các dòng này sẽ được <strong>tự động giữ nguyên 100%</strong> trong file Word.
+            </div>
+            <button type="button" class="btn btn-link btn-sm p-0" onclick="enableNumericRows()" style="font-size: 0.76rem; color: var(--accent2); text-decoration: underline;">
+              Hiện tất cả để sửa
+            </button>
           </div>
 
           <!-- Bảng chi tiết -->
