@@ -238,7 +238,8 @@ def _img_in_range(n: int, start: int, end: int) -> bool:
 def file_code_to_s_name(raw: Any) -> Optional[str]:
     """Chuẩn hóa mã file từ Excel thành chuỗi chuẩn 'Sxxxx'.
 
-    Ví dụ: '447' hoặc 'S0447' hoặc 447 đều chuyển thành 'S0447'.
+    Ví dụ: '447' hoặc 'S0447' hoặc 447 hoặc 447.0 đều chuyển thành 'S0447'.
+           '1519' hoặc 1519.0 hoặc 'S1519' đều chuyển thành 'S1519'.
 
     Args:
         raw (Any): Giá trị thô từ ô Excel.
@@ -248,13 +249,26 @@ def file_code_to_s_name(raw: Any) -> Optional[str]:
     """
     if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return None
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        if isinstance(raw, float):
+            if not raw.is_integer():
+                return None
+            num = int(raw)
+        else:
+            num = int(raw)
+        return f"S{num:04d}"
+
     s = str(raw).strip()
     if not s:
         return None
-    m = re.match(r"^S\s*(\d{1,4})$", s, re.I)
+    m = re.match(r"^S\s*(\d+)(?:\.0+)?$", s, re.I)
     if m:
         return f"S{int(m.group(1)):04d}"
-    digits = re.sub(r"\D", "", s)
+    m_num = re.match(r"^(\d+)(?:\.0+)?$", s)
+    if m_num:
+        return f"S{int(m_num.group(1)):04d}"
+    s_clean = re.sub(r"\.0+$", "", s)
+    digits = re.sub(r"\D", "", s_clean)
     if not digits:
         return None
     return f"S{int(digits):04d}"
@@ -278,10 +292,15 @@ def _to_int_img(v: Any) -> Optional[int]:
             return int(v)
         if isinstance(v, int):
             return int(v)
+        return None
     s = str(v).strip()
     if not s:
         return None
-    digits = re.sub(r"\D", "", s)
+    m = re.match(r"^(\d+)(?:\.0+)?$", s)
+    if m:
+        return int(m.group(1))
+    s_clean = re.sub(r"\.0+$", "", s)
+    digits = re.sub(r"\D", "", s_clean)
     if not digits:
         return None
     return int(digits)
@@ -511,6 +530,11 @@ def read_plans_from_excel(excel_path: str) -> tuple[list[RowPlan], list[str]]:
         except Exception as e:
             warnings.append(f"Dòng {int(idx) + 2}: bỏ qua ({e})")
             continue
+        # Bỏ qua hoàn toàn các dòng trống (không có tên thiết bị và không có file/ảnh) mà không cảnh báo
+        is_empty_dev = (dev_raw is None) or (isinstance(dev_raw, float) and pd.isna(dev_raw)) or not str(dev_raw).strip()
+        if is_empty_dev and s_name is None and i0 is None and i1 is None:
+            continue
+
         if s_name is None or i0 is None or i1 is None:
             warnings.append(f"Dòng {int(idx) + 2}: thiếu file/img/imgend — bỏ qua.")
             continue
