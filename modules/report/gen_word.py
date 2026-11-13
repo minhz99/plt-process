@@ -114,6 +114,11 @@ _I_SPREAD_MODERATE_PCT = 50.0
 # Ảnh theo dải Excel / organize_field_zip: PS-SD641.BMP …
 _IMG_MOD = 1000
 _BMP_RE = re.compile(r"^PS-SD(\d{3})\.BMP$", re.IGNORECASE)
+_OVERVIEW_STEM_RE = re.compile(
+    r"^a(?:\s*\(\d+\)|[-_]\d+|\s*-\s*copy(?:\s*\(\d+\))?)*$",
+    re.IGNORECASE,
+)
+_OVERVIEW_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg"})
 
 # ════════════════════════════════════════════════════════════════════
 #                     Context builders (template)
@@ -1648,8 +1653,27 @@ def list_bmp_in_folder(folder: str | Path) -> list[Path]:
         bmps = extra
     return [pp for _, pp in bmps]
 
+def _overview_candidate_key(p: Path) -> tuple[int, int, int, str]:
+    ext = p.suffix.lower()
+    ext_rank = 0 if ext == ".png" else (1 if ext in {".jpg", ".jpeg"} else 2)
+    stem = p.stem.strip().lower()
+    if stem == "a":
+        name_rank = 0
+        copy_num = 0
+    else:
+        name_rank = 1
+        nums = re.findall(r"\d+", stem)
+        copy_num = int(nums[0]) if nums else 999
+    return (ext_rank, name_rank, copy_num, p.name.lower())
+
 def find_overview_png(folder: str | Path) -> Path | None:
-    """Tìm file ảnh tổng quan (mặc định là a.png) trong thư mục thiết bị.
+    """Tìm file ảnh tổng quan trong thư mục thiết bị.
+
+    Hỗ trợ các biến thể tên thông dụng:
+    - ``a.png`` (ưu tiên số 1)
+    - ``a(2).png``, ``a (2).png``, ``a(1).png``, ``a (1).png``...
+    - ``a_2.png``, ``a-2.png``, ``a - Copy.png``...
+    - Các file ảnh định dạng ``.jpg``, ``.jpeg`` tương ứng.
 
     Args:
         folder: Thư mục cần tìm kiếm.
@@ -1660,15 +1684,18 @@ def find_overview_png(folder: str | Path) -> Path | None:
     p = Path(folder)
     if not p.is_dir():
         return None
+    candidates: list[Path] = []
     for f in p.iterdir():
         if not f.is_file():
             continue
-        if f.suffix.lower() == ".png" and f.stem.lower() == "a":
-            return f
+        if f.suffix.lower() in _OVERVIEW_EXTENSIONS and _OVERVIEW_STEM_RE.match(f.stem.strip()):
+            candidates.append(f)
+    if candidates:
+        return min(candidates, key=_overview_candidate_key)
     return None
 
 def _require_overview_png_and_bmps(folder: str | Path) -> tuple[Path, list[Path]]:
-    """Trả về ``(a.png, danh_sách_PS-SD_BMP)`` hoặc ném lỗi nếu thiếu."""
+    """Trả về ``(ảnh_tổng_quan, danh_sách_PS-SD_BMP)`` hoặc ném lỗi nếu thiếu."""
     p = Path(folder)
     overview = find_overview_png(p)
     if overview is None:
@@ -1677,8 +1704,8 @@ def _require_overview_png_and_bmps(folder: str | Path) -> tuple[Path, list[Path]
             overview = fallback
         else:
             raise FileNotFoundError(
-                f"Thiếu file a.png (ảnh tổng quan) trong {p!s}. "
-                "Vui lòng đặt a.png trong thư mục thiết bị."
+                f"Thiếu file a.png hoặc a(2).png (ảnh tổng quan) trong {p!s}. "
+                "Vui lòng đặt a.png hoặc a(2).png trong thư mục thiết bị."
             )
     bmps = list_bmp_in_folder(p)
     if not bmps:
@@ -1692,7 +1719,7 @@ def auto_pick_mba_images(folder: str | Path) -> dict[str, str]:
     """Tự động chọn bộ ảnh phù hợp cho template báo cáo MBA.
 
     Yêu cầu:
-    - 1 file 'a.png' cho ảnh tổng quan (imga).
+    - 1 file 'a.png' hoặc 'a(2).png' (hoặc 'a (2).png') cho ảnh tổng quan (imga).
     - Các file 'PS-SDxxx.BMP' cho ảnh thông số (img1, img2, img4, img6).
 
     Args:
@@ -1715,7 +1742,7 @@ def auto_pick_mba_images(folder: str | Path) -> dict[str, str]:
 def auto_pick_device_images(folder: str | Path) -> dict[str, str]:
     """Chọn ảnh cho template device (``imga`` + ``img1``…``img6``).
 
-    * ``imga``: **bắt buộc** file ``a.png`` trong thư mục.
+    * ``imga``: file ảnh tổng quan (``a.png``, ``a(2).png``, ``a (2).png``...) trong thư mục.
     * ``img1``…``img6``: ``PS-SDxxx.BMP`` theo thứ tự dải ảnh, hỗ trợ vòng 999→000.
     """
     overview, bmps = _require_overview_png_and_bmps(folder)
