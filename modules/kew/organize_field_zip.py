@@ -35,9 +35,10 @@ FIELD_XLSX_REQUIRED: tuple[str, ...] = (
 
 # ── Cột tự chọn (không bắt buộc có trong Excel) ──────────────────────────────
 FIELD_XLSX_OPTIONAL: tuple[str, ...] = (
-    "imgomit",       # Chỉ số ảnh bỏ qua trong dải (tuỳ chọn)
-    "imglu",         # Chỉ số ảnh load/unload → đổi tên load-unload-xxx.BMP
-    "current_char",  # Đặc tính dòng điện: Ổn định / Dao động nhẹ / ...
+    "imgomit",          # Chỉ số ảnh bỏ qua trong dải (tuỳ chọn)
+    "imglu",            # Chỉ số ảnh load/unload → đổi tên load-unload-xxx.BMP
+    "current_char",     # Đặc tính dòng điện: Ổn định / Dao động nhẹ / ...
+    "nominal_voltage",  # Điện áp danh định (110V, 220V, 380V, 400V...)
 )
 
 # ── Cột do OCR tự động điền sau khi nhận dạng ảnh BMP ────────────────────────

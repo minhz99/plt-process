@@ -503,18 +503,54 @@ def _scale(d: Mapping[str, float] | None, k: float) -> dict:
         "max": d.get("max") * k if d.get("max") is not None else None,
     }
 
-def _eval_voltage(u_max, u_min, u_avg, vref: float = _MBA_NOMINAL_VOLTAGE_V) -> tuple:
+def _infer_nominal_voltage(
+    u_min: float | None,
+    u_max: float | None,
+    default: float = _MBA_NOMINAL_VOLTAGE_V,
+) -> float:
+    """Tự động nhận diện điện áp danh định (110V, 220V, 380V, 400V) dựa trên điện áp đo được.
+
+    Quy tắc phân loại dải điện áp:
+    - Dải 110V (U < 160V): 110.0 V (thiết bị Nhật/Mỹ, mạch điều khiển, đo qua PT 100V/110V).
+    - Dải 220V (160V <= U < 300V): 220.0 V (1 pha 220V, hoặc 3 pha 200V/220V máy CNC, máy may, máy mài...).
+    - Dải 380V/400V (U >= 300V):
+        + Nếu U < 392.0 V: 380.0 V (lưới hạ thế 380V chuẩn TCVN hoặc cuối tuyến tải).
+        + Nếu U >= 392.0 V: 400.0 V (lưới 400V chuẩn MBA).
+    - Nếu không đủ dữ liệu: trả về default (mặc định 400.0 V).
+    """
+    if u_min is None and u_max is None:
+        return default
+
+    vals = [v for v in (u_min, u_max) if v is not None and v > 0]
+    if not vals:
+        return default
+
+    u_mid = sum(vals) / len(vals)
+
+    if u_mid < 160.0:
+        return 110.0
+    elif u_mid < 300.0:
+        return 220.0
+    elif u_mid < 392.0:
+        return 380.0
+    else:
+        return 400.0
+
+def _eval_voltage(u_max, u_min, u_avg, vref: float | None = None) -> tuple:
     """Đánh giá chất lượng điện áp dựa trên độ lệch so với điện áp danh định (±5%).
 
     Args:
         u_max: Điện áp cực đại đo được.
         u_min: Điện áp cực tiểu đo được.
         u_avg: Điện áp trung bình đo được.
-        vref: Điện áp danh định để so sánh (V).
+        vref: Điện áp danh định để so sánh (V). Nếu None hoặc <= 0, tự động suy luận từ u_min / u_max.
 
     Returns:
         tuple: (Kết quả "Đạt"/"Chưa đạt"/"Không đạt", độ lệch max, độ lệch min, độ lệch avg).
     """
+    if vref is None or vref <= 0:
+        vref = _infer_nominal_voltage(u_min, u_max, default=_MBA_NOMINAL_VOLTAGE_V)
+
     if u_max is None or u_min is None or vref <= 0:
         return "—", None, None, None
     dmax = (u_max - vref) / vref * 100
@@ -969,11 +1005,17 @@ def _compose_remarks_from_excel_fields(
         cos_phi = abs(cos_phi)
         ct_reversed_in_fields = True
 
-    vref = float(nominal_voltage) if nominal_voltage and nominal_voltage > 0 else _MBA_NOMINAL_VOLTAGE_V
     wave = _wave_phrase_from_char(current_char)
     name_mid = _format_name_mid(name)
     cat = _detect_equipment_category(name, kind=raw_kind or kind)
     is_servo = (cat == "servo_sewing") or (_norm_kind(kind) in ("servo", "4servo"))
+
+    if nominal_voltage is not None and nominal_voltage > 0:
+        vref = float(nominal_voltage)
+    elif kind == "mba" or cat == "mba":
+        vref = _MBA_NOMINAL_VOLTAGE_V
+    else:
+        vref = _infer_nominal_voltage(u_min, u_max, default=_MBA_NOMINAL_VOLTAGE_V)
 
     # ── Định dạng helper ─────────────────────────────────────────────────
     def _pct(v: float | None, d: int = 2) -> str:
@@ -1564,6 +1606,43 @@ def _resolve_remarks_field(
     thd_max = _parse_float_field(params.get("thd"))
     tdd_max_v = _parse_float_field(params.get("tdd"))
     pdm_kva = _parse_float_field(params.get("pdm"))
+
+    # Trích xuất u_min, u_max từ file INPS nếu params chưa có
+    if (u_min is None or u_max is None) and folder:
+        from modules.kew.analyse_kew import find_file
+        inps_p = find_file(str(folder), "INPS")
+        if inps_p and os.path.isfile(inps_p):
+            try:
+                stats = _parse_inps(inps_p)
+                u12 = _pick(stats, "AVG_VL1[V]", "AVG_V12[V]")
+                if not u12:
+                    v1 = _pick(stats, "AVG_V1[V]")
+                    u12 = _scale(v1, 3**0.5)
+                if u_min is None and u12.get("min") is not None:
+                    u_min = u12.get("min")
+                if u_max is None and u12.get("max") is not None:
+                    u_max = u12.get("max")
+            except Exception:
+                pass
+
+    if nominal_voltage is None and params:
+        for k in (
+            "nominal_voltage", "u_norm", "unorm", "udm", "u_dm",
+            "uđm", "u_đm", "vref", "u_ref",
+            "dien ap danh dinh", "điện áp danh định",
+            "dien ap dinh muc", "điện áp định mức",
+        ):
+            raw_nom = params.get(k)
+            parsed_nom = _parse_float_field(raw_nom)
+            if parsed_nom is not None and parsed_nom > 0:
+                nominal_voltage = parsed_nom
+                break
+
+    if nominal_voltage is None:
+        if kind == "mba":
+            nominal_voltage = _MBA_NOMINAL_VOLTAGE_V
+        else:
+            nominal_voltage = _infer_nominal_voltage(u_min, u_max, default=None)
 
     has_data = any(v is not None for v in [
         current_char, u_min, u_max, delta_u, delta_i, cos_phi, thd_max, tdd_max_v
@@ -2702,11 +2781,42 @@ def read_device_metadata_from_excel(
             "pdm":          _cell_val("pdm"),
         }
 
+        # ── Nhận diện điện áp danh định (từ cột Excel hoặc tự động suy luận) ──
+        nom_val = None
+        for col_name in df.columns:
+            norm_c = _norm(str(col_name))
+            if norm_c in (
+                "nominal_voltage", "u_norm", "unorm", "udm", "u_dm",
+                "uđm", "u_đm", "vref", "u_ref",
+                "dien ap danh dinh", "điện áp danh định",
+                "dien ap dinh muc", "điện áp định mức",
+            ):
+                raw_nom = row[col_name]
+                parsed_nom = _parse_float_field(raw_nom)
+                if parsed_nom is not None and parsed_nom > 0:
+                    nom_val = parsed_nom
+                    break
+
+        u_min_raw = _cell_val("u_min")
+        u_max_raw = _cell_val("u_max")
+        u_min_v = _parse_float_field(u_min_raw)
+        u_max_v = _parse_float_field(u_max_raw)
+
+        norm_k = _norm_kind(row[kind_col])
+        if nom_val is None:
+            if norm_k == "mba":
+                nom_val = _MBA_NOMINAL_VOLTAGE_V
+            else:
+                nom_val = _infer_nominal_voltage(u_min_v, u_max_v, default=None)
+
+        if nom_val is not None:
+            excel_params["nominal_voltage"] = nom_val
+
         entry = {
             "name": name,
             "stt": _excel_stt(row[cm["stt"]]),
-            "kind": _norm_kind(row[kind_col]),
-            "nominal_voltage": None,
+            "kind": norm_k,
+            "nominal_voltage": nom_val,
             "remarks": remarks,
             "excel_params": excel_params,
         }
