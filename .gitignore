@@ -41,3 +41,6 @@ dist/
 /temp/
 /tests
 /tools
+/hoa_don_evnspc
+*.xlsx
+evnspc_session.json
