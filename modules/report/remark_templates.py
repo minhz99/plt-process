@@ -280,7 +280,7 @@ def get_mba_openings(name_mid: str, quality: str) -> list[str]:
 
 
 def get_pf_mba_templates(pf_txt: str, abs_pf: float) -> list[str]:
-    """Mẫu câu hệ số công suất cosφ cho MBA."""
+    """Mẫu câu hệ số công suất cosφ cho MBA (chỉ sinh khi cosφ đạt chuẩn >= 0.9)."""
     if abs_pf >= 0.9:
         return [
             f"hệ số công suất cosφ ở mức {pf_txt}",
@@ -290,22 +290,7 @@ def get_pf_mba_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"hệ số công suất đáp ứng yêu cầu ở mức {pf_txt}",
             f"giá trị hệ số công suất tại thời điểm khảo sát ở mức {pf_txt}",
         ]
-    elif abs_pf >= 0.8:
-        return [
-            f"hệ số công suất cosφ ở mức {pf_txt}",
-            f"hệ số công suất của thiết bị ở mức {pf_txt}",
-            f"hệ số cosφ hiện ở mức {pf_txt}",
-            f"hệ số công suất cosφ ở mức {pf_txt}",
-            f"hệ số công suất đo được ở mức {pf_txt}",
-        ]
-    else:
-        return [
-            f"hệ số công suất cosφ ở mức {pf_txt}",
-            f"hệ số công suất ở mức {pf_txt}",
-            f"hệ số công suất cosφ ở mức {pf_txt}",
-            f"hệ số công suất cosφ duy trì ở mức {pf_txt}",
-            f"hệ số công suất đo được ở mức {pf_txt}",
-        ]
+    return []
 
 
 def get_mba_closing_templates() -> list[str]:
@@ -431,7 +416,7 @@ def get_device_closings_eval(name: str, quality: str) -> list[str]:
 
 
 def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
-    """Mẫu câu hệ số công suất cosφ cho thiết bị."""
+    """Mẫu câu hệ số công suất cosφ cho thiết bị (chỉ sinh khi cosφ đạt chuẩn >= 0.8)."""
     if abs_pf >= 0.9:
         return [
             f"Hệ số công suất cosφ ở mức {pf_txt}.",
@@ -451,14 +436,7 @@ def get_pf_dev_templates(pf_txt: str, abs_pf: float) -> list[str]:
             f"Hệ số công suất cosφ ở mức {pf_txt}.",
             f"Hệ số công suất đo được ở mức {pf_txt}.",
         ]
-    else:
-        return [
-            f"Hệ số công suất cosφ ở mức {pf_txt}.",
-            f"Hệ số công suất ở mức {pf_txt}.",
-            f"Hệ số cosφ đo được ở mức {pf_txt}.",
-            f"Hệ số cosφ đo được có giá trị {pf_txt}.",
-            f"Hệ số công suất đo được ở mức {pf_txt}.",
-        ]
+    return []
 
 
 def get_wave_dev_by_category(cat: str, wave: str) -> list[str]:

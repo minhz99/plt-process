@@ -921,9 +921,6 @@ def _compose_short_remark_for_table(
     tdd_max: float | None = None,
 ) -> str:
     """Sinh nhận xét ngắn gọn, định tính (KHÔNG kèm số liệu chi tiết) dành riêng cho Bảng 6.3 / Bảng tổng hợp."""
-    pf_limit = 0.9 if kind == "mba" else 0.8
-    pf_bad = (cos_phi is not None and abs(cos_phi) < pf_limit)
-
     cat = _detect_equipment_category(name, kind=kind)
     if kind == "mba" or cat == "mba":
         tdd_lim = _TDD_LIMIT_PCT
@@ -951,8 +948,7 @@ def _compose_short_remark_for_table(
     bad_reasons: list[str] = []
     if overload_bad:
         bad_reasons.append("vận hành quá tải")
-    if pf_bad:
-        bad_reasons.append("hệ số cosφ thấp")
+    # Đã loại bỏ hoàn toàn nhận xét về cos phi thấp theo yêu cầu
     if di_bad:
         bad_reasons.append("độ lệch pha dòng điện cao")
     if du_bad:
@@ -1397,8 +1393,13 @@ def _compose_remarks_from_excel_fields(
     openings = remark_templates.get_device_openings(name_mid, quality)
     chosen_opening = _pick_tpl(openings, "opening_dev")
 
-    _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs(cos_phi) if cos_phi is not None else 0.0)
-    pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
+    abs_pf = abs(cos_phi) if cos_phi is not None else 0.0
+    pf_sent = ""
+    # Chỉ sinh nhận xét hệ số công suất khi cosφ đạt chuẩn (>= 0.8), loại bỏ hoàn toàn nhận xét về cosφ thấp
+    if cos_phi is not None and abs_pf >= 0.8:
+        _pf_dev_tpl = remark_templates.get_pf_dev_templates(pf_txt, abs_pf)
+        if _pf_dev_tpl:
+            pf_sent = _pick_tpl(_pf_dev_tpl, "pf_dev")
 
     if is_repeat_category:
         wave_sent = f"Biểu đồ dòng điện tiêu thụ cấp cho {name_mid} {wave} trong thời gian đo kiểm."
@@ -1409,7 +1410,8 @@ def _compose_remarks_from_excel_fields(
     parts: list[str] = []
     parts.append(chosen_opening)
     parts.append(wave_sent)
-    parts.append(pf_sent)
+    if pf_sent:
+        parts.append(pf_sent)
 
     if volt_sent:
         parts.append(volt_sent)
@@ -3272,8 +3274,7 @@ def _t6_auto_nhan_xet(delta_I: object, cos_phi: object, tdd: object) -> str:
     tdd_missing = (val_tdd is None)
     tdd_bad = tdd_missing or (val_tdd is not None and val_tdd >= _T6_TDD_HIGH)
 
-    if val_cos is not None and abs(val_cos) < _T6_COSPHI_LOW:
-        vi_pham.append("Hệ số Cosφ thấp")
+    # Đã loại bỏ hoàn toàn nhận xét về hệ số cos phi thấp theo yêu cầu
     if val_di is not None and val_di >= _T6_DELTA_I_HIGH:
         vi_pham.append("Độ lệch pha dòng điện cao")
     if tdd_bad:
@@ -3315,6 +3316,31 @@ def _t6_fmt(v: object, decimals: int = 2) -> str:
     return f"{x:.{decimals}f}".replace(".", ",")
 
 
+def _clean_low_cosphi_remark(text: str) -> str:
+    """Loại bỏ hoàn toàn các nhận xét về cos phi thấp khỏi chuỗi nhận xét nếu có."""
+    if not text:
+        return text
+    cleaned = re.sub(
+        r"(?:,\s*|;\s*|\s+và\s+)?(?:ghi nhận\s+)?(?:hệ số\s+)?cos\s*[\u03c6phi]*\s*(?:ở mức\s+)?(?:còn\s+|quá\s+)?(?:thấp|chưa đạt|không đạt)[^;,\.\n]*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"(?:hệ số\s+)?cos\s*[\u03c6phi]*\s*(?:ở mức\s+)?(?:còn\s+|quá\s+)?(?:thấp|chưa đạt|không đạt)[^;,\.\n]*(?:[,\s]+và\s*|[;,]\s*)?",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"^[;,\.\s]+", "", cleaned)
+    cleaned = re.sub(r"[;,\.\s]+$", "", cleaned)
+    cleaned = re.sub(r"[;,]\s*[;,]", "; ", cleaned)
+    cleaned = cleaned.strip()
+    if not cleaned:
+        return "Thiết bị vận hành ổn định"
+    return cleaned[0].upper() + cleaned[1:]
+
+
 def generate_table6_docx(
     devices: list[dict],
     output_path: str | Path,
@@ -3346,6 +3372,8 @@ def generate_table6_docx(
                 thiet_bi.get("cos_phi"),
                 thiet_bi.get("tdd"),
             )
+        else:
+            nhan_xet = _clean_low_cosphi_remark(nhan_xet)
         danh_sach.append({
             "tt":       idx,
             "ten":      _strip_s_prefix(_nfc(str(thiet_bi.get("ten") or "").strip())),

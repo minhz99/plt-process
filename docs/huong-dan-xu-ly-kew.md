@@ -238,11 +238,10 @@ Cột Excel được đọc:
 
 Code hiện tại đưa tất cả dòng Excel vào Bảng 6.3, không lọc theo `type`.
 
-Nhận xét tự động:
+Nhận xét tự động (đã loại bỏ nhận xét cosφ thấp):
 
-- `cos_phi < 0.75`: "Hệ số Cosφ còn thấp".
-- `delta_i >= 10`: "Độ lệch pha dòng điện còn cao".
-- `tdd >= 12`: "Tổng biến dạng sóng hài dòng điện còn cao".
+- `delta_i >= 10`: "Độ lệch pha dòng điện cao".
+- `tdd >= 12`: "Tổng biến dạng sóng hài dòng điện cao".
 - Nếu không có vi phạm: "Thiết bị vận hành ổn định".
 
 Template sử dụng: `static/word-template/table6.docx`.
