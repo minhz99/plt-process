@@ -513,9 +513,7 @@ def _infer_nominal_voltage(
     Quy tắc phân loại dải điện áp:
     - Dải 110V (U < 160V): 110.0 V (thiết bị Nhật/Mỹ, mạch điều khiển, đo qua PT 100V/110V).
     - Dải 220V (160V <= U < 300V): 220.0 V (1 pha 220V, hoặc 3 pha 200V/220V máy CNC, máy may, máy mài...).
-    - Dải 380V/400V (U >= 300V):
-        + Nếu U < 392.0 V: 380.0 V (lưới hạ thế 380V chuẩn TCVN hoặc cuối tuyến tải).
-        + Nếu U >= 392.0 V: 400.0 V (lưới 400V chuẩn MBA).
+    - Dải 380V/400V (U >= 300V): 400.0 V (lưới 400V chuẩn MBA).
     - Nếu không đủ dữ liệu: trả về default (mặc định 400.0 V).
     """
     if u_min is None and u_max is None:
@@ -531,8 +529,6 @@ def _infer_nominal_voltage(
         return 110.0
     elif u_mid < 300.0:
         return 220.0
-    elif u_mid < 392.0:
-        return 380.0
     else:
         return 400.0
 
