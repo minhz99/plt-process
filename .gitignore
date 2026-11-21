@@ -44,3 +44,4 @@ dist/
 /hoa_don_evnspc
 *.xlsx
 evnspc_session.json
+*.zip
